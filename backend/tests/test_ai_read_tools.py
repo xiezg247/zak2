@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
+from app.services import ai_read_tools as art
+from app.services.ai_tools import WRITE_TOOL_NAMES, execute_tool
+
+
+def test_get_market_emotion_shape() -> None:
+    db = MagicMock()
+    with (
+        patch.object(art.market, "load_emotion", return_value={"phase": "冰点"}),
+        patch.object(art.market, "market_overview", return_value={"ok": 1}),
+    ):
+        out = art.get_market_emotion(db, "u", {})
+    assert out["emotion"]["phase"] == "冰点"
+    assert out["overview"] == {"ok": 1}
+
+
+def test_ai_tools_delegates_emotion() -> None:
+    with patch("app.services.ai_read_tools.get_market_emotion", return_value={"emotion": {}, "overview": {}}) as m:
+        raw = execute_tool(MagicMock(), "u", "get_market_emotion", {})
+    assert "emotion" in raw
+    m.assert_called_once()
+
+
+def test_run_skill_watchlist_mocked() -> None:
+    with patch("app.services.ai_read_tools.get_watchlist", return_value={"count": 0, "items": []}) as m:
+        out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "watchlist", "limit": 5})
+    assert "items" in out or "count" in out
+    m.assert_called_once()
+
+
+def test_run_skill_screener_mocked() -> None:
+    with patch("app.services.ai_read_tools.get_recent_screening", return_value={"runs": []}) as m:
+        out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "screener", "limit": 2})
+    assert "runs" in out
+    m.assert_called_once()
+
+
+def test_run_skill_radar_mocked() -> None:
+    with patch("app.services.ai_read_tools.get_radar_snapshot", return_value={"cards": []}) as m:
+        out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "radar"})
+    assert "cards" in out
+    m.assert_called_once()
+
+
+def test_list_note_symbols_limit() -> None:
+    items = [
+        SimpleNamespace(
+            model_dump=lambda i=i: {"vt_symbol": f"{i}.SSE", "memo_preview": "", "entry_count": 0}
+        )
+        for i in range(5)
+    ]
+    with patch.object(art, "notes") as n:
+        n.list_note_symbols.return_value = items
+        out = art.list_note_symbols(MagicMock(), "u", {"limit": 2})
+    assert out["count"] == 2
+    assert len(out["symbols"]) == 2
+
+
+def test_get_stock_notes_requires_symbol() -> None:
+    out = art.get_stock_notes(MagicMock(), "u", {})
+    assert "error" in out
+
+
+def test_get_stock_notes_ok() -> None:
+    memo = SimpleNamespace(model_dump=lambda: {"vt_symbol": "600519.SSE", "body": "x"})
+    entries = [SimpleNamespace(model_dump=lambda: {"id": 1, "body": "e"})]
+    with patch.object(art, "notes") as n:
+        n.get_memo.return_value = memo
+        n.list_entries.return_value = entries
+        out = art.get_stock_notes(MagicMock(), "u", {"vt_symbol": "600519.SSE", "entry_limit": 10})
+    assert out["memo"]["body"] == "x"
+    assert out["entry_count"] == 1
+    n.list_entries.assert_called_once()
+
+
+def test_run_skill_notes_list() -> None:
+    assert "list_note_symbols" not in WRITE_TOOL_NAMES
+    assert "get_stock_notes" not in WRITE_TOOL_NAMES
+    with patch("app.services.ai_read_tools.list_note_symbols", return_value={"count": 0, "symbols": []}) as m:
+        out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "notes"})
+    assert "symbols" in out or "count" in out
+    m.assert_called_once()
+
+
+def test_run_skill_notes_stock() -> None:
+    with patch(
+        "app.services.ai_read_tools.get_stock_notes",
+        return_value={"memo": {}, "entries": [], "entry_count": 0},
+    ) as m:
+        out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "notes", "vt_symbol": "600519.SSE"})
+    assert "memo" in out
+    m.assert_called_once()

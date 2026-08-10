@@ -1,0 +1,244 @@
+import { api } from './client'
+
+export type WatchlistItem = {
+  symbol: string
+  exchange: string
+  name: string
+  industry?: string
+  sort_order: number
+  vt_symbol: string
+  tf_symbol: string
+  last_price: number | null
+  change_pct: number | null
+  turnover_rate: number | null
+  volume: number | null
+  amount: number | null
+  volume_ratio: number | null
+}
+
+export type WatchlistGroup = {
+  id: string
+  name: string
+  sort_order: number
+}
+
+export type Bar = {
+  datetime: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+  turnover: number
+}
+
+export type BarsResponse = {
+  symbol: string
+  exchange: string
+  vt_symbol: string
+  interval: string
+  bars: Bar[]
+}
+
+export type StrategySignalRow = {
+  vt_symbol: string
+  name: string
+  last_price: number | null
+  change_pct: number | null
+  signal: string
+  signal_label: string
+  signal_date: string | null
+  strength: number | null
+  reason_summary: string
+  ref_buy_price: number | null
+  ref_sell_price: number | null
+  ma_gap_pct: number | null
+  bar_as_of: string | null
+}
+
+export type StrategyPositionRow = {
+  vt_symbol: string
+  name: string
+  cost_price: number
+  volume: number
+  buy_date: string
+  last_price: number | null
+  unrealized_pnl: number | null
+  unrealized_pnl_pct: number | null
+  t1_locked: boolean
+  exit_signal: string
+  exit_signal_label: string
+  ref_sell_price: number | null
+  reason_summary: string
+  risk_tags?: string[]
+  risk_primary?: string
+  off_plan?: boolean
+}
+
+export type PlanSymbolStatus = {
+  vt_symbol: string
+  name: string
+  in_watchlist: boolean
+  in_position: boolean
+}
+
+export type RiskSummary = {
+  total_capital: number | null
+  actual_position_pct: number | null
+  plan_max_pct: number | null
+  off_plan_count: number
+  off_plan_symbols: string[]
+  active_plan_date: string
+  plan_symbols: PlanSymbolStatus[]
+}
+
+export type TradingRiskPrefs = {
+  total_capital: number | null
+  stop_loss_pct: number
+  caution_float_pct: number
+  realized_pnl_today: number | null
+}
+
+export type TradingRiskPrefsPut = {
+  total_capital?: number | null
+  stop_loss_pct?: number | null
+  caution_float_pct?: number | null
+  realized_pnl_today?: number | null
+}
+
+export type StrategyBoard = {
+  config_key: string
+  as_of: string | null
+  source: string
+  note: string
+  panel_symbols: string[]
+  signals: StrategySignalRow[]
+  positions: StrategyPositionRow[]
+  risk_summary?: RiskSummary | null
+}
+
+export type SignalPanel = {
+  symbols: string[]
+  max_symbols: number
+  count: number
+}
+
+export type PositionItem = {
+  symbol: string
+  exchange: string
+  vt_symbol: string
+  cost_price: number
+  volume: number
+  buy_date: string
+  notes: string
+  source: string
+  plan_pct: number | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type PositionUpsert = {
+  symbol: string
+  exchange?: string
+  cost_price: number
+  volume: number
+  buy_date: string
+  notes?: string
+  plan_pct?: number | null
+}
+
+export type NotifyLogItem = {
+  id: string
+  event_type: string
+  channel: string
+  status: string
+  error: string
+  created_at: string
+  payload: Record<string, unknown>
+}
+
+export type NotifyLogOut = {
+  items: NotifyLogItem[]
+  limit: number
+  count: number
+}
+
+export const watchlistApi = {
+  list: (groupId?: string) => {
+    const q = groupId ? `?group_id=${encodeURIComponent(groupId)}` : ''
+    return api<WatchlistItem[]>(`/api/v1/watchlist${q}`)
+  },
+  strategyBoard: (configKey?: string) => {
+    const q = configKey ? `?config_key=${encodeURIComponent(configKey)}` : ''
+    return api<StrategyBoard>(`/api/v1/watchlist/strategy-board${q}`)
+  },
+  tradingRisk: () => api<TradingRiskPrefs>('/api/v1/watchlist/trading-risk'),
+  putTradingRisk: (body: TradingRiskPrefsPut) =>
+    api<TradingRiskPrefs>('/api/v1/watchlist/trading-risk', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  notifyLog: (limit?: number) => {
+    const q = limit != null ? `?limit=${encodeURIComponent(String(limit))}` : ''
+    return api<NotifyLogOut>(`/api/v1/watchlist/notify-log${q}`)
+  },
+  signalPanel: () => api<SignalPanel>('/api/v1/watchlist/signal-panel'),
+  replaceSignalPanel: (symbols: string[]) =>
+    api<SignalPanel>('/api/v1/watchlist/signal-panel', {
+      method: 'PUT',
+      body: JSON.stringify({ symbols }),
+    }),
+  addSignalPanelMember: (symbol: string) =>
+    api<SignalPanel>('/api/v1/watchlist/signal-panel/members', {
+      method: 'POST',
+      body: JSON.stringify({ symbol }),
+    }),
+  removeSignalPanelMember: (vtSymbol: string) =>
+    api<SignalPanel>(`/api/v1/watchlist/signal-panel/members/${encodeURIComponent(vtSymbol)}`, {
+      method: 'DELETE',
+    }),
+  listPositions: () => api<PositionItem[]>('/api/v1/watchlist/positions'),
+  addPosition: (body: PositionUpsert) =>
+    api<PositionItem>('/api/v1/watchlist/positions', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updatePosition: (vtSymbol: string, body: PositionUpsert) =>
+    api<PositionItem>(`/api/v1/watchlist/positions/${encodeURIComponent(vtSymbol)}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  removePosition: (vtSymbol: string) =>
+    api<{ ok: boolean }>(`/api/v1/watchlist/positions/${encodeURIComponent(vtSymbol)}`, {
+      method: 'DELETE',
+    }),
+  add: (symbol: string, name = '') =>
+    api<WatchlistItem>('/api/v1/watchlist', {
+      method: 'POST',
+      body: JSON.stringify({ symbol, name }),
+    }),
+  remove: (vtSymbol: string) =>
+    api<{ ok: boolean }>(`/api/v1/watchlist/${encodeURIComponent(vtSymbol)}`, {
+      method: 'DELETE',
+    }),
+  groups: () => api<WatchlistGroup[]>('/api/v1/watchlist/groups'),
+  createGroup: (name: string) =>
+    api<WatchlistGroup>('/api/v1/watchlist/groups', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+  deleteGroup: (id: string) =>
+    api<{ ok: boolean }>(`/api/v1/watchlist/groups/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+  addToGroup: (groupId: string, symbol: string) =>
+    api<{ ok: boolean }>(`/api/v1/watchlist/groups/${encodeURIComponent(groupId)}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ symbol }),
+    }),
+  bars: (vtSymbol: string, interval = 'd', limit = 120) =>
+    api<BarsResponse>(
+      `/api/v1/bars/${encodeURIComponent(vtSymbol)}?interval=${interval}&limit=${limit}`,
+    ),
+}

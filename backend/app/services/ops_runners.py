@@ -1,0 +1,46 @@
+"""运维任务 runner 映射（与 ops_catalog.RUNNABLE_JOB_IDS 对齐）。"""
+
+from __future__ import annotations
+
+from typing import Callable
+
+from app.services import (
+    ops_auto_screen,
+    ops_bars_fill,
+    ops_purge,
+    ops_sync_bilibili_feed,
+    ops_sync_calendar,
+    ops_sync_limit_list,
+    ops_sync_sector,
+    ops_sync_stock_industry,
+    ops_sync_universe,
+    ops_warm_market,
+)
+
+SCREEN_JOB_IDS = frozenset({"screen_intraday", "screen_post_close"})
+
+
+def _run_sync_bilibili_feed(db, **_kwargs) -> dict:
+    """Ops 手动跑：force=True，绕过时段窗口。定时走 embedded_scheduler（force=False）。"""
+    return ops_sync_bilibili_feed.sync_bilibili_feed(db, force=True)
+
+
+RUNNERS: dict[str, Callable[..., dict]] = {
+    "purge_stale_cache": ops_purge.purge_stale_cache,
+    "sync_trade_calendar": ops_sync_calendar.sync_trade_calendar,
+    "sync_sector_flow_daily": ops_sync_sector.sync_sector_flow_daily,
+    "sync_limit_list": ops_sync_limit_list.sync_limit_list,
+    "fill_watchlist_bars": ops_bars_fill.fill_watchlist_bars,
+    "batch_fill_stale": ops_bars_fill.batch_fill_stale,
+    "batch_download_universe": ops_bars_fill.batch_download_universe,
+    "sync_universe": ops_sync_universe.sync_universe,
+    "sync_stock_industry": ops_sync_stock_industry.sync_stock_industry,
+    "screen_intraday": ops_auto_screen.screen_intraday,
+    "screen_post_close": ops_auto_screen.screen_post_close,
+    "warm_market_summary": ops_warm_market.warm_market_summary,
+    "sync_bilibili_feed": _run_sync_bilibili_feed,
+}
+
+
+def needs_user_id(job_id: str) -> bool:
+    return job_id in SCREEN_JOB_IDS

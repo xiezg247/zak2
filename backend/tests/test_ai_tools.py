@@ -1,0 +1,67 @@
+from app.services.ai_tools import TOOL_DEFINITIONS, TOOL_HANDLERS, execute_tool, get_tool_definitions
+import pytest
+
+
+def test_tools_registered() -> None:
+    names = {t["function"]["name"] for t in TOOL_DEFINITIONS}
+    write = {"add_watchlist", "remove_watchlist", "upsert_note_memo", "add_note_entry"}
+    assert names == {
+        "get_watchlist",
+        "get_market_emotion",
+        "get_recent_screening",
+        "get_radar_snapshot",
+        "get_bars_summary",
+        "get_recent_backtest",
+        "list_note_symbols",
+        "get_stock_notes",
+        "list_skills",
+        "read_skill",
+        "run_skill",
+        *write,
+    }
+    assert set(TOOL_HANDLERS) == names - write
+
+
+def test_unknown_tool_json() -> None:
+    # db/user unused for unknown
+    from unittest.mock import MagicMock
+
+    out = execute_tool(MagicMock(), "u", "no_such_tool", {})
+    assert "未知工具" in out
+
+
+def test_get_tool_definitions_merges_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services import mcp_client
+
+    monkeypatch.setattr(mcp_client, "mcp_configured", lambda: True)
+    monkeypatch.setattr(
+        mcp_client,
+        "list_allowed_tools",
+        lambda: [mcp_client.McpToolInfo("diagnose_x", "desc", {"type": "object", "properties": {}})],
+    )
+    names = {t["function"]["name"] for t in get_tool_definitions()}
+    assert "mcp_diagnose_x" in names
+    assert "get_watchlist" in names
+
+
+def test_execute_mcp_tool(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import MagicMock
+
+    from app.services import mcp_client
+
+    monkeypatch.setattr(mcp_client, "call_allowed_tool", lambda name, args: '{"ok":1}')
+    out = execute_tool(MagicMock(), "u", "mcp_diagnose_x", {"a": 1})
+    assert '"ok"' in out
+
+
+def test_execute_mcp_tool_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import MagicMock
+
+    from app.services import mcp_client
+
+    def boom(name: str, args: dict) -> str:
+        raise mcp_client.McpClientError("连不上")
+
+    monkeypatch.setattr(mcp_client, "call_allowed_tool", boom)
+    out = execute_tool(MagicMock(), "u", "mcp_diagnose_x", {})
+    assert "连不上" in out

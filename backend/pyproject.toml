@@ -1,0 +1,39 @@
+[project]
+name = "zak2-api"
+version = "0.1.0"
+description = "zak2 FastAPI backend — A 股量化终端 Web API（P1：登录 + 选股）"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sqlalchemy>=2.0.36",
+    "psycopg[binary]>=3.2.0",
+    "pydantic-settings>=2.6.0",
+    "PyJWT>=2.9.0",
+    "redis>=5.2.0",
+    "httpx>=0.28.0",
+    "python-multipart>=0.0.17",
+    "apscheduler>=3.11.3",
+    "mcp>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

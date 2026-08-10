@@ -1,0 +1,20 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/* \
+  && pip install --no-cache-dir uv
+
+COPY pyproject.toml uv.lock README.md* ./
+COPY app ./app
+
+# hatchling 需要 package；无 README 时补空文件避免构建失败
+RUN if [ ! -f README.md ]; then echo "zak2-api" > README.md; fi \
+  && uv sync --frozen --no-dev
+
+ENV PATH="/app/.venv/bin:$PATH"
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

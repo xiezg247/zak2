@@ -1,0 +1,184 @@
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+
+class MarketOverview(BaseModel):
+    redis_available: bool
+    quote_count: int
+    updated_at: str | None = None
+    emotion: dict[str, Any] | None = None
+    emotion_cycle: dict[str, Any] | None = None
+    ranks_available: list[str] = Field(default_factory=list)
+
+
+class EmotionThresholdsOut(BaseModel):
+    recession_limit_down: int
+    ice_max_boards: int
+    ice_limit_down: int
+    ice_up_ratio_max: float
+    climax_ladder_depth: int
+    climax_limit_up: int
+    divergence_limit_up_min: int
+    divergence_limit_spread: int
+    startup_max_boards: int
+    startup_limit_up: int
+    amount_floor_yuan: float
+    recession_break_rate: float
+    fear_greed_overheat: float
+    hysteresis_enabled: bool
+    is_default: bool = True
+
+
+class EmotionThresholdsPut(BaseModel):
+    recession_limit_down: int | None = None
+    ice_max_boards: int | None = None
+    ice_limit_down: int | None = None
+    ice_up_ratio_max: float | None = None
+    climax_ladder_depth: int | None = None
+    climax_limit_up: int | None = None
+    divergence_limit_up_min: int | None = None
+    divergence_limit_spread: int | None = None
+    startup_max_boards: int | None = None
+    startup_limit_up: int | None = None
+    amount_floor_yuan: float | None = None
+    recession_break_rate: float | None = None
+    fear_greed_overheat: float | None = None
+    hysteresis_enabled: bool | None = None
+
+
+class EmotionCycleOut(BaseModel):
+    stage: str
+    stage_label: str
+    position_factor: float
+    position_pct_min: float
+    position_pct_max: float
+    allow_new_positions: bool
+    allowed_modes: list[str] = Field(default_factory=list)
+    allowed_mode_labels: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    source: str = ""
+    trade_date: str | None = None
+    raw_stage: str | None = None
+    inputs: dict[str, Any] = Field(default_factory=dict)
+
+
+class RankRow(BaseModel):
+    rank: int
+    symbol: str
+    exchange: str
+    vt_symbol: str
+    tf_symbol: str
+    name: str = ""
+    score: float
+    last_price: float | None = None
+    change_pct: float | None = None
+    turnover_rate: float | None = None
+    amount: float | None = None
+    volume_ratio: float | None = None
+    limit_times: float | None = None
+
+
+class SectorFlowRow(BaseModel):
+    trade_date: str
+    sector_kind: str
+    sector_id: str
+    name: str
+    change_pct: float
+    net_flow_yi: float
+    flow_source: str = ""
+
+
+class SectorIntradayPoint(BaseModel):
+    bucket_time: str
+    clock_minutes: int
+    net_flow_yi: float
+    change_pct: float
+
+
+class RadarCardOut(BaseModel):
+    card_id: str
+    title: str
+    subtitle: str = ""
+    source: str  # cache | synthesized
+    computed_at: str = ""
+    empty_message: str = ""
+    rows: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class RadarResonanceEntry(BaseModel):
+    vt_symbol: str
+    name: str = ""
+    card_count: int
+    card_titles: list[str] = Field(default_factory=list)
+    resonance_score: float
+    change_pct: float | None = None
+    last_price: float | None = None
+    seal_time_label: str = ""
+
+
+class RadarResonanceOut(BaseModel):
+    min_cards: int
+    top_n: int
+    total: int
+    entries: list[RadarResonanceEntry] = Field(default_factory=list)
+
+
+class RadarResonanceWeightItem(BaseModel):
+    card_id: str
+    title: str
+    weight: float
+    default_weight: float
+
+
+class RadarResonanceWeightsOut(BaseModel):
+    items: list[RadarResonanceWeightItem] = Field(default_factory=list)
+    weights: dict[str, float] = Field(default_factory=dict)
+
+
+class RadarResonanceWeightsPut(BaseModel):
+    weights: dict[str, float] = Field(default_factory=dict)
+
+
+class LimitListRow(BaseModel):
+    trade_date: str = ""
+    vt_symbol: str = ""
+    ts_code: str = ""
+    name: str = ""
+    limit_times: float = 0
+    first_time: str = ""
+    last_time: str = ""
+    fd_amount: float = 0
+    open_times: float = 0
+    strth: float = 0
+    updated_at: str = ""
+    seal_time_score: float = 0
+    seal_time_label: str = ""
+
+
+class LimitListOut(BaseModel):
+    trade_date: str = ""
+    total: int = 0
+    rows: list[LimitListRow] = Field(default_factory=list)
+
+
+class PlanDraftRequest(BaseModel):
+    top_n: int | None = None
+    trade_date: str | None = None
+
+
+class PlanDraftSymbol(BaseModel):
+    vt_symbol: str
+    name: str = ""
+
+
+class PlanDraftOut(BaseModel):
+    plan_id: str
+    trade_date: str
+    status: str
+    emotion_expected: str
+    symbol_count: int
+    symbols: list[PlanDraftSymbol] = Field(default_factory=list)
+    replaced: bool

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# 本地一键启动：后端 :8000 + 前端 :5173
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+if [[ ! -f .env ]]; then
+  if [[ -f .env.example ]]; then
+    cp .env.example .env
+    echo "已从 .env.example 生成 .env，请按需填写 DATABASE_URL / JWT_SECRET / 密钥"
+  else
+    echo "缺少 .env，请先配置环境变量" >&2
+    exit 1
+  fi
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "需要安装 uv：https://docs.astral.sh/uv/" >&2
+  exit 1
+fi
+if ! command -v npm >/dev/null 2>&1; then
+  echo "需要安装 Node.js / npm" >&2
+  exit 1
+fi
+
+echo "==> 同步后端依赖"
+(cd backend && uv sync --extra dev)
+
+echo "==> 安装前端依赖"
+(cd frontend && npm install --silent)
+
+API_HOST="${API_HOST:-127.0.0.1}"
+API_PORT="${API_PORT:-8000}"
+
+PIDS=()
+cleanup() {
+  for pid in "${PIDS[@]:-}"; do
+    kill "$pid" 2>/dev/null || true
+  done
+}
+trap cleanup EXIT INT TERM
+
+echo "==> 启动后端 http://${API_HOST}:${API_PORT}"
+(
+  cd backend
+  uv run uvicorn app.main:app --reload --host "$API_HOST" --port "$API_PORT"
+) &
+PIDS+=($!)
+
+# 等 API 文档端口就绪（最多约 15s）
+for _ in $(seq 1 30); do
+  code="$(curl -sf -o /dev/null -w "%{http_code}" "http://${API_HOST}:${API_PORT}/docs" || true)"
+  if [[ "$code" == "200" ]]; then
+    break
+  fi
+  sleep 0.5
+done
+
+echo "==> 启动前端 http://127.0.0.1:5173"
+echo "    使用 zak 同库账号登录；Ctrl+C 结束前后端"
+(cd frontend && npm run dev -- --host 127.0.0.1 --port 5173) &
+PIDS+=($!)
+
+wait
