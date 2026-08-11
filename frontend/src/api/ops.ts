@@ -23,6 +23,7 @@ export type SchedulerJob = {
   description: string
   runnable: boolean
   run_hint: string | null
+  status_label?: string
   enabled: boolean
   cron_hour: number | null
   cron_minute: number | null

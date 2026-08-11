@@ -140,10 +140,15 @@ def list_scheduler_jobs(db: Session) -> list[dict[str, Any]]:
                 None
                 if spec.job_id in RUNNABLE_JOB_IDS
                 else (
-                    "请启动 zak2：python -m app.quote_collector（勿与 zak CLI 双写）"
+                    "请启动：python -m app.quote_collector（本实例内勿多开）"
                     if spec.job_id == "collect_quotes"
-                    else "请用 zak CLI：job run " + spec.job_id
+                    else "未实现：见 docs/product-roadmap.md"
                 )
+            ),
+            "status_label": (
+                "可跑"
+                if spec.job_id in RUNNABLE_JOB_IDS
+                else ("独立进程" if spec.job_id == "collect_quotes" else "未实现")
             ),
             "enabled": bool(job_cfg.get("enabled", False)),
             "cron_hour": job_cfg.get("cron_hour"),

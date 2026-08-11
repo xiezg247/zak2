@@ -42,6 +42,7 @@ class SchedulerJobOut(BaseModel):
     description: str
     runnable: bool
     run_hint: str | None = None
+    status_label: str = "可跑"
     enabled: bool = False
     cron_hour: int | None = None
     cron_minute: int | None = None

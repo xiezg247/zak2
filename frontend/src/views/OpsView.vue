@@ -342,7 +342,7 @@ onMounted(async () => {
                 >
                   异步执行
                 </button>
-                <span v-else class="muted tip" :title="j.run_hint || ''">CLI</span>
+                <span v-else class="muted tip" :title="j.run_hint || ''">{{ j.status_label || '未实现' }}</span>
               </td>
             </tr>
           </tbody>
