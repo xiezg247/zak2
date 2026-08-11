@@ -153,4 +153,4 @@ enrich_market_quotes(db: Session) -> dict
 
 ## 实现计划
 
-批准本 spec 并审阅后：`docs/superpowers/plans/2026-08-11-quote-enrich.md`
+实现计划：`docs/superpowers/plans/2026-08-11-quote-enrich.md`
