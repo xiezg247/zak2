@@ -29,19 +29,30 @@ async function onSubmit() {
 
 <template>
   <div class="page">
-    <form class="card" @submit.prevent="onSubmit">
-      <div class="brand">zak2</div>
+    <form class="card form" @submit.prevent="onSubmit">
+      <div class="brand">
+        <span class="logo-mark" aria-hidden="true" />
+        zak2
+      </div>
       <p class="sub">使用与桌面端相同的账号登录</p>
       <label>
         用户名
-        <input v-model="username" autocomplete="username" required />
+        <input class="input-field" v-model="username" autocomplete="username" required />
       </label>
       <label>
         密码
-        <input v-model="password" type="password" autocomplete="current-password" required />
+        <input
+          class="input-field"
+          v-model="password"
+          type="password"
+          autocomplete="current-password"
+          required
+        />
       </label>
       <p v-if="error" class="err">{{ error }}</p>
-      <button type="submit" :disabled="loading">{{ loading ? '登录中…' : '登录' }}</button>
+      <button class="btn-primary" type="submit" :disabled="loading">
+        {{ loading ? '登录中…' : '登录' }}
+      </button>
     </form>
   </div>
 </template>
@@ -51,58 +62,52 @@ async function onSubmit() {
   min-height: 100%;
   display: grid;
   place-items: center;
-  background:
-    radial-gradient(ellipse at top, #1b2a40 0%, transparent 55%),
-    linear-gradient(160deg, #0c1016, #121820 60%, #0a0e14);
+  background: var(--surface-muted);
   padding: 24px;
 }
-.card {
+.form {
   width: min(380px, 100%);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 12px;
   padding: 28px 24px;
   display: grid;
   gap: 14px;
 }
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.logo-mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--brand);
 }
 .sub {
   margin: -6px 0 4px;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.9rem;
 }
 label {
   display: grid;
   gap: 6px;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-input {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  padding: 10px 12px;
-}
-button {
-  margin-top: 6px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-weight: 600;
-}
-button:disabled {
-  opacity: 0.6;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 .err {
   margin: 0;
-  color: var(--danger);
-  font-size: 0.85rem;
+  border-radius: 0.5rem;
+  background: var(--brand-light);
+  color: var(--brand-dark);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+.btn-primary {
+  width: 100%;
+  margin-top: 4px;
 }
 </style>

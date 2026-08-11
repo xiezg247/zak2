@@ -45,13 +45,16 @@ function logout() {
 <template>
   <div class="shell">
     <aside class="side">
-      <div class="logo">zak2</div>
+      <div class="logo">
+        <span class="logo-mark" aria-hidden="true" />
+        zak2
+      </div>
       <nav>
         <RouterLink
           v-for="item in navItems"
           :key="item.key"
-          class="nav"
-          :class="{ active: active === item.key, muted: !item.enabled }"
+          class="nav-item"
+          :class="{ 'nav-item-active': active === item.key, muted: !item.enabled }"
           :to="item.enabled && 'to' in item ? item.to : '#'"
           @click="(e) => { if (!item.enabled) e.preventDefault() }"
         >
@@ -68,7 +71,7 @@ function logout() {
         </div>
         <div class="user">
           <span>{{ auth.user?.display_name || auth.user?.username }}</span>
-          <button class="ghost" type="button" @click="logout">退出</button>
+          <button class="btn-ghost" type="button" @click="logout">退出</button>
         </div>
       </header>
       <div class="body">
@@ -81,40 +84,36 @@ function logout() {
 <style scoped>
 .shell {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 220px 1fr;
   height: 100%;
-  background: var(--bg);
+  background: var(--surface-muted);
 }
 .side {
-  border-right: 1px solid var(--border);
-  background: #0c1118;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 .logo {
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 4px 8px;
-}
-.nav {
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: none;
-  color: var(--text);
-  padding: 10px 10px;
-  border-radius: 8px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  color: var(--ink);
 }
-.nav.active {
-  background: var(--bg-panel);
+.logo-mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--brand);
+  flex-shrink: 0;
 }
-.nav.muted {
-  color: var(--muted);
+.nav-item.muted {
+  color: var(--ink-faint);
   pointer-events: none;
 }
 .soon {
@@ -131,30 +130,29 @@ function logout() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
+  min-height: 56px;
+  height: auto;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
 .top h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ink);
 }
 .meta {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 0.85rem;
+  margin: 2px 0 0;
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
 }
 .user {
   display: flex;
   gap: 12px;
   align-items: center;
-  color: var(--muted);
-}
-.ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 6px 10px;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
 }
 .body {
   flex: 1;

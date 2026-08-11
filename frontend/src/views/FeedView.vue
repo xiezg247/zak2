@@ -295,7 +295,7 @@ onMounted(() => {
   background: var(--bg);
 }
 .item.unread {
-  border-color: #3d5a80;
+  border-color: var(--brand-soft);
 }
 .item h3 {
   margin: 4px 0;

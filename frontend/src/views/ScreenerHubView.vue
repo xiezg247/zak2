@@ -994,7 +994,7 @@ td {
 th {
   color: var(--muted);
   font-weight: 500;
-  background: #121924;
+  background: var(--surface-muted);
   position: sticky;
   top: 0;
 }
