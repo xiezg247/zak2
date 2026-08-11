@@ -4,7 +4,8 @@
 
 ## 0. 前置
 
-- [ ] `cd backend && uv run alembic upgrade head` 已执行，`alembic_version` 为最新
+- [ ] `cd backend && uv run alembic upgrade head` 已执行，`alembic_version` 含 `009_create_public_bars`；`public.dbbardata` / `public.dbbaroverview` 存在
+- [ ] upgrade 后 Ops 手动跑 **补全自选日 K**（`fill_watchlist_bars`；需 `TUSHARE_TOKEN` + 已有自选；本迁移不自动拉数）
 - [ ] `.env` 已从 `.env.example` 复制，`DATABASE_URL` / `JWT_SECRET` 指向 zak2 自有库
 - [ ] （可选）从旧 zak 库导入：`scripts/import_from_zak.py` 后可登录
 - [ ] （可选）Redis 有行情：启动 `python -m app.quote_collector`（或 `./scripts/quote_collector.sh`）；本实例内勿多开 collector
