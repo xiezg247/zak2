@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 # 子表在前，父表在后（truncate CASCADE 时按此顺序亦可统一 CASCADE）
 DEFAULT_COPY_TABLES: list[str] = [
@@ -29,6 +29,13 @@ DEFAULT_COPY_TABLES: list[str] = [
     "app.backtest_runs",
     "app.web_team_reports",
     "chat.sessions",
+    "chat.messages",
+]
+
+# DEFAULT_COPY_TABLES 中使用 BIGSERIAL id 的表（显式插入 id 后需 setval）
+SERIAL_ID_TABLES: list[str] = [
+    "app.stock_note_entries",
+    "app.web_team_reports",
     "chat.messages",
 ]
 
@@ -62,6 +69,22 @@ def target_has_rows(engine: Engine, table: str) -> bool:
         return bool(conn.execute(text(f"SELECT 1 FROM {table} LIMIT 1")).first())
 
 
+def _reset_serial_sequence(conn: Connection, table: str, *, id_column: str = "id") -> None:
+    """将 BIGSERIAL 序列对齐到当前 max(id)，空表时下次 nextval 从 1 开始。"""
+    conn.execute(
+        text(
+            f"""
+            SELECT setval(
+              pg_get_serial_sequence(:table_name, :id_column),
+              COALESCE((SELECT MAX({id_column}) FROM {table}), 1),
+              (SELECT MAX({id_column}) FROM {table}) IS NOT NULL
+            )
+            """
+        ),
+        {"table_name": table, "id_column": id_column},
+    )
+
+
 def import_tables(
     source_url: str,
     target_url: str,
@@ -76,10 +99,10 @@ def import_tables(
         for t in tables:
             if target_has_rows(dst, t):
                 raise RuntimeError(f"目标表非空：{t}；请传 --force 或清空后再导")
-    with dst.begin() as conn:
-        for t in tables:
-            conn.execute(text(f"TRUNCATE {t} CASCADE"))
+    # 同一事务：truncate → copy → setval；失败则全部回滚，避免空表残留
     with src.connect() as sconn, dst.begin() as dconn:
+        if tables:
+            dconn.execute(text(f"TRUNCATE {', '.join(tables)} CASCADE"))
         for t in tables:
             rows = sconn.execute(text(f"SELECT * FROM {t}")).mappings().all()
             if not rows:
@@ -93,4 +116,8 @@ def import_tables(
                 [dict(r) for r in rows],
             )
             counts[t] = len(rows)
+        table_set = set(tables)
+        for t in SERIAL_ID_TABLES:
+            if t in table_set:
+                _reset_serial_sequence(dconn, t)
     return counts

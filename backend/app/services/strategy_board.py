@@ -9,8 +9,9 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.services import watchlist_repo as repo
+from app.core.redis_keys import KEY_PREFIX
 from app.services import signal_panel_repo
+from app.services import watchlist_repo as repo
 from app.services.off_plan import (
     build_plan_symbol_statuses,
     list_off_plan_vt_symbols,
@@ -24,7 +25,6 @@ from app.services.trading_risk import (
     load_trading_risk_prefs,
     normalize_plan_max_pct,
 )
-from app.core.redis_keys import KEY_PREFIX
 from app.services.tushare_screener import latest_open_yyyymmdd
 
 DEFAULT_CONFIG_KEY = "AshareShortBreakoutStrategy:5:10"
