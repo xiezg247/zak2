@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from app.services.limit_list_store import attach_first_time_fields, load_first_time_map
-from app.services.ops_sync_limit_list import JOB_ID, ensure_limit_list_table, sync_limit_list
+from app.services.ops_sync_limit_list import JOB_ID, sync_limit_list
 
 
 def test_attach_first_time_fields_by_vt_and_tf() -> None:
@@ -43,10 +43,7 @@ def test_load_first_time_map_from_db() -> None:
 
     def _execute(stmt, params=None):  # noqa: ANN001
         result = MagicMock()
-        sql = str(stmt)
-        if "CREATE TABLE" in sql:
-            return result
-        if "limit_list_daily" in sql:
+        if "limit_list_daily" in str(stmt):
             result.mappings.return_value = [
                 {"vt_symbol": "SHSE.600519", "first_time": "0935"},
                 {"vt_symbol": "SZSE.000001", "first_time": "1400"},
@@ -67,8 +64,6 @@ def test_load_first_time_map_lazy_fetch() -> None:
     def _execute(stmt, params=None):  # noqa: ANN001
         result = MagicMock()
         sql = str(stmt)
-        if "CREATE TABLE" in sql:
-            return result
         if "SELECT vt_symbol" in sql or ("limit_list_daily" in sql and "SELECT" in sql.upper()):
             calls["read"] += 1
             if calls["read"] == 1:
@@ -96,9 +91,6 @@ def test_load_first_time_map_no_token_silent() -> None:
 
     def _execute(stmt, params=None):  # noqa: ANN001
         result = MagicMock()
-        sql = str(stmt)
-        if "CREATE TABLE" in sql:
-            return result
         result.mappings.return_value = []
         return result
 
@@ -155,7 +147,6 @@ def test_sync_limit_list_upserts() -> None:
         patch("app.services.ops_sync_limit_list.ts.query", return_value=mock_rows),
         patch("app.services.ops_sync_limit_list.recent_open_dates", return_value=["20240805"]),
         patch("app.services.ops_sync_limit_list.save_job_run_meta") as meta,
-        patch("app.services.ops_sync_limit_list.ensure_limit_list_table"),
     ):
         out = sync_limit_list(db)
     assert out["success"] is True
@@ -163,17 +154,3 @@ def test_sync_limit_list_upserts() -> None:
     assert any("INSERT INTO app.limit_list_daily" in str(c.args[0]) for c in db.execute.call_args_list)
     meta.assert_called_once()
     assert meta.call_args.kwargs["last_success"] is True
-
-
-def test_ensure_limit_list_table_runs_ddl() -> None:
-    db = MagicMock()
-    ensure_limit_list_table(db)
-    sql = str(db.execute.call_args.args[0])
-    assert "CREATE TABLE IF NOT EXISTS app.limit_list_daily" in sql
-    db.commit.assert_not_called()
-
-
-def test_ensure_limit_list_table_commit_opt_in() -> None:
-    db = MagicMock()
-    ensure_limit_list_table(db, commit=True)
-    db.commit.assert_called_once()

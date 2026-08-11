@@ -14,22 +14,6 @@ from app.services.ops_scheduler import save_job_run_meta
 from app.services.tushare_screener import latest_open_yyyymmdd, ts_code_to_tf
 
 JOB_ID = "sync_limit_list"
-DDL = """
-CREATE TABLE IF NOT EXISTS app.limit_list_daily (
-  trade_date text NOT NULL,
-  vt_symbol text NOT NULL,
-  ts_code text NOT NULL DEFAULT '',
-  name text NOT NULL DEFAULT '',
-  limit_times double precision NOT NULL DEFAULT 0,
-  first_time text NOT NULL DEFAULT '',
-  last_time text NOT NULL DEFAULT '',
-  fd_amount double precision NOT NULL DEFAULT 0,
-  open_times double precision NOT NULL DEFAULT 0,
-  strth double precision NOT NULL DEFAULT 0,
-  updated_at text NOT NULL DEFAULT '',
-  PRIMARY KEY (trade_date, vt_symbol)
-)
-"""
 
 _FIELDS = "ts_code,trade_date,name,limit_times,first_time,last_time,fd_amount,open_times,strth"
 
@@ -69,13 +53,6 @@ def recent_open_dates(db: Session, *, lookback: int) -> list[str]:
             out.append(day.strftime("%Y%m%d"))
         day -= timedelta(days=1)
     return out
-
-
-def ensure_limit_list_table(db: Session, *, commit: bool = False) -> None:
-    """CREATE TABLE IF NOT EXISTS；默认不 commit，避免读路径误提交共享 session。"""
-    db.execute(text(DDL))
-    if commit:
-        db.commit()
 
 
 def _now_iso() -> str:
@@ -178,7 +155,6 @@ def sync_limit_list(db: Session) -> dict[str, Any]:
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
         return {"success": False, "message": message, "days": 0, "rows": 0, "skipped": True}
 
-    ensure_limit_list_table(db)
     lookback = _lookback_days()
     dates = recent_open_dates(db, lookback=lookback)
     if not dates:

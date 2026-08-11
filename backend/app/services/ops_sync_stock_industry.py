@@ -17,22 +17,6 @@ JOB_ID = "sync_stock_industry"
 SYNCED_AT_KEY = "stock_industry_synced_at"
 INSERT_CHUNK = 500
 
-DDL = """
-CREATE TABLE IF NOT EXISTS app.stock_industry (
-  symbol text NOT NULL,
-  exchange text NOT NULL,
-  industry text NOT NULL DEFAULT '',
-  industry_l1 text NOT NULL DEFAULT '',
-  source text NOT NULL DEFAULT '',
-  updated_at text NOT NULL DEFAULT '',
-  PRIMARY KEY (symbol, exchange)
-)
-"""
-
-
-def ensure_table(db: Session) -> None:
-    db.execute(text(DDL))
-
 
 def rows_from_sw_members(raw: list[dict]) -> tuple[list[dict], int]:
     rows: list[dict] = []
@@ -111,8 +95,6 @@ def sync_stock_industry(db: Session) -> dict[str, Any]:
         return _fail(db, str(exc))
 
     try:
-        ensure_table(db)
-
         raw_sw = ts.query(
             "index_member_all",
             {"is_new": "Y"},

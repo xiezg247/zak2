@@ -48,7 +48,6 @@ def test_sync_sw_success() -> None:
         patch.object(svc.ts, "require_token"),
         patch.object(svc.ts, "query", return_value=sw) as q,
         patch.object(svc, "save_job_run_meta"),
-        patch.object(svc, "ensure_table"),
     ):
         out = svc.sync_stock_industry(db)
     assert out["success"] is True
@@ -72,7 +71,6 @@ def test_sync_fallback_stock_basic() -> None:
         patch.object(svc.ts, "require_token"),
         patch.object(svc.ts, "query", side_effect=_query),
         patch.object(svc, "save_job_run_meta"),
-        patch.object(svc, "ensure_table"),
     ):
         out = svc.sync_stock_industry(db)
     assert out["success"] is True
@@ -97,7 +95,6 @@ def test_sync_empty_fail() -> None:
         patch.object(svc.ts, "require_token"),
         patch.object(svc.ts, "query", return_value=[]),
         patch.object(svc, "save_job_run_meta"),
-        patch.object(svc, "ensure_table"),
     ):
         out = svc.sync_stock_industry(db)
     assert out["success"] is False

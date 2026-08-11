@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services import tushare_client as ts
-from app.services.ops_sync_limit_list import ensure_limit_list_table, sync_one_day
+from app.services.ops_sync_limit_list import sync_one_day
 from app.services.seal_time import format_seal_time_label, seal_time_score
 from app.services.symbols import parse_flexible_symbol, to_tf_symbol, to_vt_symbol
 from app.services.tushare_screener import latest_open_yyyymmdd
@@ -66,11 +66,6 @@ def load_first_time_map(
     lazy_fetch: bool = True,
 ) -> dict[str, str]:
     """从 PG 读 vt_symbol → first_time；空且可懒拉时 sync 当日后再读。无 token 静默空 map。"""
-    try:
-        ensure_limit_list_table(db)
-    except Exception:  # noqa: BLE001
-        return {}
-
     td = _normalize_trade_date(trade_date) if trade_date else latest_open_yyyymmdd(db)
     if not td:
         return {}
@@ -125,12 +120,6 @@ def list_limit_list(
     lazy_fetch: bool = True,
 ) -> dict[str, Any]:
     """当日涨停列表摘要；无数据返回空 rows，不抛错。"""
-    try:
-        ensure_limit_list_table(db)
-    except Exception:  # noqa: BLE001
-        td = _normalize_trade_date(trade_date) if trade_date else ""
-        return {"trade_date": td, "total": 0, "rows": []}
-
     td = _normalize_trade_date(trade_date) if trade_date else latest_open_yyyymmdd(db)
     if not td:
         return {"trade_date": "", "total": 0, "rows": []}
