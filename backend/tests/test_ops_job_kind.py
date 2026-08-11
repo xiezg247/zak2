@@ -6,7 +6,7 @@ from app.services.ops_scheduler import job_kind_for, list_scheduler_jobs
 def test_job_kind_mapping() -> None:
     assert job_kind_for("purge_stale_cache") == "runnable"
     assert job_kind_for("collect_quotes") == "process"
-    assert job_kind_for("enrich_market_quotes") == "planned"
+    assert job_kind_for("enrich_market_quotes") == "runnable"
 
 
 def test_list_jobs_includes_job_kind() -> None:
@@ -17,4 +17,4 @@ def test_list_jobs_includes_job_kind() -> None:
         rows = {r["job_id"]: r for r in list_scheduler_jobs(db)}
     assert rows["collect_quotes"]["job_kind"] == "process"
     assert rows["purge_stale_cache"]["job_kind"] == "runnable"
-    assert rows["enrich_market_quotes"]["job_kind"] == "planned"
+    assert rows["enrich_market_quotes"]["job_kind"] == "runnable"

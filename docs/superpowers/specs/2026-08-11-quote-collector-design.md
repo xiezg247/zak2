@@ -16,7 +16,7 @@
 - 不把全市场采集塞进 uvicorn / 内嵌 APScheduler 主路径  
 - 不 import `vnpy_*` / 不调 zak 子进程  
 - 不推 Tick / 五档；WS 仍只推 `seq` → 前端拉 REST  
-- 不做 Tushare 因子 enrich（换手/量比/净流入等）——第二刀  
+- 不在 collector 内做 Tushare 因子 enrich（换手/量比/净流入等）——见 [行情 enrich 设计](./2026-08-11-quote-enrich-design.md)  
 - 不迁键前缀到 `zak2:*`；不做自建 Redis 强制替换宿主机  
 - 不与 zak 采集双写共存（文档约定：**同一 Redis 只跑一个采集端**）  
 - 不做 `change_speed_5m` 基线、L1 内存 cache（桌面专有优化）

@@ -7,6 +7,7 @@ from typing import Callable
 from app.services import (
     ops_auto_screen,
     ops_bars_fill,
+    ops_enrich_quotes,
     ops_purge,
     ops_sync_bilibili_feed,
     ops_sync_calendar,
@@ -39,6 +40,7 @@ RUNNERS: dict[str, Callable[..., dict]] = {
     "screen_post_close": ops_auto_screen.screen_post_close,
     "warm_market_summary": ops_warm_market.warm_market_summary,
     "sync_bilibili_feed": _run_sync_bilibili_feed,
+    "enrich_market_quotes": ops_enrich_quotes.enrich_market_quotes,
 }
 
 

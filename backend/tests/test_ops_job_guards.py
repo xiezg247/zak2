@@ -43,9 +43,9 @@ def _api_client(user: User | None = None) -> TestClient:
 
 def _planned_job_row(*, enabled: bool = False) -> dict[str, object]:
     return {
-        "job_id": "enrich_market_quotes",
-        "name": "行情因子 enrich",
-        "description": "异步合并 Tushare 因子到 Redis",
+        "job_id": "prefetch_moneyflow",
+        "name": "主力资金预拉",
+        "description": "收盘后 moneyflow 预热",
         "job_kind": "planned",
         "runnable": False,
         "run_hint": "未实现：见 docs/product-roadmap.md",
@@ -62,7 +62,7 @@ def _planned_job_row(*, enabled: bool = False) -> dict[str, object]:
 def test_patch_planned_job_enabled_true_returns_400() -> None:
     client = _api_client()
     with patch("app.services.ops_scheduler.patch_job_enabled") as p:
-        r = client.patch("/api/v1/ops/scheduler/jobs/enrich_market_quotes", json={"enabled": True})
+        r = client.patch("/api/v1/ops/scheduler/jobs/prefetch_moneyflow", json={"enabled": True})
     assert r.status_code == 400
     p.assert_not_called()
 
@@ -74,7 +74,7 @@ def test_patch_planned_job_enabled_false_returns_200() -> None:
         patch("app.services.ops_scheduler.list_scheduler_jobs") as list_jobs,
     ):
         list_jobs.return_value = [_planned_job_row(enabled=False)]
-        r = client.patch("/api/v1/ops/scheduler/jobs/enrich_market_quotes", json={"enabled": False})
+        r = client.patch("/api/v1/ops/scheduler/jobs/prefetch_moneyflow", json={"enabled": False})
     assert r.status_code == 200
     p.assert_called_once()
     assert r.json()["enabled"] is False

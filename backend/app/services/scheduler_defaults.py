@@ -24,6 +24,7 @@ DEFAULT_CRON: dict[str, dict] = {
         "minute": 15,
         "day_of_week": "mon-fri",
     },
+    "enrich_market_quotes": {"hour": 15, "minute": 20, "day_of_week": "mon-fri"},
 }
 
 _FALLBACK = {"hour": 8, "minute": 0, "day_of_week": "mon-fri", "hours": None}
