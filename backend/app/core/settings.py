@@ -12,7 +12,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = "postgresql+psycopg://zak:zak@localhost:5432/zak"
+    database_url: str = "postgresql+psycopg://zak2:zak2@localhost:5432/zak2"
     jwt_secret: str = "change-me-in-production-min-32-chars!!"
     jwt_expire_days: int = 7
     redis_url: str = "redis://127.0.0.1:6379/0"
