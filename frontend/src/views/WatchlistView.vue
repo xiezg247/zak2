@@ -968,6 +968,7 @@ onUnmounted(() => {
   grid-template-rows: 1fr auto;
   height: 100%;
   min-height: 0;
+  padding: 0;
 }
 .workspace {
   display: grid;
@@ -1019,7 +1020,7 @@ onUnmounted(() => {
   margin-bottom: 10px;
   padding: 10px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--surface-muted);
 }
 .risk-card {
@@ -1154,7 +1155,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 2px 6px;
   font-size: 0.8rem;
   background: var(--bg);
@@ -1201,15 +1202,15 @@ input,
 select {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 8px 10px;
 }
 .primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--brand-foreground);
   border: none;
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px 12px;
   font-weight: 600;
 }
@@ -1218,7 +1219,7 @@ select {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px 12px;
 }
 .chip {
@@ -1255,7 +1256,7 @@ select {
 }
 .table-wrap {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   overflow: auto;
   background: var(--bg-elevated);
   max-height: 280px;
@@ -1315,7 +1316,7 @@ tbody tr.off-plan.on {
 }
 .chart {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg-elevated);
   padding: 12px;
 }

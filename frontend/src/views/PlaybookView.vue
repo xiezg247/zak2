@@ -126,7 +126,6 @@ onMounted(() => {
 
 <style scoped>
 .page {
-  padding: 16px 20px;
   display: grid;
   gap: 16px;
 }
@@ -137,7 +136,7 @@ onMounted(() => {
 .discipline {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   padding: 12px 14px;
   display: grid;
   gap: 8px;
@@ -169,7 +168,7 @@ onMounted(() => {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   color: var(--muted);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px 10px;
 }
 .toc button.on {
@@ -178,7 +177,7 @@ onMounted(() => {
 }
 .body {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg-elevated);
   padding: 14px;
 }
@@ -195,7 +194,7 @@ onMounted(() => {
 }
 .ghost,
 .primary {
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 6px 10px;
 }
 .ghost {
@@ -206,14 +205,14 @@ onMounted(() => {
 .primary {
   background: var(--accent);
   border: none;
-  color: #fff;
+  color: var(--brand-foreground);
 }
 textarea,
 .md {
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 12px;
   font-family: var(--mono);
@@ -224,7 +223,7 @@ textarea,
 }
 .plan {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   padding: 10px 12px;
   margin-top: 8px;
   background: var(--bg-elevated);

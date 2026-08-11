@@ -308,10 +308,10 @@ onMounted(async () => {
 
 <style scoped>
 .page {
-  padding: 16px 20px;
   display: grid;
   gap: 12px;
   height: 100%;
+  padding: 16px 24px 24px;
 }
 .profiles {
   display: flex;
@@ -336,7 +336,7 @@ onMounted(async () => {
 .left,
 .right {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg-elevated);
   padding: 12px;
   overflow: auto;
@@ -353,7 +353,7 @@ onMounted(async () => {
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--muted);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 6px;
 }
 .tabs button.on {
@@ -371,7 +371,7 @@ select,
 textarea {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 8px 10px;
 }
@@ -383,8 +383,8 @@ textarea {
 .primary {
   background: var(--accent);
   border: none;
-  color: #fff;
-  border-radius: 8px;
+  color: var(--brand-foreground);
+  border-radius: 0.5rem;
   padding: 10px;
   font-weight: 600;
 }
@@ -408,7 +408,7 @@ h3 {
   text-align: left;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 8px;
   display: grid;
@@ -422,7 +422,7 @@ h3 {
 .stat {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px 10px;
 }
 .k {
@@ -436,7 +436,7 @@ h3 {
 }
 .chart {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg);
   padding: 10px;
 }
@@ -447,7 +447,7 @@ h3 {
 }
 .table-wrap {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   overflow: auto;
   background: var(--bg);
 }

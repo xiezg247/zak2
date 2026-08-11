@@ -201,8 +201,8 @@ onMounted(async () => {
 
 <style scoped>
 .page {
-  padding: 16px 20px;
   height: 100%;
+  padding: 0;
 }
 .err {
   color: var(--danger);
@@ -216,7 +216,7 @@ onMounted(async () => {
 .left,
 .right {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg-elevated);
   padding: 12px;
   overflow: auto;
@@ -237,7 +237,7 @@ onMounted(async () => {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 6px 10px;
 }
 .tabs button.on {
@@ -248,7 +248,7 @@ input,
 textarea {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 8px 10px;
   width: 100%;
@@ -258,7 +258,7 @@ textarea {
   text-align: left;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 8px;
   display: grid;
@@ -296,15 +296,15 @@ textarea {
 .primary {
   background: var(--accent);
   border: none;
-  color: #fff;
-  border-radius: 8px;
+  color: var(--brand-foreground);
+  border-radius: 0.5rem;
   padding: 8px 12px;
 }
 .ghost {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px 12px;
 }
 .link {

@@ -422,8 +422,8 @@ onMounted(async () => {
 
 <style scoped>
 .page {
-  padding: 16px 20px;
   height: 100%;
+  padding: 0;
 }
 .err {
   color: var(--danger);
@@ -438,7 +438,7 @@ onMounted(async () => {
 .left,
 .right {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg-elevated);
   display: grid;
   gap: 8px;
@@ -464,7 +464,7 @@ onMounted(async () => {
   gap: 8px;
   padding: 10px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg);
 }
 .team-title {
@@ -490,7 +490,7 @@ onMounted(async () => {
 .team-box input {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 8px 10px;
 }
@@ -501,7 +501,7 @@ onMounted(async () => {
 }
 .score-card {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px 10px;
   background: var(--bg);
   display: grid;
@@ -525,7 +525,7 @@ onMounted(async () => {
   text-align: left;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 8px;
   display: grid;
@@ -551,7 +551,7 @@ onMounted(async () => {
 }
 .bubble {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   padding: 10px 12px;
   background: var(--bg);
 }
@@ -587,7 +587,7 @@ onMounted(async () => {
 }
 .confirm-card {
   border: 1px solid var(--accent);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   padding: 10px 12px;
   background: var(--surface-muted);
   display: grid;
@@ -620,7 +620,7 @@ onMounted(async () => {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px 12px;
 }
 .status-line {
@@ -647,7 +647,7 @@ pre {
 textarea {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 10px;
   resize: vertical;
@@ -655,8 +655,8 @@ textarea {
 .primary {
   background: var(--accent);
   border: none;
-  color: #fff;
-  border-radius: 8px;
+  color: var(--brand-foreground);
+  border-radius: 0.5rem;
   padding: 10px 14px;
   font-weight: 600;
 }

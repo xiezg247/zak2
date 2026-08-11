@@ -103,7 +103,6 @@ onMounted(async () => {
 
 <style scoped>
 .page {
-  padding: 16px 20px;
   display: grid;
   gap: 14px;
 }
@@ -121,7 +120,7 @@ onMounted(async () => {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   color: var(--muted);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 6px 10px;
 }
 .tabs button.on {
@@ -131,7 +130,7 @@ onMounted(async () => {
 select {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 6px 10px;
 }
@@ -145,7 +144,7 @@ select {
 }
 .table-wrap {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   overflow: auto;
   background: var(--bg-elevated);
 }

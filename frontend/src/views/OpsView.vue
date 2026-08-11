@@ -385,7 +385,6 @@ onMounted(async () => {
 
 <style scoped>
 .page {
-  padding: 16px 20px;
   display: grid;
   gap: 16px;
 }
@@ -397,7 +396,7 @@ onMounted(async () => {
 .card,
 .panel {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg-elevated);
   padding: 12px 14px;
 }
@@ -451,7 +450,7 @@ onMounted(async () => {
   align-items: center;
 }
 .filter {
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px 12px;
   border: 1px solid var(--border);
   background: var(--bg);
@@ -509,7 +508,7 @@ th {
 .primary,
 .ghost,
 .toggle {
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px 12px;
   border: 1px solid var(--border);
   cursor: pointer;
@@ -517,7 +516,7 @@ th {
 .primary {
   background: var(--accent);
   border-color: transparent;
-  color: #fff;
+  color: var(--brand-foreground);
   font-weight: 600;
 }
 .ghost {

@@ -25,7 +25,10 @@ def main() -> int:
     tables = tables_for_import(with_market_sync=args.with_market_sync_tables)
     counts = import_tables(src, dst, tables, force=args.force)
     for t, n in counts.items():
-        print(f"{t}: {n}")
+        if n < 0:
+            print(f"{t}: skipped (missing on source or target)")
+        else:
+            print(f"{t}: {n}")
     print("done")
     return 0
 

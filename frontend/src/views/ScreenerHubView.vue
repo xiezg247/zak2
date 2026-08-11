@@ -845,7 +845,7 @@ onMounted(async () => {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   color: var(--muted);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px;
 }
 .tabs button.on {
@@ -876,7 +876,7 @@ select,
 input {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 8px 10px;
 }
@@ -898,9 +898,9 @@ input {
 }
 .primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--brand-foreground);
   border: none;
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 10px;
   font-weight: 600;
 }
@@ -911,7 +911,7 @@ input {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 6px 10px;
 }
 .link {
@@ -944,7 +944,7 @@ input {
   text-align: left;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: var(--text);
   padding: 8px 10px;
   display: grid;
@@ -979,7 +979,7 @@ input {
 }
 .table-wrap {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   overflow: auto;
   background: var(--bg-elevated);
 }
@@ -1045,7 +1045,7 @@ th {
 }
 .weight-panel {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px;
   display: grid;
   gap: 8px;
@@ -1097,7 +1097,7 @@ th {
 }
 .industry-panel {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px;
   display: grid;
   gap: 6px;

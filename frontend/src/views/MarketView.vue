@@ -445,7 +445,6 @@ onUnmounted(() => {
 
 <style scoped>
 .page {
-  padding: 16px 20px;
   display: grid;
   gap: 14px;
 }
@@ -455,9 +454,10 @@ onUnmounted(() => {
   gap: 10px;
 }
 .card {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-card);
   padding: 12px 14px;
 }
 .k {
@@ -494,12 +494,14 @@ onUnmounted(() => {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   color: var(--muted);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 6px 10px;
 }
 .tabs button.on {
-  color: var(--text);
-  border-color: var(--accent);
+  background: var(--brand-light);
+  color: var(--brand);
+  border-color: var(--brand-soft);
+  font-weight: 500;
 }
 .auto {
   display: flex;
@@ -510,7 +512,7 @@ onUnmounted(() => {
 }
 .ghost,
 .primary {
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 6px 10px;
   border: 1px solid var(--border);
   cursor: pointer;
@@ -522,7 +524,7 @@ onUnmounted(() => {
 .primary {
   background: var(--accent);
   border-color: transparent;
-  color: #fff;
+  color: var(--brand-foreground);
   font-weight: 600;
 }
 .err {
@@ -542,7 +544,7 @@ onUnmounted(() => {
 .table-wrap,
 .detail {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg-elevated);
 }
 .table-wrap {
@@ -611,7 +613,7 @@ tbody tr.on {
 }
 .thresholds-section {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg-elevated);
   padding: 12px 14px;
 }

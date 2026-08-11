@@ -193,10 +193,10 @@ onMounted(() => {
 
 <style scoped>
 .page {
-  padding: 16px 20px;
   display: grid;
   gap: 12px;
   height: 100%;
+  padding: 16px 24px 24px;
 }
 .hint {
   margin: 0;
@@ -216,7 +216,7 @@ onMounted(() => {
 .left,
 .right {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg-elevated);
   padding: 12px;
   overflow: auto;
@@ -233,7 +233,7 @@ onMounted(() => {
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px 10px;
 }
 .sync-label {
@@ -246,8 +246,8 @@ onMounted(() => {
 .primary {
   background: var(--accent);
   border: none;
-  color: #fff;
-  border-radius: 8px;
+  color: var(--brand-foreground);
+  border-radius: 0.5rem;
   padding: 8px 12px;
 }
 .primary:disabled {
@@ -266,7 +266,7 @@ onMounted(() => {
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px 10px;
 }
 .sub.on {
@@ -276,7 +276,7 @@ onMounted(() => {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--muted);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 0 8px;
 }
 .ghost {
@@ -284,12 +284,12 @@ onMounted(() => {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 6px 10px;
 }
 .item {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   padding: 10px 12px;
   cursor: pointer;
   background: var(--bg);

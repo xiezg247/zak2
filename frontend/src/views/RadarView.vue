@@ -369,12 +369,12 @@ onMounted(() => {
 
 <style scoped>
 .page {
-  padding: 16px 20px;
   display: grid;
   gap: 14px;
   height: 100%;
   min-height: 0;
   box-sizing: border-box;
+  padding: 16px 24px 24px;
 }
 .toolbar {
   display: flex;
@@ -386,14 +386,14 @@ onMounted(() => {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 6px 10px;
 }
 .primary {
   background: var(--accent);
   border: none;
   color: var(--brand-foreground);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 6px 12px;
   font-weight: 600;
 }
@@ -450,7 +450,8 @@ onMounted(() => {
   text-align: left;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-card);
   padding: 12px;
   color: var(--text);
   display: grid;
@@ -474,7 +475,7 @@ onMounted(() => {
 }
 .table-wrap {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   overflow: auto;
   background: var(--bg-elevated);
 }
@@ -501,7 +502,7 @@ th {
 }
 .side {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background: var(--bg-elevated);
   padding: 12px;
   display: grid;
@@ -528,7 +529,7 @@ th {
 }
 .weight-panel {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px;
   display: grid;
   gap: 8px;
@@ -575,7 +576,7 @@ th {
 }
 .side-row {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 8px;
   display: grid;
   gap: 4px;
