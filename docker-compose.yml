@@ -1,31 +1,60 @@
-# zak2：api + web + quote-collector；PG/Redis 用宿主机 zak（host.docker.internal）
+# zak2：postgres + redis + api + quote-collector + web
 # 用法：docker compose up --build
 # Web: http://127.0.0.1:8080  API: http://127.0.0.1:8000
+# 宿主机端口占用时映射：5433→PG、6380→Redis、8001→API；容器内仍为 postgres:5432 / redis:6379 / :8000
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: zak2
+      POSTGRES_PASSWORD: zak2
+      POSTGRES_DB: zak2
+    ports:
+      - "5433:5432"
+    volumes:
+      - zak2_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zak2 -d zak2"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8001:8000"
     env_file:
       - .env
     environment:
-      # 覆盖本机 localhost：容器内访问宿主机服务
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql+psycopg://zak:zak@host.docker.internal:5432/zak}
-      REDIS_URL: ${DOCKER_REDIS_URL:-redis://host.docker.internal:6379/0}
+      DATABASE_URL: postgresql+psycopg://zak2:zak2@postgres:5432/zak2
+      REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: ${DOCKER_CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
       API_HOST: 0.0.0.0
       API_PORT: "8000"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://127.0.0.1:8000/health"]
       interval: 10s
       timeout: 3s
-      retries: 5
-      start_period: 15s
+      retries: 8
+      start_period: 40s
 
   quote-collector:
     build:
@@ -34,11 +63,14 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql+psycopg://zak:zak@host.docker.internal:5432/zak}
-      REDIS_URL: ${DOCKER_REDIS_URL:-redis://host.docker.internal:6379/0}
-    command: ["python", "-m", "app.quote_collector"]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      DATABASE_URL: postgresql+psycopg://zak2:zak2@postgres:5432/zak2
+      REDIS_URL: redis://redis:6379/0
+    entrypoint: ["python", "-m", "app.quote_collector"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   web:
@@ -50,3 +82,6 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+volumes:
+  zak2_pg:

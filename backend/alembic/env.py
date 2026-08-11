@@ -39,7 +39,9 @@ def run_migrations_online() -> None:
     section["sqlalchemy.url"] = _database_url()
     connectable = engine_from_config(section, prefix="sqlalchemy.", poolclass=pool.NullPool)
     with connectable.connect() as connection:
+        # SQLAlchemy 2.0 autobegin：先提交 SET，避免外层事务在退出时回滚掉 alembic 迁移
         connection.execute(text(f"SET search_path TO {_SEARCH_PATH}"))
+        connection.commit()
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()

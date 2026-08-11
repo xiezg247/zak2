@@ -33,6 +33,10 @@ echo "==> 安装前端依赖"
 API_HOST="${API_HOST:-127.0.0.1}"
 API_PORT="${API_PORT:-8000}"
 
+# 提示：本机开发需自行准备 PG/Redis（或 docker compose 起依赖）；启动 API 前建议迁移
+echo "==> 提示：启动 API 前可执行：cd backend && uv run alembic upgrade head"
+echo "    （不强制起 Docker PG；DATABASE_URL 见 .env）"
+
 PIDS=()
 cleanup() {
   for pid in "${PIDS[@]:-}"; do
