@@ -87,12 +87,11 @@ const last = computed(() => (props.bars.length ? props.bars[props.bars.length - 
   <div class="candle">
     <svg :viewBox="`0 0 ${width} ${height}`" preserveAspectRatio="none" role="img">
       <line
+        class="midline"
         :x1="pad.left"
         :x2="width - pad.right"
         :y1="layout.midY"
         :y2="layout.midY"
-        stroke="currentColor"
-        stroke-opacity="0.15"
       />
       <template v-for="(c, i) in layout.candles" :key="i">
         <line :x1="c.x" :y1="c.yH" :x2="c.x" :y2="c.yL" :stroke="c.color" stroke-width="1" />
@@ -129,7 +128,10 @@ const last = computed(() => (props.bars.length ? props.bars[props.bars.length - 
 
 <style scoped>
 .candle {
-  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  padding: 12px;
   width: 100%;
 }
 .candle svg {
@@ -137,8 +139,11 @@ const last = computed(() => (props.bars.length ? props.bars[props.bars.length - 
   height: 240px;
   display: block;
 }
+.midline {
+  stroke: var(--line);
+}
 .axis {
-  fill: var(--muted);
+  fill: var(--ink-muted);
   font-size: 10px;
 }
 .hint {
@@ -147,7 +152,7 @@ const last = computed(() => (props.bars.length ? props.bars[props.bars.length - 
   gap: 10px;
   margin-top: 8px;
   font-size: 0.78rem;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-family: var(--mono);
 }
 </style>
