@@ -5,6 +5,49 @@ from __future__ import annotations
 # interval 日 K 值为 Interval.DAILY.value → 'd'
 DAILY_INTERVAL = "d"
 
+PUBLIC_BAR_TABLE_UP: tuple[str, ...] = (
+    """
+    CREATE TABLE IF NOT EXISTS public.dbbardata (
+      id SERIAL PRIMARY KEY,
+      symbol VARCHAR NOT NULL,
+      exchange VARCHAR NOT NULL,
+      datetime TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+      interval VARCHAR NOT NULL,
+      volume REAL NOT NULL,
+      turnover REAL NOT NULL,
+      open_interest REAL NOT NULL,
+      open_price REAL NOT NULL,
+      high_price REAL NOT NULL,
+      low_price REAL NOT NULL,
+      close_price REAL NOT NULL
+    )
+    """,
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS dbbardata_symbol_exchange_interval_datetime
+    ON public.dbbardata (symbol, exchange, interval, datetime)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS public.dbbaroverview (
+      id SERIAL PRIMARY KEY,
+      symbol VARCHAR NOT NULL,
+      exchange VARCHAR NOT NULL,
+      interval VARCHAR NOT NULL,
+      count INTEGER NOT NULL,
+      start TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+      "end" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    )
+    """,
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS dbbaroverview_symbol_exchange_interval
+    ON public.dbbaroverview (symbol, exchange, interval)
+    """,
+)
+
+PUBLIC_BAR_TABLE_DOWN: tuple[str, ...] = (
+    "DROP TABLE IF EXISTS public.dbbardata CASCADE",
+    "DROP TABLE IF EXISTS public.dbbaroverview CASCADE",
+)
+
 PUBLIC_BAR_INDEX_UP: tuple[str, ...] = (
     # 单标的 tail：WHERE interval='d' AND symbol=? AND exchange=? AND datetime BETWEEN ...
     """
