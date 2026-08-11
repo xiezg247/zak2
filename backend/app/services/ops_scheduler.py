@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
+
+JobKind = Literal["runnable", "process", "planned"]
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -15,6 +17,30 @@ from app.services.scheduler_defaults import resolve_cron
 _CONFIG_ID = "default"
 _META_PREFIX = "scheduler/job_last_run/"
 _MAX_MESSAGE_LEN = 500
+
+
+def job_kind_for(job_id: str) -> JobKind:
+    if job_id in RUNNABLE_JOB_IDS:
+        return "runnable"
+    if job_id == "collect_quotes":
+        return "process"
+    return "planned"
+
+
+def _status_label_for(kind: JobKind) -> str:
+    if kind == "runnable":
+        return "可跑"
+    if kind == "process":
+        return "独立进程"
+    return "未实现"
+
+
+def _run_hint_for(kind: JobKind) -> str | None:
+    if kind == "runnable":
+        return None
+    if kind == "process":
+        return "请启动：python -m app.quote_collector（本实例内勿多开）"
+    return "未实现：见 docs/product-roadmap.md"
 
 
 def load_scheduler_config(db: Session) -> dict[str, Any]:
@@ -131,25 +157,15 @@ def list_scheduler_jobs(db: Session) -> list[dict[str, Any]]:
         if not isinstance(job_cfg, dict):
             job_cfg = {}
         meta = load_job_run_meta(db, spec.job_id)
+        kind = job_kind_for(spec.job_id)
         row: dict[str, Any] = {
             "job_id": spec.job_id,
             "name": spec.name,
             "description": spec.description,
-            "runnable": spec.job_id in RUNNABLE_JOB_IDS,
-            "run_hint": (
-                None
-                if spec.job_id in RUNNABLE_JOB_IDS
-                else (
-                    "请启动：python -m app.quote_collector（本实例内勿多开）"
-                    if spec.job_id == "collect_quotes"
-                    else "未实现：见 docs/product-roadmap.md"
-                )
-            ),
-            "status_label": (
-                "可跑"
-                if spec.job_id in RUNNABLE_JOB_IDS
-                else ("独立进程" if spec.job_id == "collect_quotes" else "未实现")
-            ),
+            "job_kind": kind,
+            "runnable": kind == "runnable",
+            "run_hint": _run_hint_for(kind),
+            "status_label": _status_label_for(kind),
             "enabled": bool(job_cfg.get("enabled", False)),
             "cron_hour": job_cfg.get("cron_hour"),
             "cron_minute": job_cfg.get("cron_minute"),

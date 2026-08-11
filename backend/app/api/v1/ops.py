@@ -33,7 +33,6 @@ from app.services import (
     ops_sync_calendar,
     ops_sync_sector,
 )
-from app.services.ops_catalog import RUNNABLE_JOB_IDS
 from app.services.ops_runners import RUNNERS, needs_user_id
 
 router = APIRouter(prefix="/ops", tags=["ops"])
@@ -145,6 +144,14 @@ def patch_scheduler_job(
     db: Session = Depends(get_db),
 ) -> SchedulerJobOut:
     _ = user
+    kind = ops_scheduler.job_kind_for(job_id)
+    if kind != "runnable":
+        detail = (
+            "独立进程请启动 quote-collector"
+            if kind == "process"
+            else "未实现任务不可启用"
+        )
+        raise HTTPException(status_code=400, detail=detail)
     try:
         ops_scheduler.patch_job_enabled(db, job_id, body.enabled)
     except KeyError as exc:
@@ -192,7 +199,15 @@ def _run_ops_job(async_job_id: str, catalog_job_id: str, user_id: str = "") -> N
 
 @router.post("/scheduler/jobs/{job_id}/run", response_model=JobAccepted)
 def run_scheduler_job(job_id: str, user: User = Depends(get_current_user)) -> JobAccepted:
-    if job_id not in RUNNABLE_JOB_IDS or job_id not in RUNNERS:
+    kind = ops_scheduler.job_kind_for(job_id)
+    if kind != "runnable":
+        detail = (
+            "独立进程请启动 quote-collector"
+            if kind == "process"
+            else "未实现任务不可执行"
+        )
+        raise HTTPException(status_code=400, detail=detail)
+    if job_id not in RUNNERS:
         raise HTTPException(
             status_code=501,
             detail=f"zak2 暂不支持执行该任务，请用 CLI：job run {job_id}",

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -40,6 +40,7 @@ class SchedulerJobOut(BaseModel):
     job_id: str
     name: str
     description: str
+    job_kind: Literal["runnable", "process", "planned"] = "runnable"
     runnable: bool
     run_hint: str | None = None
     status_label: str = "可跑"
