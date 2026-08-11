@@ -33,6 +33,7 @@ from app.services import (
     ops_sync_calendar,
     ops_sync_sector,
 )
+from app.services.ops_catalog import JOBS_BY_ID
 from app.services.ops_runners import RUNNERS, needs_user_id
 
 router = APIRouter(prefix="/ops", tags=["ops"])
@@ -144,8 +145,10 @@ def patch_scheduler_job(
     db: Session = Depends(get_db),
 ) -> SchedulerJobOut:
     _ = user
+    if job_id not in JOBS_BY_ID:
+        raise HTTPException(status_code=404, detail="未知任务")
     kind = ops_scheduler.job_kind_for(job_id)
-    if kind != "runnable":
+    if kind != "runnable" and body.enabled:
         detail = (
             "独立进程请启动 quote-collector"
             if kind == "process"

@@ -22,10 +22,11 @@ async function refresh() {
 }
 
 async function toggle(job: SchedulerJob) {
-  if (job.job_kind !== 'runnable') return
+  if (job.job_kind !== 'runnable' && !job.enabled) return
+  const nextEnabled = job.job_kind === 'runnable' ? !job.enabled : false
   busy.value = job.job_id
   try {
-    const updated = await opsApi.setEnabled(job.job_id, !job.enabled)
+    const updated = await opsApi.setEnabled(job.job_id, nextEnabled)
     jobs.value = jobs.value.map((row) => (row.job_id === updated.job_id ? updated : row))
   } catch (e) {
     error.value = e instanceof Error ? e.message : '更新失败'
@@ -342,7 +343,7 @@ onMounted(async () => {
                     type="button"
                     class="toggle"
                     :class="{ on: j.enabled }"
-                    :disabled="busy === j.job_id || j.job_kind !== 'runnable'"
+                    :disabled="busy === j.job_id || (j.job_kind !== 'runnable' && !j.enabled)"
                     @click="toggle(j)"
                   >
                     {{ j.enabled ? '开' : '关' }}

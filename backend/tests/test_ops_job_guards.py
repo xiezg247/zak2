@@ -41,10 +41,57 @@ def _api_client(user: User | None = None) -> TestClient:
     return TestClient(app)
 
 
-def test_patch_planned_job_returns_400() -> None:
+def _planned_job_row(*, enabled: bool = False) -> dict[str, object]:
+    return {
+        "job_id": "enrich_market_quotes",
+        "name": "行情因子 enrich",
+        "description": "异步合并 Tushare 因子到 Redis",
+        "job_kind": "planned",
+        "runnable": False,
+        "run_hint": "未实现：见 docs/product-roadmap.md",
+        "status_label": "未实现",
+        "enabled": enabled,
+        "cron_hour": None,
+        "cron_minute": None,
+        "cron_day_of_week": None,
+        "interval_seconds": None,
+        "last_run": None,
+    }
+
+
+def test_patch_planned_job_enabled_true_returns_400() -> None:
     client = _api_client()
     with patch("app.services.ops_scheduler.patch_job_enabled") as p:
         r = client.patch("/api/v1/ops/scheduler/jobs/enrich_market_quotes", json={"enabled": True})
+    assert r.status_code == 400
+    p.assert_not_called()
+
+
+def test_patch_planned_job_enabled_false_returns_200() -> None:
+    client = _api_client()
+    with (
+        patch("app.services.ops_scheduler.patch_job_enabled") as p,
+        patch("app.services.ops_scheduler.list_scheduler_jobs") as list_jobs,
+    ):
+        list_jobs.return_value = [_planned_job_row(enabled=False)]
+        r = client.patch("/api/v1/ops/scheduler/jobs/enrich_market_quotes", json={"enabled": False})
+    assert r.status_code == 200
+    p.assert_called_once()
+    assert r.json()["enabled"] is False
+
+
+def test_patch_unknown_job_returns_404() -> None:
+    client = _api_client()
+    with patch("app.services.ops_scheduler.patch_job_enabled") as p:
+        r = client.patch("/api/v1/ops/scheduler/jobs/unknown_job_xyz", json={"enabled": False})
+    assert r.status_code == 404
+    p.assert_not_called()
+
+
+def test_patch_process_job_enabled_true_returns_400() -> None:
+    client = _api_client()
+    with patch("app.services.ops_scheduler.patch_job_enabled") as p:
+        r = client.patch("/api/v1/ops/scheduler/jobs/collect_quotes", json={"enabled": True})
     assert r.status_code == 400
     p.assert_not_called()
 
