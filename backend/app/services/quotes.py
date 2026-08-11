@@ -1,4 +1,4 @@
-"""Redis 行情读取（兼容 zak 键名与短 field）。"""
+"""Redis 行情读取（zak2 自有键与短 field）。"""
 
 from __future__ import annotations
 
@@ -8,14 +8,15 @@ from typing import Any
 
 import redis
 
+from app.core.redis_keys import (
+    KEY_PREFIX,
+    META_QUOTE_COUNT_KEY,
+    META_UPDATED_AT_KEY,
+    QUOTE_BLOB_KEY_FMT,
+    QUOTE_KEY_FMT,
+    RANK_KEY_FMT,
+)
 from app.core.settings import get_settings
-
-KEY_PREFIX = "zak"
-RANK_KEY_FMT = f"{KEY_PREFIX}:rank:{{field}}"
-QUOTE_KEY_FMT = f"{KEY_PREFIX}:quote:{{symbol}}"
-QUOTE_BLOB_KEY_FMT = f"{KEY_PREFIX}:quote:b:{{symbol}}"
-META_UPDATED_AT_KEY = f"{KEY_PREFIX}:meta:updated_at"
-META_QUOTE_COUNT_KEY = f"{KEY_PREFIX}:meta:quote_count"
 
 SHORT_TO_LONG = {
     "s": "symbol",

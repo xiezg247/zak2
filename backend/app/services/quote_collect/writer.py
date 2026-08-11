@@ -1,19 +1,19 @@
-"""Redis 行情写入（键兼容现网 QuoteStore）。"""
+"""Redis 行情写入（zak2 自有键）。"""
 
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
 
+from app.core.redis_keys import (
+    META_QUOTE_COUNT_KEY,
+    META_SEQ_KEY,
+    META_UPDATED_AT_KEY,
+    NOTIFY_CHANNEL,
+    QUOTE_KEY_FMT,
+    RANK_KEY_FMT,
+)
 from app.services.quote_collect.models import QuoteSnapshot
-
-KEY_PREFIX = "zak"
-QUOTE_KEY_FMT = f"{KEY_PREFIX}:quote:{{symbol}}"
-RANK_KEY_FMT = f"{KEY_PREFIX}:rank:{{field}}"
-META_UPDATED_AT_KEY = f"{KEY_PREFIX}:meta:updated_at"
-META_QUOTE_COUNT_KEY = f"{KEY_PREFIX}:meta:quote_count"
-META_SEQ_KEY = f"{KEY_PREFIX}:meta:seq"
-NOTIFY_CHANNEL = f"{KEY_PREFIX}:notify:quotes"
 
 FULL_RANK_FIELDS: tuple[str, ...] = (
     "change_pct",

@@ -24,10 +24,10 @@ from app.services.trading_risk import (
     load_trading_risk_prefs,
     normalize_plan_max_pct,
 )
+from app.core.redis_keys import KEY_PREFIX
 from app.services.tushare_screener import latest_open_yyyymmdd
 
 DEFAULT_CONFIG_KEY = "AshareShortBreakoutStrategy:5:10"
-KEY_PREFIX = "zak"
 _CHINA_TZ = timezone(timedelta(hours=8))
 
 

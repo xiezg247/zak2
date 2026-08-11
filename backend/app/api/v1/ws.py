@@ -9,6 +9,7 @@ from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 
 from app.core.db import SessionLocal
+from app.core.redis_keys import NOTIFY_CHANNEL
 from app.core.security import decode_access_token
 from app.models.user import User
 from app.services.quote_notify_hub import get_quote_notify_hub
@@ -46,7 +47,7 @@ async def ws_quotes(websocket: WebSocket, token: str = Query(default="")) -> Non
     hub = get_quote_notify_hub()
     await hub.register(websocket)
     try:
-        await websocket.send_json({"type": "hello", "channel": "zak:notify:quotes"})
+        await websocket.send_json({"type": "hello", "channel": NOTIFY_CHANNEL})
         while True:
             try:
                 # 客户端可发 ping；超时则服务端发 ping

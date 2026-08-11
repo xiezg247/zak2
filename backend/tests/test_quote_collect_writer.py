@@ -20,4 +20,4 @@ def test_write_quotes_pipeline_and_publish() -> None:
     n = RedisQuoteWriter(client).write_quotes({"SHSE.600519": q})
     assert n == 1
     pipe.incr.assert_called()
-    client.publish.assert_called_with("zak:notify:quotes", "7")
+    client.publish.assert_called_with("zak2:notify:quotes", "7")

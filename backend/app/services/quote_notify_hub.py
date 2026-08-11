@@ -1,4 +1,4 @@
-"""Redis zak:notify:quotes → WebSocket 广播。"""
+"""Redis zak2:notify:quotes → WebSocket 广播。"""
 
 from __future__ import annotations
 
@@ -10,11 +10,10 @@ from typing import Any
 import redis
 from fastapi import WebSocket
 
+from app.core.redis_keys import NOTIFY_CHANNEL as QUOTE_NOTIFY_CHANNEL
 from app.core.settings import get_settings
 
 logger = logging.getLogger(__name__)
-
-QUOTE_NOTIFY_CHANNEL = "zak:notify:quotes"
 
 
 class QuoteNotifyHub:
