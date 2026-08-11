@@ -1068,7 +1068,7 @@ onUnmounted(() => {
 }
 .plan-list li:hover,
 .plan-list li.on {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--brand-light);
 }
 .plan-name {
   flex: 1;
@@ -1080,7 +1080,7 @@ onUnmounted(() => {
 }
 .plan-tag {
   font-size: 0.75rem;
-  color: var(--muted, #8b98a8);
+  color: var(--muted);
   flex-shrink: 0;
 }
 .notify-card {
@@ -1282,7 +1282,7 @@ tbody tr {
   cursor: pointer;
 }
 tbody tr.on {
-  background: var(--surface-muted);
+  background: var(--brand-light);
 }
 tbody tr.off-plan {
   background: #fee2e2;

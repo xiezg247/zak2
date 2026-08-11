@@ -141,6 +141,7 @@ const last = computed(() => (props.bars.length ? props.bars[props.bars.length - 
 }
 .midline {
   stroke: var(--line);
+  opacity: 0.55;
 }
 .axis {
   fill: var(--ink-muted);

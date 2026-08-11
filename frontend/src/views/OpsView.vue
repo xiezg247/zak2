@@ -402,7 +402,7 @@ onMounted(async () => {
   padding: 12px 14px;
 }
 .card.bad {
-  border-color: #7a3a3a;
+  border-color: var(--danger);
 }
 .card h3 {
   margin: 0 0 6px;
@@ -430,7 +430,7 @@ onMounted(async () => {
   font-size: 1.25rem;
 }
 .stat-row .warn strong {
-  color: #d4a15c;
+  color: var(--brand-dark);
 }
 .toolbar {
   display: flex;
@@ -503,7 +503,7 @@ th {
   margin: 0;
 }
 .ok {
-  color: #6fbf8a;
+  color: var(--ok);
   margin: 0;
 }
 .primary,

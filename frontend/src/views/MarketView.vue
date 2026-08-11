@@ -593,7 +593,7 @@ tbody tr {
   cursor: pointer;
 }
 tbody tr.on {
-  background: var(--surface-muted);
+  background: var(--brand-light);
 }
 .mono {
   font-family: var(--mono);
@@ -668,7 +668,7 @@ tbody tr.on {
 }
 .ok {
   margin: 0;
-  color: #6fbf8a;
+  color: var(--ok);
   font-size: 0.85rem;
 }
 @media (max-width: 960px) {
