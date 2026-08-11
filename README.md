@@ -27,7 +27,15 @@ Schema 主权在本仓 **Alembic**（`backend/alembic/`）。
 
 1. 复制环境变量：`cp .env.example .env` 并填写（建议配置 `TICKFLOW_API_KEY`）
 2. 迁移数据库：`cd backend && uv sync --extra dev && uv run alembic upgrade head`
-3. （可选）从旧 zak 库一次性导入用户/自选：`scripts/import_from_zak.py`（见 `.env.example` 中 `ZAK_IMPORT_DATABASE_URL`）
+3. （可选）从旧 zak 库一次性导入用户/自选（目标库已 `alembic upgrade head` 后）：
+
+```bash
+ZAK_IMPORT_DATABASE_URL=postgresql+psycopg://zak:zak@localhost:5432/zak \
+DATABASE_URL=postgresql+psycopg://zak2:zak2@localhost:5432/zak2 \
+python scripts/import_from_zak.py --force
+```
+
+默认跳过日 K 大表；需同步 universe/日历等时加 `--with-market-sync-tables`。见 `.env.example` 中 `ZAK_IMPORT_DATABASE_URL`。
 
 ## 启动
 
