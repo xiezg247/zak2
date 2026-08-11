@@ -7,7 +7,7 @@ from typing import Any, Callable
 
 from sqlalchemy.orm import Session
 
-from app.services import backtest_repo, bars, notes, watchlist_repo
+from app.services import backtest_repo, bars, notes, positions_repo, signal_panel_repo, watchlist_repo
 from app.services.symbols import to_vt_symbol
 
 MAX_RESULT_CHARS = 6000
@@ -19,6 +19,10 @@ WRITE_TOOL_NAMES = frozenset({
     "remove_watchlist",
     "upsert_note_memo",
     "add_note_entry",
+    "upsert_position",
+    "delete_position",
+    "add_signal_panel",
+    "remove_signal_panel",
 })
 
 
@@ -203,8 +207,6 @@ def _remove_watchlist(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         return {"error": "不在自选中"}
     # 尽量同步移出信号名单（忽略失败）
     try:
-        from app.services import signal_panel_repo
-
         panel = signal_panel_repo.load_symbols(db, user_id)
         vt = to_vt_symbol(symbol, exchange)
         if vt in panel:
@@ -253,6 +255,105 @@ def _add_note_entry(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     }
 
 
+def _upsert_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
+    raw = str(args.get("symbol") or args.get("vt_symbol") or "").strip()
+    if not raw:
+        return {"error": "需要 symbol，例如 600519.SSE"}
+    try:
+        cost_price = float(args.get("cost_price"))
+        volume = int(args.get("volume"))
+    except (TypeError, ValueError):
+        return {"error": "cost_price / volume 无效"}
+    buy_date = str(args.get("buy_date") or "").strip()
+    if not buy_date:
+        return {"error": "需要 buy_date（YYYY-MM-DD）"}
+    notes_text = str(args.get("notes") or "")
+    plan_pct = args.get("plan_pct")
+    if plan_pct is not None and plan_pct != "":
+        try:
+            plan_pct = float(plan_pct)
+        except (TypeError, ValueError):
+            return {"error": "plan_pct 无效"}
+    else:
+        plan_pct = None
+    try:
+        symbol, exchange = watchlist_repo.resolve_symbol_pair(raw, args.get("exchange"))
+        existing = positions_repo.get_position(db, user_id, symbol, exchange)
+        if existing:
+            row = positions_repo.update_position(
+                db,
+                user_id,
+                symbol=symbol,
+                exchange=exchange,
+                cost_price=cost_price,
+                volume=volume,
+                buy_date=buy_date,
+                notes=notes_text,
+                plan_pct=plan_pct,
+            )
+            action = "updated"
+        else:
+            row = positions_repo.add_position(
+                db,
+                user_id,
+                symbol=symbol,
+                exchange=exchange,
+                cost_price=cost_price,
+                volume=volume,
+                buy_date=buy_date,
+                notes=notes_text,
+                plan_pct=plan_pct,
+            )
+            action = "created"
+    except Exception as exc:  # noqa: BLE001
+        return {"error": str(getattr(exc, "detail", None) or exc)}
+    vt = str(row.get("vt_symbol") or to_vt_symbol(symbol, exchange))
+    return {
+        "ok": True,
+        "action": action,
+        "vt_symbol": vt,
+        "cost_price": row.get("cost_price"),
+        "volume": row.get("volume"),
+        "buy_date": row.get("buy_date"),
+    }
+
+
+def _delete_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
+    raw = str(args.get("symbol") or args.get("vt_symbol") or "").strip()
+    if not raw:
+        return {"error": "需要 symbol，例如 600519.SSE"}
+    try:
+        symbol, exchange = watchlist_repo.resolve_symbol_pair(raw, args.get("exchange"))
+        ok = positions_repo.delete_position(db, user_id, symbol=symbol, exchange=exchange)
+    except Exception as exc:  # noqa: BLE001
+        return {"error": str(getattr(exc, "detail", None) or exc)}
+    if not ok:
+        return {"error": "持仓不存在"}
+    return {"ok": True, "vt_symbol": to_vt_symbol(symbol, exchange), "removed": True}
+
+
+def _add_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any:
+    raw = str(args.get("symbol") or args.get("vt_symbol") or "").strip()
+    if not raw:
+        return {"error": "需要 symbol，例如 600519.SSE"}
+    try:
+        symbols = signal_panel_repo.add_symbol(db, user_id, raw)
+    except Exception as exc:  # noqa: BLE001
+        return {"error": str(getattr(exc, "detail", None) or exc)}
+    return {"ok": True, "symbols": symbols}
+
+
+def _remove_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any:
+    raw = str(args.get("symbol") or args.get("vt_symbol") or "").strip()
+    if not raw:
+        return {"error": "需要 symbol，例如 600519.SSE"}
+    try:
+        symbols = signal_panel_repo.remove_symbol(db, user_id, raw)
+    except Exception as exc:  # noqa: BLE001
+        return {"error": str(getattr(exc, "detail", None) or exc)}
+    return {"ok": True, "symbols": symbols}
+
+
 def summarize_write_tool(name: str, args: dict[str, Any]) -> str:
     if name == "add_watchlist":
         sym = str(args.get("symbol") or args.get("vt_symbol") or "").strip() or "?"
@@ -271,6 +372,20 @@ def summarize_write_tool(name: str, args: dict[str, Any]) -> str:
         body = str(args.get("body") or "").strip().replace("\n", " ")
         preview = body[:40] + ("…" if len(body) > 40 else "")
         return f"记流水：{sym} — {preview}"
+    if name == "upsert_position":
+        sym = str(args.get("symbol") or args.get("vt_symbol") or "").strip() or "?"
+        cost = args.get("cost_price")
+        vol = args.get("volume")
+        return f"录入/更新持仓：{sym} 成本{cost} 数量{vol}"
+    if name == "delete_position":
+        sym = str(args.get("symbol") or args.get("vt_symbol") or "").strip() or "?"
+        return f"删除持仓：{sym}"
+    if name == "add_signal_panel":
+        sym = str(args.get("symbol") or args.get("vt_symbol") or "").strip() or "?"
+        return f"加入信号名单：{sym}"
+    if name == "remove_signal_panel":
+        sym = str(args.get("symbol") or args.get("vt_symbol") or "").strip() or "?"
+        return f"移出信号名单：{sym}"
     return name
 
 
@@ -293,6 +408,10 @@ WRITE_HANDLERS: dict[str, ToolHandler] = {
     "remove_watchlist": _remove_watchlist,
     "upsert_note_memo": _upsert_note_memo,
     "add_note_entry": _add_note_entry,
+    "upsert_position": _upsert_position,
+    "delete_position": _delete_position,
+    "add_signal_panel": _add_signal_panel,
+    "remove_signal_panel": _remove_signal_panel,
 }
 
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
@@ -504,6 +623,73 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "body": {"type": "string", "description": "流水全文"},
                 },
                 "required": ["body"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "upsert_position",
+            "description": "提议录入或更新持仓（须先在自选；需用户确认后生效）",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "vt_symbol": {"type": "string"},
+                    "exchange": {"type": "string"},
+                    "cost_price": {"type": "number"},
+                    "volume": {"type": "integer", "description": "100 股整手"},
+                    "buy_date": {"type": "string", "description": "YYYY-MM-DD"},
+                    "notes": {"type": "string"},
+                    "plan_pct": {"type": "number"},
+                },
+                "required": ["symbol", "cost_price", "volume", "buy_date"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_position",
+            "description": "提议删除持仓（需用户确认后生效）",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "vt_symbol": {"type": "string"},
+                    "exchange": {"type": "string"},
+                },
+                "required": ["symbol"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "add_signal_panel",
+            "description": "提议将股票加入信号名单（需用户确认后生效）",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "vt_symbol": {"type": "string"},
+                },
+                "required": ["symbol"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remove_signal_panel",
+            "description": "提议将股票移出信号名单（需用户确认后生效）",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "vt_symbol": {"type": "string"},
+                },
+                "required": ["symbol"],
             },
         },
     },

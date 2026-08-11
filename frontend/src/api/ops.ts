@@ -6,6 +6,14 @@ export type Health = {
   llm: { configured: boolean; model: string; api_base: string }
   tushare_configured: boolean
   mcp?: { configured?: boolean; enabled?: boolean; status?: string; tool_count?: number; tools?: string[]; error?: string }
+  quote_collector?: {
+    running?: boolean
+    provider?: string | null
+    status?: string | null
+    last_count?: number
+    ts?: string | null
+    hint?: string | null
+  }
   note?: string
 }
 
@@ -58,6 +66,10 @@ export type AsyncJob = {
 
 export const opsApi = {
   health: () => api<Health>('/api/v1/ops/health'),
+  forceCollector: () =>
+    api<SyncResult>('/api/v1/ops/collector/force', {
+      method: 'POST',
+    }),
   barsOverview: () => api<BarsOverview>('/api/v1/ops/bars/overview'),
   jobs: () => api<SchedulerJob[]>('/api/v1/ops/scheduler/jobs'),
   setEnabled: (jobId: string, enabled: boolean) =>

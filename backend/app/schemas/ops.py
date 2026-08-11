@@ -11,6 +11,8 @@ class HealthOut(BaseModel):
     llm: dict[str, Any]
     tushare_configured: bool
     mcp: dict[str, Any] = Field(default_factory=dict)
+    scheduler_lock: dict[str, Any] = Field(default_factory=dict)
+    quote_collector: dict[str, Any] = Field(default_factory=dict)
     note: str = ""
 
 

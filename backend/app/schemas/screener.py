@@ -103,6 +103,7 @@ class ReferencePeerRequest(BaseModel):
     reference_name: str = ""
     hard_filter: HardFilterPrefs | None = None
     hard_filter_template: str | None = None
+    weights: dict[str, float] | None = None
 
 
 class ConditionRunRequest(BaseModel):

@@ -6,8 +6,8 @@
 
 - [ ] zak 已 `cli.py db upgrade`，库可连
 - [ ] `.env` 已从 `.env.example` 复制，`DATABASE_URL` / `JWT_SECRET` 正确
-- [ ] （可选）Redis 有行情：`zak` 侧 `job run collect_quotes`
-- [ ] （可选）`TUSHARE_TOKEN` / `LLM_API_KEY` 已填
+- [ ] （可选）Redis 有行情：启动 `python -m app.quote_collector`（或 `./scripts/quote_collector.sh`）；勿与 zak `collect_quotes` 双写
+- [ ] （可选）`TUSHARE_TOKEN` / `LLM_API_KEY` / `TICKFLOW_API_KEY` 已填
 - [ ] （可选）内嵌调度：`EMBEDDED_SCHEDULER_ENABLED` / `BARS_SCHEDULER_ENABLED`；选股定时需 `SCHEDULER_SCREEN_USER_ID`；多 API 副本需 `REDIS_URL`（Redis job 锁防双跑；Redis 不可用或抢锁失败则跳过该次定时）
 
 ## 1. 启动
@@ -40,7 +40,7 @@ cd frontend && npm run dev
 
 - [ ] 条件：涨幅榜 / 自定义区间 / 硬过滤切换后命中数变化
 - [ ] Preset：涨停股（需 Redis）；低 PE / 中大盘（需 Tushare）
-- [ ] 配方：盘中多因子、盘后多因子、**超短统一**、**雷达龙头**；**形态**四类；**对标**输入标杆代码可跑（需 Tushare）
+- [ ] 配方：盘中多因子、盘后多因子、**超短统一**、**雷达龙头**；**形态**六类（含平台突破/回踩 MA20）；**对标**五维权重、输入标杆代码可跑（需 Tushare）；任意结果行点「**找同类**」→ 切对标 Tab 并以该行代码自动跑
 - [ ] 先 Ops **同步行业映射**（`sync_stock_industry`）；Redis 行情缺 `industry` 时，配方/雷达龙头结果列可见行业名（硬过滤「允许行业」可命中补全后的名）
 - [ ] 硬过滤模板下方可展开**行业白名单勾选**（读 `GET /screener/industries`）；未同步映射时空列表提示去 Ops 同步；勾选 1～2 个行业后跑条件/配方 → 结果列行业落在白名单内；**全不勾选**时命中数与仅选模板时一致
 - [ ] 勾选行业后**保存方案** → 刷新 → **加载复跑**仍保留勾选；取消全部勾选再跑与未限制时一致
@@ -68,9 +68,9 @@ cd frontend && npm run dev
 - [ ] `/notes` 备忘/流水可写；**研报 Tab** 可看团队落库（`?symbol=&report=` 可直达）
 - [ ] `/feed` 时间线可读；左侧输入 **mid** →「添加」可新增 UP 订阅（无 `BILIBILI_COOKIES` 时 400 提示明确）；**关键词搜索** → 结果点「添加」走现有添加路径（可勾选「并同步」）；勾选「并同步」可立即拉动态（失败仍保留订阅，页内提示 `sync_error`）；每行「删」confirm 后订阅及条目移除；配置 Cookie 后 Ops 跑 `sync_bilibili_feed` 可见新条目（无 Cookie / 无启用订阅时 skipped）；亦可 `pytest backend/tests/test_bilibili_user_search.py backend/tests/test_feed_search.py backend/tests/test_feed_subscriptions.py`
 - [ ] `/backtest` 对有日 K 的票跑通双均线
-- [ ] `/ai` 流式回复；写操作确认卡；**团队分析**快速/深度；结束后可「研报已保存」并跳转笔记；Agent 可调用 `list_skills` / `read_skill` 加载内置 Skill 说明（亦可 `pytest backend/tests/test_ai_tools_skills.py backend/tests/test_skills_catalog.py` 单测覆盖）
+- [ ] `/ai` 流式回复；写操作确认卡；可提议 `upsert_position` / `delete_position` / `add_signal_panel` / `remove_signal_panel`，确认卡后落库（缺自选时 upsert 应失败）；**团队分析**快速/深度；结束后可「研报已保存」并跳转笔记；Agent 可调用 `list_skills` / `read_skill` 加载内置 Skill 说明（亦可 `pytest backend/tests/test_ai_write_positions.py backend/tests/test_ai_tools_skills.py backend/tests/test_skills_catalog.py` 单测覆盖）
 - [ ] Agent / 工具：`list_note_symbols` / `get_stock_notes` 只读可用；`run_skill` 对 watchlist / screener / radar / market-emotion / **notes** 可用（只读；emotion 需情绪数据或可接受空结构；notes 无 vt_symbol 列符号、有则读备忘+流水；亦可 `pytest backend/tests/test_ai_read_tools.py backend/tests/test_skills_catalog.py backend/tests/test_ai_tools_skills.py` 单测覆盖）
-- [ ] `/ops` 健康绿（含 `scheduler_lock` backend/ttl/key_prefix；MCP 未启用显示「未启用」；启用且 URL 正确显示「已连接」）；可跑清理 cache / 盘中或盘后选股（需行情）；可跑 **`sync_limit_list`**（需 Tushare token；写入当日涨停列表/封板时刻）；可提交**同步 A 股列表**（`sync_universe`）；可提交**同步行业映射**（`sync_stock_industry` → `app.stock_industry`，需 Tushare token；申万空则回退 stock_basic）；可快捷**预热情绪周期**（`warm_market_summary`，写入短 TTL 缓存）；可快捷**B站订阅同步**（`sync_bilibili_feed`，需 `BILIBILI_COOKIES`）；无 token / 空结果有明确失败文案
+- [ ] `/ops` 健康绿（含 `scheduler_lock`；**行情采集**卡片可见 running/hint；「强制采一轮」在 collector 未启动时文案明确，启动后可触发）；MCP 未启用显示「未启用」；启用且 URL 正确显示「已连接」）；可跑清理 cache / 盘中或盘后选股（需行情）；可跑 **`sync_limit_list`**（需 Tushare token；写入当日涨停列表/封板时刻）；可提交**同步 A 股列表**（`sync_universe`）；可提交**同步行业映射**（`sync_stock_industry` → `app.stock_industry`，需 Tushare token；申万空则回退 stock_basic）；可快捷**预热情绪周期**（`warm_market_summary`，写入短 TTL 缓存）；可快捷**B站订阅同步**（`sync_bilibili_feed`，需 `BILIBILI_COOKIES`）；无 token / 空结果有明确失败文案
 - [ ] （可选）配置 `MCP_ENABLED` + `MCP_URL` 后，`/ops` MCP 卡片为已连接；AI 可调用 `mcp_diagnose_*` 只读工具；`GET /api/v1/ops/mcp/tools` 可列白名单
 - [ ] `/ops` 定时任务：可开关全部可跑 job（含 cache/日历/板块/涨停/universe/**sync_stock_industry**/日 K/选股/**warm_market_summary**/**sync_bilibili_feed**）；任务表可见 `sync_bilibili_feed` 开关；cron 只读展示（universe 默认周一 08:00；**stock_industry 默认周一 08:15**；warm 默认工作日 09:25；**bilibili 默认工作日 8–19 点每小时 :15**）；日 K「补全自选」/「补全过期」/「全市场日 K 首下」可提交（需 token；首下另需 app.universe，可先同步 A 股列表）；无 universe / 无 token 有明确失败文案；overview 不再提示仅 CLI
 - [ ] （可选）配置 `SCHEDULER_SCREEN_USER_ID` 后，盘中/盘后选股定时可写入该用户 `screener_runs`（未配置则跳过选股定时）

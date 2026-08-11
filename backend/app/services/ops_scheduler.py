@@ -136,7 +136,15 @@ def list_scheduler_jobs(db: Session) -> list[dict[str, Any]]:
             "name": spec.name,
             "description": spec.description,
             "runnable": spec.job_id in RUNNABLE_JOB_IDS,
-            "run_hint": None if spec.job_id in RUNNABLE_JOB_IDS else "请用 zak CLI：job run " + spec.job_id,
+            "run_hint": (
+                None
+                if spec.job_id in RUNNABLE_JOB_IDS
+                else (
+                    "请启动 zak2：python -m app.quote_collector（勿与 zak CLI 双写）"
+                    if spec.job_id == "collect_quotes"
+                    else "请用 zak CLI：job run " + spec.job_id
+                )
+            ),
             "enabled": bool(job_cfg.get("enabled", False)),
             "cron_hour": job_cfg.get("cron_hour"),
             "cron_minute": job_cfg.get("cron_minute"),

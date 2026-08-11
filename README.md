@@ -26,14 +26,14 @@ Schema 主权仍在 zak Alembic；zak2 只读写同库。
 ## 前置
 
 1. 在 **zak** 侧完成 PG 迁移与用户：`uv run python cli.py db upgrade`
-2. （可选）采集行情到 Redis：`uv run python cli.py job run collect_quotes`
-3. 复制环境变量：`cp .env.example .env` 并填写
+2. 复制环境变量：`cp .env.example .env` 并填写（建议配置 `TICKFLOW_API_KEY`）
+3. （可选）若不用 zak2 collector，仍可用 zak CLI：`uv run python cli.py job run collect_quotes`（**勿与 collector 双写同一 Redis**）
 
 ## 启动
 
 ```bash
-# 一键（推荐）
-chmod +x scripts/dev.sh scripts/check.sh
+# 一键（推荐：API + 行情采集 + 前端）
+chmod +x scripts/dev.sh scripts/check.sh scripts/quote_collector.sh
 ./scripts/dev.sh
 ```
 
@@ -43,12 +43,16 @@ chmod +x scripts/dev.sh scripts/check.sh
 cd backend && uv sync --extra dev
 uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
+# 另开：行情采集（TickFlow → Redis）
+uv run python -m app.quote_collector
+# 或 ./scripts/quote_collector.sh
+
 cd frontend && npm install && npm run dev
 ```
 
 打开 http://127.0.0.1:5173 ，使用 zak 已有账号登录。
 
-## Docker Compose（api + web）
+## Docker Compose（api + web + quote-collector）
 
 不编 PG/Redis：连**宿主机**上 zak 已有的库与 Redis（容器内用 `host.docker.internal`）。
 

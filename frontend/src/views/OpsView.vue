@@ -71,6 +71,23 @@ async function runJob(jobId: string, sync = false) {
   }
 }
 
+async function forceCollector() {
+  busy.value = 'collector_force'
+  message.value = ''
+  try {
+    const result = await opsApi.forceCollector()
+    message.value = result.message
+    if (!result.success) {
+      error.value = result.message
+    }
+    await refresh()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '强制采集失败'
+  } finally {
+    busy.value = ''
+  }
+}
+
 function scheduleText(j: SchedulerJob) {
   if (
     j.interval_seconds &&
@@ -114,6 +131,22 @@ onMounted(async () => {
           <h3>Redis 行情</h3>
           <p>{{ health.redis.ok ? '正常' : '不可用' }}</p>
           <p class="muted">quotes {{ health.redis.quote_count ?? 0 }} · {{ health.redis.updated_at || '无更新时间' }}</p>
+        </div>
+        <div class="card" :class="{ bad: !health.quote_collector?.running }">
+          <h3>行情采集</h3>
+          <p>{{ health.quote_collector?.running ? '运行中' : '未运行' }}</p>
+          <p class="muted">
+            {{
+              health.quote_collector?.running
+                ? `${health.quote_collector?.provider || '—'} · ${health.quote_collector?.status || '—'} · 最近 ${health.quote_collector?.last_count ?? 0} 条`
+                : health.quote_collector?.hint || 'python -m app.quote_collector'
+            }}
+          </p>
+          <div class="actions" style="margin-top: 8px">
+            <button type="button" class="ghost" :disabled="!!busy" @click="forceCollector">
+              {{ busy === 'collector_force' ? '发送中…' : '强制采一轮' }}
+            </button>
+          </div>
         </div>
         <div class="card" :class="{ bad: !health.llm.configured }">
           <h3>LLM</h3>

@@ -33,7 +33,7 @@ class JobSpec:
 
 
 JOB_SPECS: tuple[JobSpec, ...] = (
-    JobSpec("collect_quotes", "行情采集", "TickFlow 全市场快照写入 Redis（生产建议独立进程）", "collect_quotes"),
+    JobSpec("collect_quotes", "行情采集", "zak2 quote-collector → Redis（生产独立进程；勿与 zak CLI 双写）", "collect_quotes"),
     JobSpec("enrich_market_quotes", "行情因子 enrich", "异步合并 Tushare 因子到 Redis", "enrich_market_quotes"),
     JobSpec("sync_universe", "同步 A 股列表", "Tushare stock_basic → app.universe（Web 可跑）", "sync_universe"),
     JobSpec(

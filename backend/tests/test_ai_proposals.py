@@ -53,10 +53,26 @@ def test_summarize_write_tool() -> None:
     assert "删自选" in summarize_write_tool("remove_watchlist", {"symbol": "600519.SSE"})
     assert "写备忘" in summarize_write_tool("upsert_note_memo", {"vt_symbol": "600519.SSE", "body": "观察"})
     assert "记流水" in summarize_write_tool("add_note_entry", {"vt_symbol": "600519.SSE", "body": "买入观察"})
+    assert "持仓" in summarize_write_tool(
+        "upsert_position",
+        {"symbol": "600519.SSE", "cost_price": 100, "volume": 100, "buy_date": "2026-08-01"},
+    )
+    assert "删除持仓" in summarize_write_tool("delete_position", {"symbol": "600519.SSE"})
+    assert "信号名单" in summarize_write_tool("add_signal_panel", {"symbol": "600519.SSE"})
+    assert "移出信号名单" in summarize_write_tool("remove_signal_panel", {"symbol": "600519.SSE"})
 
 
 def test_write_tools_registered() -> None:
-    assert WRITE_TOOL_NAMES == {"add_watchlist", "remove_watchlist", "upsert_note_memo", "add_note_entry"}
+    assert WRITE_TOOL_NAMES == {
+        "add_watchlist",
+        "remove_watchlist",
+        "upsert_note_memo",
+        "add_note_entry",
+        "upsert_position",
+        "delete_position",
+        "add_signal_panel",
+        "remove_signal_panel",
+    }
 
 
 def test_execute_tool_blocks_all_writes() -> None:

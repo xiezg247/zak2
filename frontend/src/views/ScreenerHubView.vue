@@ -423,6 +423,16 @@ async function addToWatchlist(row: Record<string, unknown>) {
   }
 }
 
+type ScreenerResultRow = Record<string, unknown>
+
+function findPeers(row: ScreenerResultRow) {
+  const vt = String(row.vt_symbol || '').trim() || String(row.symbol || '').trim()
+  if (!vt) return
+  peerSymbol.value = vt
+  tab.value = 'peer'
+  void runScreen()
+}
+
 function exportCsv() {
   if (!current.value) return
   const url = screenerApi.exportCsvUrl(current.value.id)
@@ -596,7 +606,7 @@ onMounted(async () => {
             标杆代码
             <input v-model="peerSymbol" placeholder="600519.SSE" @keyup.enter="runScreen" />
           </label>
-          <p class="hint muted">同业 40% + 估值 35% + 近5日动量 25%（需 Tushare）</p>
+          <p class="hint muted">同业 30% + 估值 25% + 近5日动量 15% + 近20日动量 15% + 换手 15%（需 Tushare）</p>
         </div>
 
         <div class="block">
@@ -779,8 +789,9 @@ onMounted(async () => {
                   <template v-else-if="isRadarLeader && rowSealLabel(row)">{{ rowSealLabel(row) }}</template>
                   <template v-else>—</template>
                 </td>
-                <td>
+                <td class="row-actions">
                   <button type="button" class="link" @click="addToWatchlist(row)">自选</button>
+                  <button type="button" class="link" @click="findPeers(row)">找同类</button>
                 </td>
               </tr>
               <tr v-if="!rows.length">
@@ -908,6 +919,10 @@ input {
   border: none;
   color: var(--accent);
   padding: 0;
+}
+.row-actions {
+  display: flex;
+  gap: 8px;
 }
 .status {
   margin: 0;

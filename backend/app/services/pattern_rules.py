@@ -175,10 +175,72 @@ def match_old_duck(series: BarSeries) -> PatternMatch | None:
     )
 
 
+def match_platform_break(series: BarSeries) -> PatternMatch | None:
+    """平台突破：突破前 15 日窄幅整理后放量收盘突破平台高。"""
+    if len(series.closes) < 40:
+        return None
+    platform_highs = series.highs[-17:-2]
+    platform_lows = series.lows[-17:-2]
+    if len(platform_highs) < 15 or len(platform_lows) < 15:
+        return None
+    platform_high = max(platform_highs)
+    platform_low = min(platform_lows)
+    if platform_low <= 0:
+        return None
+    amplitude = (platform_high - platform_low) / platform_low
+    if amplitude > 0.08:
+        return None
+    if series.closes[-1] <= platform_high:
+        return None
+    vol_ratio = _volume_ratio(series.volumes)
+    if vol_ratio is None or vol_ratio < 1.2:
+        return None
+    breakout_pct = (series.closes[-1] - platform_high) / platform_high * 100
+    score = breakout_pct + vol_ratio * 5
+    return PatternMatch(
+        score=round(score, 2),
+        hint=f"平台振幅 {amplitude * 100:.1f}%，量比 {vol_ratio:.2f}",
+    )
+
+
+def match_pullback_ma20(series: BarSeries) -> PatternMatch | None:
+    """缩量回踩 MA20：近 10 日曾贴 MA20，收阳且缩量；有 MA60 时要求 MA20>MA60。"""
+    if len(series.closes) < 40:
+        return None
+    ma20 = _ma(series.closes, 20)
+    if ma20 is None or ma20 <= 0:
+        return None
+    ma60 = _ma(series.closes, 60)
+    if ma60 is not None and not (ma20 > ma60):
+        return None
+    if series.closes[-1] < series.closes[-2]:
+        return None
+    vol_ratio = _volume_ratio(series.volumes)
+    if vol_ratio is None or vol_ratio > 0.9:
+        return None
+    near = False
+    dist_pct = 0.0
+    for low in series.lows[-10:]:
+        dist = abs(low - ma20) / ma20
+        if dist <= 0.02:
+            near = True
+            dist_pct = dist * 100
+            break
+    if not near:
+        return None
+    score = (0.02 - dist_pct / 100) * 100 + (0.9 - vol_ratio) * 10
+    return PatternMatch(
+        score=round(score, 2),
+        hint=f"距 MA20 {dist_pct:.1f}%，量比 {vol_ratio:.2f}",
+    )
+
+
 PATTERN_MATCHERS = {
     "ma_bull": match_ma_bull,
     "w_bottom": match_w_bottom,
     "old_duck": match_old_duck,
+    "platform_break": match_platform_break,
+    "pullback_ma20": match_pullback_ma20,
 }
 
 # theme_hot 为行情活跃度，无 K 线 matcher
@@ -186,6 +248,16 @@ PATTERN_META = (
     {"pattern_id": "ma_bull", "name": "均线多头", "description": "MA5>MA10>MA20>MA60 且收盘≥MA20"},
     {"pattern_id": "w_bottom", "name": "W底", "description": "近60日双底 + 突破颈线（简化）"},
     {"pattern_id": "old_duck", "name": "老鸭头", "description": "中期多头 + MA5金叉MA10 + 放量上攻"},
+    {
+        "pattern_id": "platform_break",
+        "name": "平台突破",
+        "description": "突破前15日振幅≤8%，收盘突破平台高且量比≥1.2",
+    },
+    {
+        "pattern_id": "pullback_ma20",
+        "name": "回踩MA20",
+        "description": "近10日贴MA20、收阳缩量；有MA60时要求MA20>MA60",
+    },
     {
         "pattern_id": "theme_hot",
         "name": "主题投资",

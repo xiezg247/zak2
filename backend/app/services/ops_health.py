@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.settings import get_settings
 from app.services import mcp_client, scheduler_lock
 from app.services.quotes import get_quote_store
+from app.services.quote_collect.control import collector_health
 
 
 def _mask_url(url: str) -> str:
@@ -65,5 +66,6 @@ def health_snapshot(db: Session) -> dict[str, Any]:
             "ttl_seconds": scheduler_lock.clamp_ttl(settings.scheduler_lock_ttl_seconds),
             "key_prefix": scheduler_lock.LOCK_KEY_PREFIX,
         },
-        "note": "可跑：purge / 日历 / 板块 / limit_list / 日 K 补全 / 选股；MCP 可接 Streamable HTTP 诊断工具。",
+        "quote_collector": collector_health(),
+        "note": "可跑：purge / 日历 / 板块 / limit_list / 日 K 补全 / 选股；行情采集见独立进程 python -m app.quote_collector；MCP 可接 Streamable HTTP 诊断工具。",
     }

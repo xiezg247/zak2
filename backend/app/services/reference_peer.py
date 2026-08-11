@@ -1,4 +1,4 @@
-"""标杆对标：同业 + 估值 + 近 5 日动量（Tushare，对齐桌面权重）。"""
+"""标杆对标：同业 + 估值 + 5/20 日动量 + 换手（Tushare，五维权重）。"""
 
 from __future__ import annotations
 
@@ -23,10 +23,20 @@ from app.services.tushare_screener import (
     ts_code_to_tf,
 )
 
-_WEIGHT_INDUSTRY = 0.40
-_WEIGHT_VALUATION = 0.35
-_WEIGHT_MOMENTUM = 0.25
-_MOMENTUM_DAYS = 5
+_DEFAULT_WEIGHTS = {
+    "industry": 0.30,
+    "valuation": 0.25,
+    "momentum_5d": 0.15,
+    "momentum_20d": 0.15,
+    "turnover": 0.15,
+}
+_MOMENTUM_5D = 5
+_MOMENTUM_20D = 20
+# 兼容旧常量名
+_WEIGHT_INDUSTRY = _DEFAULT_WEIGHTS["industry"]
+_WEIGHT_VALUATION = _DEFAULT_WEIGHTS["valuation"]
+_WEIGHT_MOMENTUM = _DEFAULT_WEIGHTS["momentum_5d"]
+_MOMENTUM_DAYS = _MOMENTUM_5D
 
 
 def vt_to_ts_code(vt_symbol: str) -> str:
@@ -73,6 +83,29 @@ def momentum_score(reference: float, candidate: float) -> float:
     return round(max(0.0, 100.0 - min(diff, 40.0) * 2.5), 1)
 
 
+def turnover_score(ref_to: float, cand_to: float) -> float:
+    """换手接近度；任一侧缺数据（≤0）时返回中性 50。"""
+    if ref_to <= 0 or cand_to <= 0:
+        return 50.0
+    return round(max(0.0, 100.0 - min(abs(ref_to - cand_to), 20.0) * 5.0), 1)
+
+
+def resolve_weights(override: dict[str, float] | None) -> dict[str, float]:
+    """合并默认权重；缺键补默认；归一化到和为 1。"""
+    merged = dict(_DEFAULT_WEIGHTS)
+    if override:
+        for key, value in override.items():
+            if key in merged:
+                try:
+                    merged[key] = float(value)
+                except (TypeError, ValueError):
+                    continue
+    total = sum(merged.values())
+    if total <= 0:
+        return dict(_DEFAULT_WEIGHTS)
+    return {key: value / total for key, value in merged.items()}
+
+
 def cumulative_return(ts_code: str, pct_maps: list[dict[str, float]]) -> float:
     if not ts_code:
         return 0.0
@@ -83,10 +116,22 @@ def cumulative_return(ts_code: str, pct_maps: list[dict[str, float]]) -> float:
     return (compound - 1.0) * 100.0
 
 
-def composite_similarity(*, val_score: float, mom_score: float) -> float:
+def composite_similarity(
+    *,
+    val_score: float,
+    mom5_score: float,
+    mom20_score: float,
+    turnover_s: float,
+    weights: dict[str, float] | None = None,
+) -> float:
+    w = resolve_weights(weights)
     industry_score = 100.0
     return round(
-        industry_score * _WEIGHT_INDUSTRY + val_score * _WEIGHT_VALUATION + mom_score * _WEIGHT_MOMENTUM,
+        industry_score * w["industry"]
+        + val_score * w["valuation"]
+        + mom5_score * w["momentum_5d"]
+        + mom20_score * w["momentum_20d"]
+        + turnover_s * w["turnover"],
         1,
     )
 
@@ -216,6 +261,7 @@ def run_reference_peer(
         if ts_code != ref_ts and (meta.get(ts_code) or {}).get("industry") == ref_industry
     ]
     if not candidates:
+        weights = resolve_weights(req.weights)
         return {
             "condition": f"对标 · {ref_name}",
             "source": "reference_peer",
@@ -226,6 +272,7 @@ def run_reference_peer(
                 "trade_date": trade_date,
                 "reference_industry": ref_industry,
                 "hard_filter_resolved": prefs.model_dump(),
+                "weights": {key: round(value, 4) for key, value in weights.items()},
             },
             "rows": [],
             "industry_dist": [],
@@ -237,20 +284,33 @@ def run_reference_peer(
             },
         }
 
-    pct_maps = _fetch_pct_maps(db, days=_MOMENTUM_DAYS)
+    weights = resolve_weights(req.weights)
+    pct_maps = _fetch_pct_maps(db, days=_MOMENTUM_20D)
     ref_pe = _positive_float(reference.get("pe_ttm") or reference.get("pe"))
     ref_mv = _positive_float(reference.get("circ_mv") or reference.get("total_mv"))
-    ref_momentum = cumulative_return(ref_ts, pct_maps)
+    ref_to = ts.safe_float(reference.get("turnover_rate"))
+    ref_mom5 = cumulative_return(ref_ts, pct_maps[:_MOMENTUM_5D])
+    ref_mom20 = cumulative_return(ref_ts, pct_maps[:_MOMENTUM_20D])
 
     scored_rows: list[QuoteRow] = []
     for item in candidates:
         ts_code = str(item.get("ts_code") or "").strip().upper()
         pe = _positive_float(item.get("pe_ttm") or item.get("pe"))
         mv = _positive_float(item.get("circ_mv") or item.get("total_mv"))
+        cand_to = ts.safe_float(item.get("turnover_rate"))
         val = valuation_score(pe=pe, mv=mv, ref_pe=ref_pe, ref_mv=ref_mv)
-        mom = cumulative_return(ts_code, pct_maps)
-        mom_s = momentum_score(ref_momentum, mom)
-        sim = composite_similarity(val_score=val, mom_score=mom_s)
+        mom5 = cumulative_return(ts_code, pct_maps[:_MOMENTUM_5D])
+        mom20 = cumulative_return(ts_code, pct_maps[:_MOMENTUM_20D])
+        mom5_s = momentum_score(ref_mom5, mom5)
+        mom20_s = momentum_score(ref_mom20, mom20)
+        to_s = turnover_score(ref_to, cand_to)
+        sim = composite_similarity(
+            val_score=val,
+            mom5_score=mom5_s,
+            mom20_score=mom20_s,
+            turnover_s=to_s,
+            weights=weights,
+        )
         tf = ts_code_to_tf(ts_code)
         name = (meta.get(ts_code) or {}).get("name") or ""
         reasons = [
@@ -258,13 +318,15 @@ def run_reference_peer(
             f"估值：PE {pe:.1f} / 流通市值 {mv:,.0f} 万（标杆 PE {ref_pe:.1f} · {ref_mv:,.0f} 万）"
             if pe or mv
             else "估值：—",
-            f"近{_MOMENTUM_DAYS}日涨跌 {mom:+.2f}%（标杆 {ref_momentum:+.2f}%）",
+            f"近{_MOMENTUM_5D}日涨跌 {mom5:+.2f}%（标杆 {ref_mom5:+.2f}%）",
+            f"近{_MOMENTUM_20D}日涨跌 {mom20:+.2f}%（标杆 {ref_mom20:+.2f}%）",
+            f"换手接近度 {to_s:.1f}（标杆 {ref_to:.2f}% · 候选 {cand_to:.2f}%）",
         ]
         row = QuoteRow(
             symbol=tf,
             name=name,
             last_price=ts.safe_float(item.get("close")),
-            turnover_rate=ts.safe_float(item.get("turnover_rate")),
+            turnover_rate=cand_to,
             volume_ratio=ts.safe_float(item.get("volume_ratio")),
             total_mv=ts.safe_float(item.get("total_mv")),
             circ_mv=ts.safe_float(item.get("circ_mv")),
@@ -273,9 +335,11 @@ def run_reference_peer(
         row.__dict__["_score"] = sim
         row.__dict__["_similarity_score"] = sim
         row.__dict__["_pe_ttm"] = round(pe, 4) if pe else None
-        row.__dict__["_momentum_5d"] = round(mom, 2)
+        row.__dict__["_momentum_5d"] = round(mom5, 2)
+        row.__dict__["_momentum_20d"] = round(mom20, 2)
+        row.__dict__["_turnover_score"] = to_s
         row.__dict__["_hit_reason"] = "；".join(reasons[:2])
-        row.__dict__["_pattern_hint"] = reasons[2] if len(reasons) > 2 else ""
+        row.__dict__["_pattern_hint"] = "；".join(reasons[2:])
         scored_rows.append(row)
 
     scored_rows.sort(key=lambda r: float(r.__dict__.get("_similarity_score") or 0), reverse=True)
@@ -295,6 +359,8 @@ def run_reference_peer(
         if r.__dict__.get("_pe_ttm") is not None:
             item["pe_ttm"] = r.__dict__["_pe_ttm"]
         item["momentum_5d"] = r.__dict__.get("_momentum_5d")
+        item["momentum_20d"] = r.__dict__.get("_momentum_20d")
+        item["turnover_score"] = r.__dict__.get("_turnover_score")
         item["hit_reason"] = r.__dict__.get("_hit_reason")
         item["pattern_hint"] = r.__dict__.get("_pattern_hint")
         item["reference_vt_symbol"] = tf_to_vt(ts_code_to_tf(ref_ts))
@@ -321,9 +387,7 @@ def run_reference_peer(
             "reference_industry": ref_industry,
             "hard_filter_resolved": prefs.model_dump(),
             "weights": {
-                "industry": _WEIGHT_INDUSTRY,
-                "valuation": _WEIGHT_VALUATION,
-                "momentum": _WEIGHT_MOMENTUM,
+                key: round(value, 4) for key, value in weights.items()
             },
         },
         "rows": packed,
@@ -333,7 +397,8 @@ def run_reference_peer(
             "vt_symbol": tf_to_vt(ts_code_to_tf(ref_ts)),
             "name": ref_name,
             "industry": ref_industry,
-            "momentum_5d": round(ref_momentum, 2),
+            "momentum_5d": round(ref_mom5, 2),
+            "momentum_20d": round(ref_mom20, 2),
             "pe_ttm": ref_pe or None,
         },
     }

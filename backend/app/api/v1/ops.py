@@ -45,6 +45,15 @@ def get_health(user: User = Depends(get_current_user), db: Session = Depends(get
     return HealthOut(**ops_health.health_snapshot(db))
 
 
+@router.post("/collector/force", response_model=SyncResult)
+def collector_force(user: User = Depends(get_current_user)) -> SyncResult:
+    _ = user
+    from app.services.quote_collect.control import force_collect_from_settings
+
+    result = force_collect_from_settings()
+    return SyncResult(success=bool(result.get("success")), message=str(result.get("message") or ""))
+
+
 @router.get("/mcp/tools", response_model=McpToolsOut)
 def get_mcp_tools(user: User = Depends(get_current_user)) -> McpToolsOut:
     _ = user

@@ -48,6 +48,13 @@ echo "==> 启动后端 http://${API_HOST}:${API_PORT}"
 ) &
 PIDS+=($!)
 
+echo "==> 启动行情采集 python -m app.quote_collector"
+(
+  cd backend
+  uv run python -m app.quote_collector
+) &
+PIDS+=($!)
+
 # 等 API 文档端口就绪（最多约 15s）
 for _ in $(seq 1 30); do
   code="$(curl -sf -o /dev/null -w "%{http_code}" "http://${API_HOST}:${API_PORT}/docs" || true)"
@@ -58,7 +65,7 @@ for _ in $(seq 1 30); do
 done
 
 echo "==> 启动前端 http://127.0.0.1:5173"
-echo "    使用 zak 同库账号登录；Ctrl+C 结束前后端"
+echo "    使用 zak 同库账号登录；Ctrl+C 结束前后端与采集"
 (cd frontend && npm run dev -- --host 127.0.0.1 --port 5173) &
 PIDS+=($!)
 

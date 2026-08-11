@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     mcp_tool_allowlist: str = ""
     # 废弃：stdio 命令；保留字段以免旧 .env 报错，运行时忽略
     mcp_command: str = ""
+    quote_collector_enabled: bool = True
+    quote_collect_interval_sec: int = 30
+    quote_provider: str = "tickflow"
+    tickflow_api_key: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:

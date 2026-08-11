@@ -4,7 +4,16 @@ import pytest
 
 def test_tools_registered() -> None:
     names = {t["function"]["name"] for t in TOOL_DEFINITIONS}
-    write = {"add_watchlist", "remove_watchlist", "upsert_note_memo", "add_note_entry"}
+    write = {
+        "add_watchlist",
+        "remove_watchlist",
+        "upsert_note_memo",
+        "add_note_entry",
+        "upsert_position",
+        "delete_position",
+        "add_signal_panel",
+        "remove_signal_panel",
+    }
     assert names == {
         "get_watchlist",
         "get_market_emotion",

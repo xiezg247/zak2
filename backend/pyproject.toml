@@ -15,6 +15,7 @@ dependencies = [
     "python-multipart>=0.0.17",
     "apscheduler>=3.11.3",
     "mcp>=2.0.0",
+    "tickflow[all]>=0.1.22",
 ]
 
 [project.optional-dependencies]

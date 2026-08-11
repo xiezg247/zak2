@@ -20,7 +20,7 @@
 | AI | **薄** | 单 Agent + 团队 + 写确认卡 + Web 研报落库；MCP Streamable HTTP 诊断工具 |
 | 运维 | **薄** | 可跑 job 已内嵌定时（含 Web `sync_universe` / `sync_stock_industry` / `sync_bilibili_feed`）；不可跑仍 CLI |
 | 风控通知 / 交易链路 | **薄** | 计划外 + trading/risk 偏好与仓位占比；自选可见计划标的对照；有通知历史只读；无下单 |
-| 行情采集常驻 | **CLI** | 设计上不进 API 进程 |
+| 行情采集常驻 | **有**（薄） | zak2 `quote-collector`（TickFlow→Redis 键兼容）；无 enrich/L1；与 zak CLI 采集互斥 |
 
 ---
 
@@ -33,7 +33,7 @@
 | 硬过滤模板 + 方案保存复跑 | **有** | Redis 行业为空时硬过滤前读 `app.stock_industry` 补全；Hub 可勾选行业白名单（`GET /screener/industries` + 与模板 merge） |
 | 盘中/盘后/超短多因子配方 | **有** | 简化打分；Hub 可编辑因子权重（按用户 meta）；缺 Redis 行业时可补全 |
 | 雷达龙头配方 | **有** | 简化 `leader_score`；情绪周期五阶段 gate；候选池硬过滤前可补空行业 |
-| 形态 / 对标 | **薄** | 四形态 + 标杆对标（Tushare）；未扩全桌面因子库 |
+| 形态 / 对标 | **薄** | 六形态（含平台突破/回踩 MA20）+ 五维标杆对标（同业/估值/5·20 日动量/换手，Tushare）；Hub 结果行「找同类」；未扩全桌面因子库 |
 | 自动选股 cron | **薄** | Web 内嵌可定时（需 SCHEDULER_SCREEN_USER_ID）；亦可手动跑 |
 
 ## 看盘
@@ -67,15 +67,15 @@
 
 | 能力 | zak2 | 备注 |
 |------|------|------|
-| 流式 chat + 只读工具 + 写操作确认卡 | **有** | 加/删自选、写备忘、记流水 |
+| 流式 chat + 只读工具 + 写操作确认卡 | **有** | 加/删自选、写备忘、记流水；持仓 upsert/delete、信号名单增删 |
 | 投研团队编排（快速） | **有**（薄） | 预取+规则分+chief |
 | 投研团队深度模式 | **有**（薄） | `mode=deep`；研报落 Web 自有表 |
-| 写操作工具 / MCP / Skills 生态 | **薄** | 4 个写工具；MCP Streamable HTTP + diagnose 白名单；有内置 SKILL.md + list/read；薄 `run_skill`（同进程 + 软超时）：watchlist / screener / radar / market-emotion / notes 五 skill 可跑（notes 只读：list/get 或 skill 分流）；仍非桌面全量 Python registry |
+| 写操作工具 / MCP / Skills 生态 | **薄** | 8 个写工具（原 4 + 持仓 upsert/delete、信号名单 add/remove）；MCP Streamable HTTP + diagnose 白名单；有内置 SKILL.md + list/read；薄 `run_skill`（同进程 + 软超时）：watchlist / screener / radar / market-emotion / notes 五 skill 可跑（notes 只读：list/get 或 skill 分流）；仍非桌面全量 Python registry |
 | Web 投研研报 | **有**（薄） | `app.web_team_reports`；与桌面表分开 |
-| 健康面板 / 调度开关 / 可跑 sync | **有** | 含 `sync_universe` / `sync_stock_industry`（Tushare → app.universe / app.stock_industry）；见 README 可跑列表 |
+| 健康面板 / 调度开关 / 可跑 sync | **有** | 含 `sync_universe` / `sync_stock_industry`；健康含 quote_collector 心跳；可强制采一轮 |
 | 内嵌 APScheduler / Redis job 锁 | **薄** | 覆盖全部可跑 job（cache/日历/板块/涨停/universe/行业映射/日 K/选股）；多副本经 Redis SET NX 防双跑；Redis 不可用则跳过定时 job（无选主） |
 | 一键启动 / 验收脚本 / 本缺口表 | **有** | `scripts/` + 本文 |
-| Docker 全家桶 | **薄** | `docker compose` 仅 api+web；PG/Redis 用宿主机 zak |
+| Docker 全家桶 | **薄** | `docker compose`：api+web+quote-collector；PG/Redis 用宿主机 zak |
 
 ---
 
@@ -83,10 +83,10 @@
 
 - **只改 zak2**（FastAPI + Vue），不调整 `zak` / `vnpy-*` 桌面代码。
 - 与桌面「双端同步」类缺口（如信号名单本机偏好）**明确不做**；Web 侧自洽即可。
-- 仍可**读**共用 PG/Redis；采集/调度等常驻能力继续靠现有 CLI，不把桌面逻辑搬进 API。
+- 仍可**读**共用 PG/Redis；全市场行情由 zak2 **独立 collector 进程**写入（不进 API）；其它不可跑 job 仍可靠 CLI。
 
 ## 建议下一刀（非绑定，仅 zak2）
 
-Docker 全家桶完善等。
+Tushare enrich 因子，或只读持仓/信号查询工具（`get_positions` / `get_signal_panel` 等）。
 
 [联调清单](./smoke-checklist.md) · [架构 P1](./architecture-p1.md)
