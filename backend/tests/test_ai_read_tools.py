@@ -94,3 +94,89 @@ def test_run_skill_notes_stock() -> None:
         out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "notes", "vt_symbol": "600519.SSE"})
     assert "memo" in out
     m.assert_called_once()
+
+
+def test_get_positions_limit_and_shape() -> None:
+    rows = [
+        {
+            "symbol": "600519",
+            "exchange": "SSE",
+            "vt_symbol": "600519.SSE",
+            "cost_price": 100.0,
+            "volume": 100,
+            "buy_date": "2026-08-01",
+            "notes": "",
+            "source": "manual",
+            "plan_pct": None,
+            "sort_order": 0,
+            "created_at": "",
+            "updated_at": "",
+        },
+        {
+            "symbol": "000001",
+            "exchange": "SZSE",
+            "vt_symbol": "000001.SZSE",
+            "cost_price": 10.0,
+            "volume": 200,
+            "buy_date": "2026-07-01",
+            "notes": "",
+            "source": "manual",
+            "plan_pct": 0.1,
+            "sort_order": 1,
+            "created_at": "",
+            "updated_at": "",
+        },
+    ]
+    with patch.object(art, "positions_repo") as pref:
+        pref.list_positions.return_value = rows
+        with patch.object(art, "get_quote_store") as gq:
+            store = MagicMock()
+            store.get_quotes.return_value = []
+            gq.return_value = store
+            out = art.get_positions(MagicMock(), "u", {"limit": 1, "with_quotes": True})
+    assert out["count"] == 1
+    assert out["items"][0]["vt_symbol"] == "600519.SSE"
+    pref.list_positions.assert_called_once()
+
+
+def test_get_signal_panel_delegates() -> None:
+    payload = {"symbols": ["600519.SSE"], "count": 1, "max_symbols": 10}
+    with patch.object(art, "signal_panel_repo") as sp:
+        sp.panel_payload.return_value = payload
+        out = art.get_signal_panel(MagicMock(), "u", {})
+    assert out == payload
+    sp.panel_payload.assert_called_once()
+
+
+def test_get_trading_risk_prefs_and_summary() -> None:
+    prefs = {
+        "total_capital": 100000.0,
+        "stop_loss_pct": 0.05,
+        "caution_float_pct": -5.0,
+        "realized_pnl_today": None,
+    }
+    board = {
+        "risk_summary": {
+            "total_capital": 100000.0,
+            "actual_position_pct": 0.2,
+            "plan_max_pct": 0.5,
+            "off_plan_count": 0,
+            "off_plan_symbols": [],
+            "active_plan_date": "2026-08-11",
+            "plan_symbols": [
+                {"vt_symbol": "600519.SSE", "status": "in_position", "name": "茅台", "extra": "drop_me"},
+            ],
+        }
+    }
+    with (
+        patch.object(art, "trading_risk") as tr,
+        patch.object(art, "strategy_board") as sb,
+    ):
+        tr.load_trading_risk_prefs.return_value = prefs
+        sb.load_strategy_board.return_value = board
+        out = art.get_trading_risk(MagicMock(), "u", {})
+    assert out["prefs"]["total_capital"] == 100000.0
+    assert out["risk_summary"]["actual_position_pct"] == 0.2
+    assert out["risk_summary"]["plan_symbols"] == [
+        {"vt_symbol": "600519.SSE", "status": "in_position"}
+    ]
