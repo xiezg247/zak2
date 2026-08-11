@@ -194,7 +194,7 @@ zak2 原以「共用 zak 的 PostgreSQL / Redis、Schema 主权在 zak Alembic�
 
 建议顺序：**P0 → P1 → P3（可与 P2 并行）→ P2**（绿场可跳过 P2）。
 
-实现细节另开 `docs/superpowers/plans/2026-08-11-zak2-independent-evolution.md`（writing-plans）。
+实现计划：`docs/superpowers/plans/2026-08-11-zak2-independent-evolution.md`。
 
 ## 风险
 
