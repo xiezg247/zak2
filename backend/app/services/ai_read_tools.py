@@ -132,10 +132,10 @@ def get_positions(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     with_quotes = bool(args.get("with_quotes", True))
     items = list(positions_repo.list_positions(db, user_id)[:limit])
     if with_quotes and items:
-        store = get_quote_store()
         try:
             from app.services.symbols import to_tf_symbol
 
+            store = get_quote_store()
             tf_map = {to_tf_symbol(r["symbol"], r["exchange"]): r for r in items}
             quotes = store.get_quotes(list(tf_map.keys()))
             for q in quotes:

@@ -146,6 +146,66 @@ def test_get_positions_limit_and_shape() -> None:
     pref.list_positions.assert_called_once()
 
 
+def test_get_positions_empty_and_skip_quotes() -> None:
+    with patch.object(art, "positions_repo") as pref:
+        pref.list_positions.return_value = []
+        with patch.object(art, "get_quote_store") as gq:
+            out = art.get_positions(MagicMock(), "u", {"with_quotes": True})
+    assert out == {"count": 0, "items": []}
+    gq.assert_not_called()
+
+
+def test_get_positions_with_quotes_false_skips_store() -> None:
+    rows = [
+        {
+            "symbol": "600519",
+            "exchange": "SSE",
+            "vt_symbol": "600519.SSE",
+            "cost_price": 100.0,
+            "volume": 100,
+            "buy_date": "2026-08-01",
+            "notes": "",
+            "source": "manual",
+            "plan_pct": None,
+            "sort_order": 0,
+            "created_at": "",
+            "updated_at": "",
+        }
+    ]
+    with patch.object(art, "positions_repo") as pref:
+        pref.list_positions.return_value = rows
+        with patch.object(art, "get_quote_store") as gq:
+            out = art.get_positions(MagicMock(), "u", {"with_quotes": False})
+    assert out["count"] == 1
+    assert "last_price" not in out["items"][0]
+    gq.assert_not_called()
+
+
+def test_get_positions_quote_store_failure_still_returns() -> None:
+    rows = [
+        {
+            "symbol": "600519",
+            "exchange": "SSE",
+            "vt_symbol": "600519.SSE",
+            "cost_price": 100.0,
+            "volume": 100,
+            "buy_date": "2026-08-01",
+            "notes": "",
+            "source": "manual",
+            "plan_pct": None,
+            "sort_order": 0,
+            "created_at": "",
+            "updated_at": "",
+        }
+    ]
+    with patch.object(art, "positions_repo") as pref:
+        pref.list_positions.return_value = rows
+        with patch.object(art, "get_quote_store", side_effect=RuntimeError("redis down")):
+            out = art.get_positions(MagicMock(), "u", {"with_quotes": True})
+    assert out["count"] == 1
+    assert out["items"][0]["vt_symbol"] == "600519.SSE"
+
+
 def test_get_signal_panel_delegates() -> None:
     payload = {"symbols": ["600519.SSE"], "count": 1, "max_symbols": 10}
     with patch.object(art, "signal_panel_repo") as sp:
