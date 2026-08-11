@@ -47,25 +47,33 @@ def apply_factor_patches(client: Any, patches: dict[str, dict[str, float]]) -> d
         return {"updated": 0, "seq": None, "published": False}
 
     pipe = client.pipeline(transaction=False)
-    # ranks from applied only
-    for field in ("turnover_rate", "volume_ratio", "net_mf_amount"):
-        pipe.delete(RANK_KEY_FMT.format(field=field))
+    rebuild_turnover = any("turnover_rate" in f for f in applied.values())
+    rebuild_volume_ratio = any("volume_ratio" in f for f in applied.values())
+    rebuild_net_mf = any("net_mf_amount" in f for f in applied.values())
+
     turn: dict[str, float] = {}
     vr: dict[str, float] = {}
     nmf: dict[str, float] = {}
     for tf, f in applied.items():
         if "turnover_rate" in f:
             turn[tf] = f["turnover_rate"]
-        if f.get("volume_ratio", 0) > 0:
+        if "volume_ratio" in f and f["volume_ratio"] > 0:
             vr[tf] = f["volume_ratio"]
-        if f.get("net_mf_amount", 0) != 0:
+        if "net_mf_amount" in f and f["net_mf_amount"] != 0:
             nmf[tf] = f["net_mf_amount"]
-    if turn:
-        pipe.zadd(RANK_KEY_FMT.format(field="turnover_rate"), turn)
-    if vr:
-        pipe.zadd(RANK_KEY_FMT.format(field="volume_ratio"), vr)
-    if nmf:
-        pipe.zadd(RANK_KEY_FMT.format(field="net_mf_amount"), nmf)
+
+    if rebuild_turnover:
+        pipe.delete(RANK_KEY_FMT.format(field="turnover_rate"))
+        if turn:
+            pipe.zadd(RANK_KEY_FMT.format(field="turnover_rate"), turn)
+    if rebuild_volume_ratio:
+        pipe.delete(RANK_KEY_FMT.format(field="volume_ratio"))
+        if vr:
+            pipe.zadd(RANK_KEY_FMT.format(field="volume_ratio"), vr)
+    if rebuild_net_mf:
+        pipe.delete(RANK_KEY_FMT.format(field="net_mf_amount"))
+        if nmf:
+            pipe.zadd(RANK_KEY_FMT.format(field="net_mf_amount"), nmf)
     pipe.incr(META_SEQ_KEY)
     results = pipe.execute()
     new_seq = int(results[-1])

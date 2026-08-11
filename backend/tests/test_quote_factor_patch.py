@@ -17,6 +17,37 @@ def test_apply_skips_missing_keys_no_publish() -> None:
     client.pipeline.assert_not_called()
 
 
+def test_apply_mv_only_patches_hash_without_touching_ranks() -> None:
+    client = MagicMock()
+    client.exists.return_value = 1
+    pipe = MagicMock()
+    pipe.execute.return_value = [43]
+    client.pipeline.return_value = pipe
+    patches = {
+        "SHSE.600519": {
+            "total_mv": 100.0,
+            "circ_mv": 80.0,
+        }
+    }
+    out = apply_factor_patches(client, patches)
+    assert out["updated"] == 1
+    assert out["seq"] == 43
+    assert out["published"] is True
+
+    key = QUOTE_KEY_FMT.format(symbol="SHSE.600519")
+    client.hset.assert_called_once()
+    hset_kwargs = client.hset.call_args.kwargs
+    mapping = hset_kwargs.get("mapping") or client.hset.call_args.args[1]
+    assert mapping == {"total_mv": "100.0", "circ_mv": "80.0"}
+
+    client.pipeline.assert_called_once_with(transaction=False)
+    pipe.delete.assert_not_called()
+    pipe.zadd.assert_not_called()
+    pipe.incr.assert_called_once_with(META_SEQ_KEY)
+    pipe.execute.assert_called_once()
+    client.publish.assert_called_with(NOTIFY_CHANNEL, "43")
+
+
 def test_apply_patches_existing_and_rebuilds_ranks() -> None:
     client = MagicMock()
     client.exists.return_value = 1
