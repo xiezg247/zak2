@@ -148,14 +148,18 @@ def _synth_leader_pick(db: Session) -> RadarCardOut:
     )
 
 
-def list_radar_cards(db: Session) -> list[RadarCardOut]:
-    cached = {c.card_id: c for c in _from_cache(db)}
-    synthesized = [
+def build_synthesized_cards(db: Session) -> list[RadarCardOut]:
+    return [
         _synth_leader_pick(db),
         _synth_limit_ladder(db),
         _synth_sector_hot(db),
         _synth_change_top(),
     ]
+
+
+def list_radar_cards(db: Session) -> list[RadarCardOut]:
+    cached = {c.card_id: c for c in _from_cache(db)}
+    synthesized = build_synthesized_cards(db)
     # cache 优先；合成补缺
     out: list[RadarCardOut] = []
     seen: set[str] = set()
