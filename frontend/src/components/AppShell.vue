@@ -130,8 +130,9 @@ function logout() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 56px;
-  padding: 0 20px;
+  min-height: 56px;
+  height: auto;
+  padding: 10px 20px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
@@ -157,7 +158,6 @@ function logout() {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 16px 20px;
 }
 @media (max-width: 900px) {
   .shell {
