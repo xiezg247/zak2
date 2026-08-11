@@ -530,9 +530,9 @@ th {
   min-width: 44px;
 }
 .toggle.on {
-  background: #24553a;
-  color: #d8ffe8;
-  border-color: #2f6b48;
+  background: #ecfdf5;
+  color: #166534;
+  border-color: #86efac;
 }
 .tip {
   cursor: help;

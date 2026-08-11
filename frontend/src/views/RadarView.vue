@@ -392,7 +392,7 @@ onMounted(() => {
 .primary {
   background: var(--accent);
   border: none;
-  color: #0b1020;
+  color: var(--brand-foreground);
   border-radius: 8px;
   padding: 6px 12px;
   font-weight: 600;
@@ -488,7 +488,7 @@ td {
 }
 th {
   color: var(--muted);
-  background: #121924;
+  background: var(--surface-muted);
   font-weight: 500;
 }
 .mono {

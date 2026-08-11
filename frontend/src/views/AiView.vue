@@ -556,10 +556,10 @@ onMounted(async () => {
   background: var(--bg);
 }
 .bubble.user {
-  border-color: #2f4d73;
+  border-color: var(--brand-soft);
 }
 .bubble.assistant {
-  border-color: #2f5540;
+  border-color: var(--line);
 }
 .tool-status {
   margin: 0;
@@ -589,12 +589,12 @@ onMounted(async () => {
   border: 1px solid var(--accent);
   border-radius: 10px;
   padding: 10px 12px;
-  background: #121924;
+  background: var(--surface-muted);
   display: grid;
   gap: 8px;
 }
 .confirm-card.confirmed {
-  border-color: #2f5540;
+  border-color: var(--line);
   opacity: 0.85;
 }
 .confirm-card.rejected,

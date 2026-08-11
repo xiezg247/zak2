@@ -244,7 +244,7 @@ onMounted(async () => {
             </div>
             <div class="chart" v-if="spark">
               <svg viewBox="0 0 360 120" preserveAspectRatio="none">
-                <polyline fill="none" stroke="#3d8bfd" stroke-width="2" :points="spark" />
+                <polyline fill="none" stroke="var(--brand)" stroke-width="2" :points="spark" />
               </svg>
             </div>
             <div class="table-wrap" v-if="selected.trades?.length">
@@ -461,7 +461,7 @@ td {
 }
 th {
   color: var(--muted);
-  background: #121924;
+  background: var(--surface-muted);
   font-weight: 500;
 }
 .click {

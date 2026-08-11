@@ -584,7 +584,7 @@ td {
 }
 th {
   color: var(--muted);
-  background: #121924;
+  background: var(--surface-muted);
   position: sticky;
   top: 0;
   font-weight: 500;
@@ -593,7 +593,7 @@ tbody tr {
   cursor: pointer;
 }
 tbody tr.on {
-  background: #1c2838;
+  background: var(--surface-muted);
 }
 .mono {
   font-family: var(--mono);

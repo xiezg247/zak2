@@ -991,7 +991,7 @@ onUnmounted(() => {
   padding: 12px 20px 16px;
   display: grid;
   gap: 10px;
-  background: #0d1219;
+  background: var(--surface-muted);
 }
 .strategy-head {
   display: flex;
@@ -1020,7 +1020,7 @@ onUnmounted(() => {
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #121924;
+  background: var(--surface-muted);
 }
 .risk-card {
   margin-bottom: 0;
@@ -1115,7 +1115,7 @@ onUnmounted(() => {
 }
 .notify-payload-row td {
   white-space: normal;
-  background: #0e141d;
+  background: var(--surface-muted);
   padding: 8px 10px;
 }
 .notify-payload {
@@ -1274,7 +1274,7 @@ td {
 th {
   color: var(--muted);
   font-weight: 500;
-  background: #121924;
+  background: var(--surface-muted);
   position: sticky;
   top: 0;
 }
@@ -1282,13 +1282,13 @@ tbody tr {
   cursor: pointer;
 }
 tbody tr.on {
-  background: #1c2838;
+  background: var(--surface-muted);
 }
 tbody tr.off-plan {
-  background: #2a1c1c;
+  background: #fee2e2;
 }
 tbody tr.off-plan.on {
-  background: #3a2424;
+  background: var(--brand-light);
 }
 .warn {
   color: var(--danger);
