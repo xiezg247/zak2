@@ -1,3 +1,5 @@
+> **已归档（2026-08-11）。** zak2 独立演进后不再维护本对照表；排期见 [docs/product-roadmap.md](../product-roadmap.md)。以下内容仅供历史参考。
+
 # zak2 ↔ zak 桌面能力缺口对照
 
 > 以当前 zak2 代码为准；桌面以 `packages/vnpy-*` + `docs/` 为准。  
@@ -89,4 +91,4 @@
 
 Tushare enrich 因子，或只读持仓/信号查询工具（`get_positions` / `get_signal_panel` 等）。
 
-[联调清单](./smoke-checklist.md) · [架构 P1](./architecture-p1.md)
+[联调清单](../smoke-checklist.md) · [架构 P1](../architecture-p1.md) · [产品路线](../product-roadmap.md)

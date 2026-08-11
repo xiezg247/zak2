@@ -1,12 +1,14 @@
 # zak2 联调清单
 
-本地验证 Web 与同库桌面是否打通。勾选即记。
+本地验证 zak2 独立实例（自有 PG/Redis）。勾选即记。
 
 ## 0. 前置
 
-- [ ] zak 已 `cli.py db upgrade`，库可连
-- [ ] `.env` 已从 `.env.example` 复制，`DATABASE_URL` / `JWT_SECRET` 正确
-- [ ] （可选）Redis 有行情：启动 `python -m app.quote_collector`（或 `./scripts/quote_collector.sh`）；勿与 zak `collect_quotes` 双写
+- [ ] `cd backend && uv run alembic upgrade head` 已执行，`alembic_version` 为最新
+- [ ] `.env` 已从 `.env.example` 复制，`DATABASE_URL` / `JWT_SECRET` 指向 zak2 自有库
+- [ ] （可选）从旧 zak 库导入：`scripts/import_from_zak.py` 后可登录
+- [ ] （可选）Redis 有行情：启动 `python -m app.quote_collector`（或 `./scripts/quote_collector.sh`）；本实例内勿多开 collector
+- [ ] （可选）collector 运行后 `redis-cli GET zak2:meta:quote_count` 有数值（Compose 宿主机 Redis 为 `127.0.0.1:6380`）
 - [ ] （可选）`TUSHARE_TOKEN` / `LLM_API_KEY` / `TICKFLOW_API_KEY` 已填
 - [ ] （可选）内嵌调度：`EMBEDDED_SCHEDULER_ENABLED` / `BARS_SCHEDULER_ENABLED`；选股定时需 `SCHEDULER_SCREEN_USER_ID`；多 API 副本需 `REDIS_URL`（Redis job 锁防双跑；Redis 不可用或抢锁失败则跳过该次定时）
 
@@ -21,11 +23,11 @@ cd backend && uv run uvicorn app.main:app --reload --port 8000
 cd frontend && npm run dev
 ```
 
-- [ ] （可选）`docker compose up --build` 后 http://127.0.0.1:8080 可登录（需宿主机 PG）
+- [ ] （可选）`docker compose up --build` 后 http://127.0.0.1:8080 可登录（API 文档 http://127.0.0.1:8001/docs；PG/Redis 宿主机 5433/6380）
 
 ## 2. 鉴权
 
-- [ ] 用 zak 已有用户登录成功
+- [ ] 登录成功（新建用户或导入后原账号）
 - [ ] 刷新页面仍保持登录（token）
 - [ ] 错误密码有明确提示
 
@@ -46,7 +48,7 @@ cd frontend && npm run dev
 - [ ] 勾选行业后**保存方案** → 刷新 → **加载复跑**仍保留勾选；取消全部勾选再跑与未限制时一致
 - [ ] 盘中/盘后/超短 **因子权重**：配方 Tab 可改权重 → 保存后刷新仍保留 →「恢复默认」回到内置比例 → 再跑选股（排序可相对变化）
 - [ ] 保存方案 → 刷新 → 加载复跑
-- [ ] 历史出现记录；CSV 可下；桌面同用户可见 `screener_runs`
+- [ ] 历史出现记录；CSV 可下
 
 ## 5. 市场 · 板块 · 雷达
 
@@ -88,4 +90,4 @@ cd frontend && npm run dev
 
 失败时优先查：`.env` 库址、Redis 是否空、Tushare 积分、浏览器 Network 里 `/api` 是否 401/502。
 
-[缺口对照](./gap-vs-desktop.md)
+[产品路线](./product-roadmap.md) · [归档缺口对照](./archive/gap-vs-desktop.md)

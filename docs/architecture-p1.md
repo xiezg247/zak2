@@ -4,17 +4,17 @@
 
 | 项 | 选择 |
 |----|------|
-| 目标 | 长期全量对齐 zak PyQt；本期仅登录 + 选股 Hub + Jobs |
-| 复用 | 共用 PostgreSQL / 可选 Redis；业务重写；不 import `vnpy_*` |
+| 目标 | 以 [product-roadmap.md](./product-roadmap.md) 为准，非全量对齐桌面 |
+| 复用 | 自有 PostgreSQL / Redis；业务在本仓；不 import `vnpy_*` |
 | 结构 | `backend/` FastAPI + `frontend/` Vue3 |
-| Schema | 迁移主权在 zak Alembic |
+| Schema | zak2 Alembic（`backend/alembic/`） |
 
 ## 运行时
 
 ```text
-Vue SPA ──JWT REST──▶ FastAPI ──▶ PostgreSQL（与 zak 同库）
+Vue SPA ──JWT REST──▶ FastAPI ──▶ PostgreSQL（zak2 自有库）
                          │
-                         ├── Redis（行情快照，可选）
+                         ├── Redis（行情快照，键前缀 zak2:）
                          └── Tushare（财务 preset，可选）
 ```
 
