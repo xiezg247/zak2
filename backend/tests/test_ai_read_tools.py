@@ -155,6 +155,38 @@ def test_get_signal_panel_delegates() -> None:
     sp.panel_payload.assert_called_once()
 
 
+def test_run_skill_positions_all() -> None:
+    assert "get_positions" not in WRITE_TOOL_NAMES
+    with (
+        patch("app.services.ai_read_tools.get_positions", return_value={"count": 0, "items": []}) as gp,
+        patch(
+            "app.services.ai_read_tools.get_signal_panel",
+            return_value={"symbols": [], "count": 0, "max_symbols": 10},
+        ) as gs,
+        patch(
+            "app.services.ai_read_tools.get_trading_risk",
+            return_value={"prefs": {}, "risk_summary": {}},
+        ) as gr,
+    ):
+        out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "positions"})
+    assert "positions" in out and "signal_panel" in out and "trading_risk" in out
+    gp.assert_called_once()
+    gs.assert_called_once()
+    gr.assert_called_once()
+
+
+def test_run_skill_positions_section_signals() -> None:
+    with patch(
+        "app.services.ai_read_tools.get_signal_panel",
+        return_value={"symbols": ["600519.SSE"], "count": 1, "max_symbols": 10},
+    ) as gs:
+        out = execute_tool(
+            MagicMock(), "u", "run_skill", {"skill_id": "positions", "section": "signals"}
+        )
+    assert "600519" in out or "symbols" in out
+    gs.assert_called_once()
+
+
 def test_get_trading_risk_prefs_and_summary() -> None:
     prefs = {
         "total_capital": 100000.0,

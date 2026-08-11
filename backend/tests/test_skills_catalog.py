@@ -4,9 +4,16 @@ from app.services import skills_catalog
 from app.services.skills_catalog import MAX_SKILL_CHARS, list_skills, read_skill
 
 
-def test_list_has_five() -> None:
+def test_list_includes_positions() -> None:
     ids = {s["id"] for s in list_skills()}
-    assert ids == {"watchlist", "market-emotion", "screener", "radar", "notes"}
+    assert ids == {
+        "watchlist",
+        "market-emotion",
+        "screener",
+        "radar",
+        "notes",
+        "positions",
+    }
 
 
 def test_read_watchlist() -> None:
@@ -49,3 +56,4 @@ def test_runnable_flags() -> None:
     assert m["radar"]["runnable"] is True
     assert m["market-emotion"]["runnable"] is True
     assert m["notes"]["runnable"] is True
+    assert m["positions"]["runnable"] is True
