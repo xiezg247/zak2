@@ -165,21 +165,29 @@ onMounted(() => {
 }
 .toc button {
   text-align: left;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-muted);
   border-radius: 0.5rem;
   padding: 8px 10px;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.toc button:hover {
+  color: var(--ink);
+  border-color: var(--brand-soft);
 }
 .toc button.on {
-  color: var(--text);
-  border-color: var(--accent);
+  background: var(--brand-light);
+  color: var(--brand);
+  border-color: var(--brand-soft);
+  font-weight: 500;
 }
 .body {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
-  background: var(--bg-elevated);
-  padding: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px;
 }
 .head {
   display: flex;

@@ -395,13 +395,15 @@ onMounted(async () => {
 }
 .card,
 .panel {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
-  background: var(--bg-elevated);
-  padding: 12px 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  padding: 14px 16px;
 }
 .card.bad {
   border-color: var(--danger);
+  background: #fff5f5;
 }
 .card h3 {
   margin: 0 0 6px;
@@ -451,10 +453,11 @@ onMounted(async () => {
 }
 .filter {
   border-radius: 0.5rem;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.8125rem;
 }
 tr.section td {
   border-bottom: 1px solid var(--border);

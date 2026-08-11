@@ -357,8 +357,10 @@ onMounted(async () => {
   padding: 6px;
 }
 .tabs button.on {
-  color: var(--text);
-  border-color: var(--accent);
+  background: var(--brand-light);
+  color: var(--brand);
+  border-color: var(--brand-soft);
+  font-weight: 500;
 }
 label {
   display: grid;

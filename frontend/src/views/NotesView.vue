@@ -241,8 +241,10 @@ onMounted(async () => {
   padding: 6px 10px;
 }
 .tabs button.on {
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--brand-light);
+  color: var(--brand);
+  border-color: var(--brand-soft);
+  font-weight: 500;
 }
 input,
 textarea {

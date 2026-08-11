@@ -448,17 +448,23 @@ onMounted(() => {
 }
 .card {
   text-align: left;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
   box-shadow: var(--shadow-card);
   padding: 12px;
-  color: var(--text);
+  color: var(--ink);
   display: grid;
   gap: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.card:hover {
+  border-color: var(--brand-soft);
 }
 .card.on {
-  border-color: var(--accent);
+  border-color: var(--brand);
+  background: var(--brand-light);
 }
 .title {
   font-weight: 600;
@@ -474,10 +480,11 @@ onMounted(() => {
   font-size: 1.1rem;
 }
 .table-wrap {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
   overflow: auto;
-  background: var(--bg-elevated);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 th,
 td {

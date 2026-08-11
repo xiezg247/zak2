@@ -978,21 +978,35 @@ onUnmounted(() => {
 }
 .left,
 .right {
-  padding: 16px 20px;
+  padding: 20px 24px;
   overflow: auto;
   display: grid;
-  gap: 12px;
+  gap: 14px;
   align-content: start;
 }
 .left {
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--line);
+  background: var(--surface);
 }
-.strategy {
-  border-top: 1px solid var(--border);
-  padding: 12px 20px 16px;
+.right {
+  background: var(--surface-muted);
+}
+.block {
   display: grid;
   gap: 10px;
-  background: var(--surface-muted);
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.strategy {
+  border-top: 1px solid var(--line);
+  padding: 14px 24px 18px;
+  display: grid;
+  gap: 12px;
+  background: var(--surface);
+  box-shadow: 0 -1px 0 var(--line-soft);
 }
 .strategy-head {
   display: flex;
@@ -1176,10 +1190,6 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.block {
-  display: grid;
-  gap: 8px;
-}
 .row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -1228,8 +1238,10 @@ select {
   color: var(--muted);
 }
 .chip.on {
-  border-color: var(--accent);
-  color: var(--text);
+  background: var(--brand-light);
+  color: var(--brand);
+  border-color: var(--brand-soft);
+  font-weight: 500;
 }
 .limits {
   margin-left: auto;
@@ -1255,11 +1267,12 @@ select {
   font-size: 0.85rem;
 }
 .table-wrap {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
   overflow: auto;
-  background: var(--bg-elevated);
-  max-height: 280px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  max-height: 320px;
 }
 .strategy .table-wrap {
   max-height: 220px;
@@ -1315,9 +1328,10 @@ tbody tr.off-plan.on {
   flex-wrap: wrap;
 }
 .chart {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
-  background: var(--bg-elevated);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
   padding: 12px;
 }
 .bar-meta {

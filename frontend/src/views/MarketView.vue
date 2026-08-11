@@ -543,16 +543,17 @@ onUnmounted(() => {
 }
 .table-wrap,
 .detail {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
-  background: var(--bg-elevated);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 .table-wrap {
   overflow: auto;
   max-height: 70vh;
 }
 .detail {
-  padding: 12px;
+  padding: 14px;
   display: grid;
   gap: 10px;
   align-content: start;

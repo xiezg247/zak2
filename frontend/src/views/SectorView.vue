@@ -124,8 +124,10 @@ onMounted(async () => {
   padding: 6px 10px;
 }
 .tabs button.on {
-  color: var(--text);
-  border-color: var(--accent);
+  background: var(--brand-light);
+  color: var(--brand);
+  border-color: var(--brand-soft);
+  font-weight: 500;
 }
 select {
   background: var(--bg-elevated);
@@ -143,10 +145,11 @@ select {
   font-size: 0.85rem;
 }
 .table-wrap {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
   overflow: auto;
-  background: var(--bg-elevated);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 th,
 td {

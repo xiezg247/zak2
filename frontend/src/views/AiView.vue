@@ -423,7 +423,11 @@ onMounted(async () => {
 <style scoped>
 .page {
   height: 100%;
-  padding: 0;
+  padding: 16px 20px 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .err {
   color: var(--danger);
@@ -431,18 +435,20 @@ onMounted(async () => {
 }
 .workspace {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 12px;
-  height: calc(100% - 8px);
+  grid-template-columns: 280px 1fr;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
 }
 .left,
 .right {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
-  background: var(--bg-elevated);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 10px;
+  padding: 14px;
   min-height: 0;
 }
 .left {

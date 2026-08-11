@@ -817,40 +817,54 @@ onMounted(async () => {
 <style scoped>
 .workspace {
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: 320px 1fr;
   height: 100%;
   min-height: 0;
+  background: var(--surface-muted);
 }
 .left {
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--line);
   padding: 16px;
   overflow: auto;
   display: grid;
   gap: 14px;
   align-content: start;
+  background: var(--surface);
 }
 .right {
-  padding: 16px 20px;
+  padding: 20px 24px;
   overflow: auto;
   display: grid;
-  gap: 12px;
+  gap: 14px;
   align-content: start;
 }
 .tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
+  padding: 4px;
+  border-radius: 0.75rem;
+  background: var(--surface-muted);
+  border: 1px solid var(--line-soft);
 }
 .tabs button {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ink-muted);
   border-radius: 0.5rem;
   padding: 8px;
+  font-size: 0.8125rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.tabs button:hover {
+  color: var(--ink);
 }
 .tabs button.on {
-  color: var(--text);
-  border-color: var(--accent);
+  background: var(--surface);
+  color: var(--brand);
+  border-color: var(--brand-soft);
+  font-weight: 500;
+  box-shadow: var(--shadow-card);
 }
 .block {
   display: grid;
@@ -897,12 +911,13 @@ input {
   font-size: 0.75rem;
 }
 .primary {
-  background: var(--accent);
+  background: var(--brand);
   color: var(--brand-foreground);
   border: none;
   border-radius: 0.5rem;
   padding: 10px;
   font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 .primary:disabled {
   opacity: 0.6;
@@ -942,18 +957,24 @@ input {
 .hist {
   width: 100%;
   text-align: left;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 0.5rem;
-  color: var(--text);
+  color: var(--ink);
   padding: 8px 10px;
   display: grid;
   gap: 2px;
   margin-bottom: 6px;
   position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.hist:hover {
+  border-color: var(--brand-soft);
 }
 .hist.on {
-  border-color: var(--accent);
+  background: var(--brand-light);
+  border-color: var(--brand-soft);
+  color: var(--brand);
 }
 .del {
   position: absolute;
@@ -978,10 +999,11 @@ input {
   font-size: 0.85rem;
 }
 .table-wrap {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
   overflow: auto;
-  background: var(--bg-elevated);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 th,
 td {

@@ -69,6 +69,29 @@ button {
   cursor: pointer;
 }
 
+input:not([type='checkbox']):not([type='radio']):not([type='range']),
+select,
+textarea {
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):focus,
+select:focus,
+textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(230, 100, 50, 0.15);
+}
+
+::selection {
+  background: var(--brand-soft);
+  color: var(--ink);
+}
+
 table {
   border-collapse: collapse;
   width: 100%;
@@ -89,6 +112,14 @@ table td {
 
 table tbody tr:hover td {
   background: var(--brand-light);
+}
+
+.table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  overflow: auto;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 
 .card {
@@ -299,4 +330,22 @@ table tbody tr:hover td {
 
 .err {
   color: var(--danger);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  padding: 0.15rem 0.55rem;
+  font-size: 0.75rem;
+}
+
+.chip.on {
+  background: var(--brand-light);
+  border-color: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 500;
 }
