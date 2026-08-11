@@ -13,7 +13,7 @@
 ## 近期待办
 
 1. 完成本独立演进落地（Compose / Alembic / `zak2:` 前缀 / 去 CLI 文案 / 导入脚本）
-2. Ops planned job 透明化与健康面板打磨
+2. ~~Ops planned job 透明化与健康面板打磨~~（已完成 → [spec](./superpowers/specs/2026-08-11-ops-planned-health-polish-design.md)）
 3. 候选（另立项）：行情 enrich 因子、AI 只读持仓/信号工具、其它 Web 体验
 
 ## 明确不做（直到本文件改口）
