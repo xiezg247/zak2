@@ -42,6 +42,19 @@ def test_resolve_bilibili_feed_hours() -> None:
     assert r2["hours"] == [9, 12, 18] and r2["minute"] == 30
 
 
+def test_resolve_warm_radar_card_snapshots() -> None:
+    r = resolve_cron("warm_radar_card_snapshots", {})
+    assert r["hours"] == [9, 10, 14]
+    assert r["minute"] == 20
+    assert r["day_of_week"] == "mon-fri"
+
+
+def test_resolve_sync_suspend_daily() -> None:
+    r = resolve_cron("sync_suspend_daily", {})
+    assert r["hour"] == 17 and r["minute"] == 40 and r["day_of_week"] == "mon-fri"
+    assert r["hours"] is None
+
+
 def test_config_overrides_hour() -> None:
     r = resolve_cron("purge_stale_cache", {"cron_hour": 20, "cron_minute": 1})
     assert r["hour"] == 20 and r["minute"] == 1

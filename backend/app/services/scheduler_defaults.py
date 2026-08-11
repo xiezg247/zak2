@@ -25,6 +25,14 @@ DEFAULT_CRON: dict[str, dict] = {
         "day_of_week": "mon-fri",
     },
     "enrich_market_quotes": {"hour": 15, "minute": 20, "day_of_week": "mon-fri"},
+    "sync_suspend_daily": {"hour": 17, "minute": 40, "day_of_week": "mon-fri"},
+    "sync_disclosure_calendar": {"hour": 8, "minute": 30, "day_of_week": "mon"},
+    "prefetch_tushare": {"hour": 15, "minute": 30, "day_of_week": "mon-fri"},
+    "warm_radar_card_snapshots": {
+        "hours": [9, 10, 14],
+        "minute": 20,
+        "day_of_week": "mon-fri",
+    },
 }
 
 _FALLBACK = {"hour": 8, "minute": 0, "day_of_week": "mon-fri", "hours": None}

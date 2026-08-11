@@ -7,6 +7,11 @@ def test_job_kind_mapping() -> None:
     assert job_kind_for("purge_stale_cache") == "runnable"
     assert job_kind_for("collect_quotes") == "process"
     assert job_kind_for("enrich_market_quotes") == "runnable"
+    assert job_kind_for("sync_suspend_daily") == "runnable"
+    assert job_kind_for("sync_disclosure_calendar") == "runnable"
+    assert job_kind_for("prefetch_tushare") == "runnable"
+    assert job_kind_for("warm_radar_card_snapshots") == "runnable"
+    assert job_kind_for("prefetch_moneyflow") == "planned"
 
 
 def test_list_jobs_includes_job_kind() -> None:
@@ -18,3 +23,5 @@ def test_list_jobs_includes_job_kind() -> None:
     assert rows["collect_quotes"]["job_kind"] == "process"
     assert rows["purge_stale_cache"]["job_kind"] == "runnable"
     assert rows["enrich_market_quotes"]["job_kind"] == "runnable"
+    assert rows["sync_suspend_daily"]["job_kind"] == "runnable"
+    assert rows["prefetch_moneyflow"]["job_kind"] == "planned"

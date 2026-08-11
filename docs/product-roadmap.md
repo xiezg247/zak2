@@ -16,6 +16,7 @@
 2. ~~Ops planned job 透明化与健康面板打磨~~（已完成 → [spec](./superpowers/specs/2026-08-11-ops-planned-health-polish-design.md)）
 3. ~~日 K 绿场建表~~（已完成 → [spec](./superpowers/specs/2026-08-11-public-bars-schema-design.md)）；拉数仍靠 Ops 手动
 4. ~~行情 enrich 因子~~（已完成 → [spec](./superpowers/specs/2026-08-11-quote-enrich-design.md)）；~~AI 只读持仓/信号工具~~（已完成 → [spec](./superpowers/specs/2026-08-11-ai-read-positions-signals-design.md)）；候选：其它 Web 体验
+5. ~~Ops planned 首批四 job~~（已完成 → [spec](./superpowers/specs/2026-08-11-ops-planned-batch1-design.md)）：`sync_suspend_daily` / `sync_disclosure_calendar` / `prefetch_tushare` / `warm_radar_card_snapshots` 已注册为可跑（默认定时关）
 
 ## 明确不做（直到本文件改口）
 

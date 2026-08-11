@@ -8,14 +8,18 @@ from app.services import (
     ops_auto_screen,
     ops_bars_fill,
     ops_enrich_quotes,
+    ops_prefetch_tushare,
     ops_purge,
     ops_sync_bilibili_feed,
     ops_sync_calendar,
+    ops_sync_disclosure,
     ops_sync_limit_list,
     ops_sync_sector,
     ops_sync_stock_industry,
+    ops_sync_suspend,
     ops_sync_universe,
     ops_warm_market,
+    ops_warm_radar,
 )
 
 SCREEN_JOB_IDS = frozenset({"screen_intraday", "screen_post_close"})
@@ -41,6 +45,10 @@ RUNNERS: dict[str, Callable[..., dict]] = {
     "warm_market_summary": ops_warm_market.warm_market_summary,
     "sync_bilibili_feed": _run_sync_bilibili_feed,
     "enrich_market_quotes": ops_enrich_quotes.enrich_market_quotes,
+    "sync_suspend_daily": ops_sync_suspend.sync_suspend_daily,
+    "sync_disclosure_calendar": ops_sync_disclosure.sync_disclosure_calendar,
+    "prefetch_tushare": ops_prefetch_tushare.prefetch_tushare,
+    "warm_radar_card_snapshots": ops_warm_radar.warm_radar_card_snapshots,
 }
 
 

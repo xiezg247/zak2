@@ -18,6 +18,10 @@ def test_catalog_runnable_jobs() -> None:
     assert "warm_market_summary" in RUNNABLE_JOB_IDS
     assert "sync_bilibili_feed" in RUNNABLE_JOB_IDS
     assert "enrich_market_quotes" in RUNNABLE_JOB_IDS
+    assert "sync_suspend_daily" in RUNNABLE_JOB_IDS
+    assert "sync_disclosure_calendar" in RUNNABLE_JOB_IDS
+    assert "prefetch_tushare" in RUNNABLE_JOB_IDS
+    assert "warm_radar_card_snapshots" in RUNNABLE_JOB_IDS
     ids = {s.job_id for s in JOB_SPECS}
     assert RUNNABLE_JOB_IDS <= ids
 
