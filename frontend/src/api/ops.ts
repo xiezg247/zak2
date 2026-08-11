@@ -28,6 +28,7 @@ export type SchedulerJob = {
   name: string
   description: string
   runnable: boolean
+  job_kind: 'runnable' | 'process' | 'planned'
   run_hint: string | null
   status_label?: string
   enabled: boolean

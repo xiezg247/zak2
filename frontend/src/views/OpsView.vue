@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AppShell from '../components/AppShell.vue'
 import { opsApi, type BarsOverview, type Health, type SchedulerJob } from '../api/ops'
+import { filterJobs, groupJobs, KIND_TITLE, type JobFilter } from './opsJobGroups'
 
 const health = ref<Health | null>(null)
 const bars = ref<BarsOverview | null>(null)
 const jobs = ref<SchedulerJob[]>([])
+const jobFilter = ref<JobFilter>('all')
+const jobGroups = computed(() => groupJobs(filterJobs(jobs.value, jobFilter.value)))
 const error = ref('')
 const busy = ref('')
 const message = ref('')
@@ -19,6 +22,7 @@ async function refresh() {
 }
 
 async function toggle(job: SchedulerJob) {
+  if (job.job_kind !== 'runnable') return
   busy.value = job.job_id
   try {
     const updated = await opsApi.setEnabled(job.job_id, !job.enabled)
@@ -251,6 +255,12 @@ onMounted(async () => {
             </p>
           </div>
           <div class="actions">
+            <select v-model="jobFilter" class="filter">
+              <option value="all">全部</option>
+              <option value="runnable">可跑</option>
+              <option value="process">独立进程</option>
+              <option value="planned">未实现</option>
+            </select>
             <button type="button" class="ghost" :disabled="!!busy" @click="refresh">刷新</button>
             <button
               type="button"
@@ -316,46 +326,55 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="j in jobs" :key="j.job_id">
-              <td>
-                <div class="name">{{ j.name }}</div>
-                <div class="muted">{{ j.job_id }} · {{ j.description }}</div>
-              </td>
-              <td>
-                <button
-                  type="button"
-                  class="toggle"
-                  :class="{ on: j.enabled }"
-                  :disabled="busy === j.job_id"
-                  @click="toggle(j)"
-                >
-                  {{ j.enabled ? '开' : '关' }}
-                </button>
-              </td>
-              <td class="mono">{{ scheduleText(j) }}</td>
-              <td>
-                <template v-if="j.last_run">
-                  <div :class="j.last_run.last_success === false ? 'err' : ''">
-                    {{ j.last_run.last_success === false ? '失败' : j.last_run.last_success ? '成功' : '—' }}
-                    · {{ j.last_run.last_run_at }}
-                  </div>
-                  <div class="muted">{{ j.last_run.last_message }}</div>
-                </template>
-                <span v-else class="muted">无记录</span>
-              </td>
-              <td>
-                <button
-                  v-if="j.runnable"
-                  type="button"
-                  class="ghost"
-                  :disabled="!!busy"
-                  @click="runJob(j.job_id, false)"
-                >
-                  异步执行
-                </button>
-                <span v-else class="muted tip" :title="j.run_hint || ''">{{ j.status_label || '未实现' }}</span>
-              </td>
-            </tr>
+            <template v-for="g in jobGroups" :key="g.kind">
+              <tr class="section">
+                <td colspan="5">
+                  <strong>{{ g.title }}</strong>· {{ g.items.length }}
+                </td>
+              </tr>
+              <tr v-for="j in g.items" :key="j.job_id">
+                <td>
+                  <div class="name">{{ j.name }}</div>
+                  <div class="muted">{{ j.job_id }} · {{ j.description }}</div>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="toggle"
+                    :class="{ on: j.enabled }"
+                    :disabled="busy === j.job_id || j.job_kind !== 'runnable'"
+                    @click="toggle(j)"
+                  >
+                    {{ j.enabled ? '开' : '关' }}
+                  </button>
+                </td>
+                <td class="mono">{{ scheduleText(j) }}</td>
+                <td>
+                  <template v-if="j.last_run">
+                    <div :class="j.last_run.last_success === false ? 'err' : ''">
+                      {{ j.last_run.last_success === false ? '失败' : j.last_run.last_success ? '成功' : '—' }}
+                      · {{ j.last_run.last_run_at }}
+                    </div>
+                    <div class="muted">{{ j.last_run.last_message }}</div>
+                  </template>
+                  <span v-else class="muted">无记录</span>
+                </td>
+                <td>
+                  <button
+                    v-if="j.job_kind === 'runnable'"
+                    type="button"
+                    class="ghost"
+                    :disabled="!!busy"
+                    @click="runJob(j.job_id, false)"
+                  >
+                    异步执行
+                  </button>
+                  <span v-else class="muted tip" :title="j.run_hint || ''">{{
+                    j.status_label || KIND_TITLE[j.job_kind]
+                  }}</span>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </section>
@@ -428,6 +447,28 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+}
+.filter {
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+tr.section td {
+  border-bottom: 1px solid var(--border);
+  padding-top: 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+tr.section strong {
+  color: var(--text);
+  margin-right: 2px;
+}
+.toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 table {
   width: 100%;
