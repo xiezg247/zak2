@@ -7,7 +7,17 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.services import market, notes, radar, screener_repo, watchlist_repo
+from app.services import (
+    market,
+    notes,
+    positions_repo,
+    radar,
+    screener_repo,
+    signal_panel_repo,
+    strategy_board,
+    trading_risk,
+    watchlist_repo,
+)
 from app.services.quotes import get_quote_store
 from app.services.symbols import to_vt_symbol
 
@@ -115,3 +125,54 @@ def get_stock_notes(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     memo_d = memo.model_dump() if hasattr(memo, "model_dump") else dict(memo)
     entry_ds = [e.model_dump() if hasattr(e, "model_dump") else dict(e) for e in entries]
     return {"memo": memo_d, "entries": entry_ds, "entry_count": len(entry_ds)}
+
+
+def get_positions(db: Session, user_id: str, args: dict[str, Any]) -> Any:
+    limit = max(1, min(int(args.get("limit") or 20), 20))
+    with_quotes = bool(args.get("with_quotes", True))
+    items = list(positions_repo.list_positions(db, user_id)[:limit])
+    if with_quotes and items:
+        try:
+            from app.services.symbols import to_tf_symbol
+
+            store = get_quote_store()
+            tf_map = {to_tf_symbol(r["symbol"], r["exchange"]): r for r in items}
+            quotes = store.get_quotes(list(tf_map.keys()))
+            for q in quotes:
+                target = tf_map.get(q.symbol)
+                if target is None:
+                    continue
+                target["last_price"] = q.last_price
+                target["change_pct"] = q.change_pct
+                if getattr(q, "name", None):
+                    target["name"] = q.name
+        except Exception:  # noqa: BLE001
+            pass
+    return {"count": len(items), "items": items}
+
+
+def get_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any:
+    _ = args
+    return signal_panel_repo.panel_payload(db, user_id)
+
+
+def get_trading_risk(db: Session, user_id: str, args: dict[str, Any]) -> Any:
+    config_key = args.get("config_key")
+    prefs = trading_risk.load_trading_risk_prefs(db, user_id)
+    board = strategy_board.load_strategy_board(
+        db, user_id, config_key=str(config_key) if config_key else None
+    )
+    raw_summary = dict(board.get("risk_summary") or {})
+    plan_symbols = []
+    for row in list(raw_summary.get("plan_symbols") or []):
+        if isinstance(row, dict):
+            plan_symbols.append(
+                {
+                    "vt_symbol": row.get("vt_symbol"),
+                    "status": row.get("status"),
+                }
+            )
+        else:
+            plan_symbols.append(row)
+    raw_summary["plan_symbols"] = plan_symbols
+    return {"prefs": prefs, "risk_summary": raw_summary}

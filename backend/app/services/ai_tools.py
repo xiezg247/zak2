@@ -40,6 +40,24 @@ def _get_watchlist(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     return ai_read_tools.get_watchlist(db, user_id, args)
 
 
+def _get_positions(db: Session, user_id: str, args: dict[str, Any]) -> Any:
+    from app.services import ai_read_tools
+
+    return ai_read_tools.get_positions(db, user_id, args)
+
+
+def _get_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any:
+    from app.services import ai_read_tools
+
+    return ai_read_tools.get_signal_panel(db, user_id, args)
+
+
+def _get_trading_risk(db: Session, user_id: str, args: dict[str, Any]) -> Any:
+    from app.services import ai_read_tools
+
+    return ai_read_tools.get_trading_risk(db, user_id, args)
+
+
 def _get_market_emotion(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     from app.services import ai_read_tools
 
@@ -391,6 +409,9 @@ def summarize_write_tool(name: str, args: dict[str, Any]) -> str:
 
 TOOL_HANDLERS: dict[str, ToolHandler] = {
     "get_watchlist": _get_watchlist,
+    "get_positions": _get_positions,
+    "get_signal_panel": _get_signal_panel,
+    "get_trading_risk": _get_trading_risk,
     "get_market_emotion": _get_market_emotion,
     "get_recent_screening": _get_recent_screening,
     "get_radar_snapshot": _get_radar_snapshot,
@@ -425,6 +446,44 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "properties": {
                     "limit": {"type": "integer", "description": "最多返回条数，默认 30"},
                     "with_quotes": {"type": "boolean", "description": "是否附带行情，默认 true"},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_positions",
+            "description": "获取当前用户记账持仓列表，可选附带最新行情",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer", "description": "最多返回条数，默认 20，上限 20"},
+                    "with_quotes": {"type": "boolean", "description": "是否附带行情，默认 true"},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_signal_panel",
+            "description": "获取当前用户自选信号名单（vt_symbol 列表）",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_trading_risk",
+            "description": "获取交易风控偏好与仓位/计划外摘要（risk_summary）",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "config_key": {
+                        "type": "string",
+                        "description": "可选策略 config_key，缺省与策略看盘一致",
+                    },
                 },
             },
         },

@@ -1,4 +1,10 @@
-from app.services.ai_tools import TOOL_DEFINITIONS, TOOL_HANDLERS, execute_tool, get_tool_definitions
+from app.services.ai_tools import (
+    TOOL_DEFINITIONS,
+    TOOL_HANDLERS,
+    WRITE_TOOL_NAMES,
+    execute_tool,
+    get_tool_definitions,
+)
 import pytest
 
 
@@ -16,6 +22,9 @@ def test_tools_registered() -> None:
     }
     assert names == {
         "get_watchlist",
+        "get_positions",
+        "get_signal_panel",
+        "get_trading_risk",
         "get_market_emotion",
         "get_recent_screening",
         "get_radar_snapshot",
@@ -29,6 +38,14 @@ def test_tools_registered() -> None:
         *write,
     }
     assert set(TOOL_HANDLERS) == names - write
+
+
+def test_read_position_tools_registered_not_write() -> None:
+    names = {d["function"]["name"] for d in get_tool_definitions() if d.get("type") == "function"}
+    for n in ("get_positions", "get_signal_panel", "get_trading_risk"):
+        assert n in names
+        assert n in TOOL_HANDLERS
+        assert n not in WRITE_TOOL_NAMES
 
 
 def test_unknown_tool_json() -> None:
