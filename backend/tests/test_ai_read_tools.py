@@ -25,6 +25,13 @@ def test_ai_tools_delegates_emotion() -> None:
     m.assert_called_once()
 
 
+def test_ai_tools_delegates_get_positions() -> None:
+    with patch("app.services.ai_read_tools.get_positions", return_value={"count": 0, "items": []}) as m:
+        raw = execute_tool(MagicMock(), "u", "get_positions", {"limit": 5})
+    assert "count" in raw
+    m.assert_called_once()
+
+
 def test_run_skill_watchlist_mocked() -> None:
     with patch("app.services.ai_read_tools.get_watchlist", return_value={"count": 0, "items": []}) as m:
         out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "watchlist", "limit": 5})
