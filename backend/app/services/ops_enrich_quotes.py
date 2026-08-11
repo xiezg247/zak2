@@ -90,7 +90,10 @@ def enrich_market_quotes(db: Session) -> dict[str, Any]:
         return {"success": False, "skipped": True, "message": message, "trade_date": trade_date}
 
     client = redis.Redis.from_url(get_settings().redis_url, decode_responses=True)
-    result = apply_factor_patches(client, patches)
+    try:
+        result = apply_factor_patches(client, patches)
+    finally:
+        client.close()
     updated = int(result.get("updated") or 0)
     if updated <= 0:
         message = "无已存在的行情键可补丁，请先跑 quote-collector"
@@ -100,7 +103,7 @@ def enrich_market_quotes(db: Session) -> dict[str, Any]:
     message = f"已更新 {updated} 只因子（trade_date={trade_date}）"
     if notes:
         message += "；" + "；".join(notes)
-    save_job_run_meta(db, JOB_ID, last_message=message[:500], last_success=True)
+    save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
     return {
         "success": True,
         "skipped": False,

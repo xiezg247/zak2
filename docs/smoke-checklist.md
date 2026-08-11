@@ -75,7 +75,7 @@ cd frontend && npm run dev
 - [ ] `/ops` 健康绿（含 **调度锁** 卡：`Redis 锁 · TTL {ttl}s` 与 `key_prefix`；Redis 不可达时标红；**行情采集**卡片可见 running/hint；「强制采一轮」在 collector 未启动时文案明确，启动后可触发）；MCP 未启用显示「未启用」；启用且 URL 正确显示「已连接」）；可跑清理 cache / 盘中或盘后选股（需行情）；可跑 **`sync_limit_list`**（需 Tushare token；写入当日涨停列表/封板时刻）；可提交**同步 A 股列表**（`sync_universe`）；可提交**同步行业映射**（`sync_stock_industry` → `app.stock_industry`，需 Tushare token；申万空则回退 stock_basic）；可快捷**预热情绪周期**（`warm_market_summary`，写入短 TTL 缓存）；可快捷**B站订阅同步**（`sync_bilibili_feed`，需 `BILIBILI_COOKIES`）；无 token / 空结果有明确失败文案
 - [ ] （可选）配置 `MCP_ENABLED` + `MCP_URL` 后，`/ops` MCP 卡片为已连接；AI 可调用 `mcp_diagnose_*` 只读工具；`GET /api/v1/ops/mcp/tools` 可列白名单
 - [ ] `/ops` 定时任务：顶栏可筛选（全部/可跑/独立进程/未实现）；默认按 `job_kind` 分组展示；**planned** / **独立进程** job 启用开关不可点、无「执行」；**可跑** job 可开关与异步执行（含 cache/日历/板块/涨停/universe/**sync_stock_industry**/日 K/选股/**warm_market_summary**/**sync_bilibili_feed**/**enrich_market_quotes**）；任务表可见 `sync_bilibili_feed` 开关；cron 只读展示（universe 默认周一 08:00；**stock_industry 默认周一 08:15**；warm 默认工作日 09:25；**bilibili 默认工作日 8–19 点每小时 :15**；**enrich 默认工作日 15:20**）；日 K「补全自选」/「补全过期」/「全市场日 K 首下」可提交（需 token；首下另需 app.universe，可先同步 A 股列表）；无 universe / 无 token 有明确失败文案；overview 不再提示仅 CLI
-- [ ] Ops 手动跑 **`enrich_market_quotes`**（需 `TUSHARE_TOKEN` + collector 已有行情键；无 token / 无 Redis 行情 / 无匹配键时有明确 skipped 文案；成功后可看换手/量比/净流入榜更新）
+- [ ] Ops 手动跑 **`enrich_market_quotes`**（需 `TUSHARE_TOKEN` + collector 已有行情键；无 token / 无 Redis 行情 / 无匹配键 / 当日 Tushare 因子未出时有明确 skipped 文案，可稍后重试；成功后可看换手/量比/净流入榜更新）
 - [ ] （可选）配置 `SCHEDULER_SCREEN_USER_ID` 后，盘中/盘后选股定时可写入该用户 `screener_runs`（未配置则跳过选股定时）
 
 ## 7. 自动化冒烟
