@@ -169,6 +169,17 @@ onMounted(async () => {
             }}
           </p>
         </div>
+        <div class="card" :class="{ bad: health.scheduler_lock?.ok === false || !health.redis.ok }">
+          <h3>调度锁</h3>
+          <p>
+            {{
+              health.scheduler_lock?.ok === false || !health.redis.ok
+                ? '不可用'
+                : `Redis 锁 · TTL ${health.scheduler_lock?.ttl_seconds ?? '—'}s`
+            }}
+          </p>
+          <p class="muted">{{ health.scheduler_lock?.key_prefix || 'zak2:scheduler:lock:' }}</p>
+        </div>
       </section>
 
       <section v-if="bars" class="panel bars">

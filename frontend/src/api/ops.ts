@@ -6,6 +6,12 @@ export type Health = {
   llm: { configured: boolean; model: string; api_base: string }
   tushare_configured: boolean
   mcp?: { configured?: boolean; enabled?: boolean; status?: string; tool_count?: number; tools?: string[]; error?: string }
+  scheduler_lock?: {
+    ok?: boolean
+    backend?: string
+    ttl_seconds?: number
+    key_prefix?: string
+  }
   quote_collector?: {
     running?: boolean
     provider?: string | null

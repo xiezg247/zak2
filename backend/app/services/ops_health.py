@@ -62,6 +62,7 @@ def health_snapshot(db: Session) -> dict[str, Any]:
         "tushare_configured": bool(settings.tushare_token.strip()),
         "mcp": mcp_client.probe_connection(settings),
         "scheduler_lock": {
+            "ok": redis_ok,
             "backend": "redis",
             "ttl_seconds": scheduler_lock.clamp_ttl(settings.scheduler_lock_ttl_seconds),
             "key_prefix": scheduler_lock.LOCK_KEY_PREFIX,
