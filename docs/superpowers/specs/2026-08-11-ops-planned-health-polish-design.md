@@ -154,4 +154,4 @@ job_kind: "runnable" | "process" | "planned"
 
 ## 实现计划
 
-批准本 spec 后另写：`docs/superpowers/plans/2026-08-11-ops-planned-health-polish.md`
+实现计划：`docs/superpowers/plans/2026-08-11-ops-planned-health-polish.md`
