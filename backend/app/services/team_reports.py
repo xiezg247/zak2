@@ -18,34 +18,6 @@ REPORT_MAX_BODY = 128_000
 REPORT_MAX_TITLE = 200
 SUMMARY_MAX = 240
 
-_DDL = """
-CREATE TABLE IF NOT EXISTS app.web_team_reports (
-  id bigserial PRIMARY KEY,
-  user_id uuid NOT NULL,
-  symbol text NOT NULL,
-  exchange text NOT NULL,
-  vt_symbol text NOT NULL DEFAULT '',
-  title text NOT NULL DEFAULT '',
-  body text NOT NULL,
-  summary text NOT NULL DEFAULT '',
-  mode text NOT NULL DEFAULT 'fast',
-  context_json text NOT NULL DEFAULT '',
-  created_at text NOT NULL
-)
-"""
-
-
-def ensure_web_team_reports_table(db: Session) -> None:
-    db.execute(text(_DDL))
-    db.execute(
-        text(
-            """
-            CREATE INDEX IF NOT EXISTS ix_web_team_reports_user_vt
-            ON app.web_team_reports (user_id, vt_symbol, created_at DESC)
-            """
-        )
-    )
-
 
 def _now_iso() -> str:
     return datetime.now().isoformat(timespec="seconds")
@@ -88,7 +60,6 @@ def persist_team_report(
         _logger.warning("team report skip: bad vt_symbol=%s", vt_symbol)
         return None
 
-    ensure_web_team_reports_table(db)
     head = (name or symbol).strip()
     title = _clip(f"{head} · 投研团队 · {_now_iso()}", REPORT_MAX_TITLE)
     body_clipped = _clip(body, REPORT_MAX_BODY)
@@ -138,7 +109,6 @@ def list_reports(db: Session, user_id: str, vt_symbol: str, *, limit: int = 50) 
         symbol, exchange = parse_flexible_symbol(vt_symbol)
     except ValueError as exc:
         raise ValueError(str(exc)) from exc
-    ensure_web_team_reports_table(db)
     limit = max(1, min(int(limit), 100))
     rows = db.execute(
         text(
@@ -166,7 +136,6 @@ def list_reports(db: Session, user_id: str, vt_symbol: str, *, limit: int = 50) 
 
 
 def get_report(db: Session, user_id: str, report_id: int) -> dict[str, Any] | None:
-    ensure_web_team_reports_table(db)
     row = db.execute(
         text(
             """
