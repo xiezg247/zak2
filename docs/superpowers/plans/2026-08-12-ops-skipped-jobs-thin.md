@@ -706,3 +706,13 @@ EOF
 | 不引入队列 / 不真下 1m / 不跑策略 | Global + 各 Task |
 
 无 TBD。predict/队列/ths_member/1m 下载明确不做。
+
+---
+
+# Ops skipped jobs thin SDD progress
+
+- Task 1: complete — `40bca59` — Spec ✅ · Approved
+- Task 2: complete — `c7cc0ae` — Spec ✅ · Approved
+- Task 3: complete — `5d15bcb` — Spec ✅ · Approved
+- Task 4: complete — `e55d150` — Spec ✅ · Approved
+- Final: ready for finishing (local main)

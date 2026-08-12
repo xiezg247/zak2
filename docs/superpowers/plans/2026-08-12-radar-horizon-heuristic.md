@@ -443,3 +443,13 @@ EOF
 | smoke / roadmap | 4 |
 
 无 TBD。predict 明确不做。
+
+---
+
+# Radar horizon heuristic SDD progress
+
+- Task 1: complete — `33cc76d` — Spec ✅ · Approved
+- Task 2: complete — `273ab1b` — Spec ✅ · Approved
+- Task 3: complete — `6aaa797` — Spec ✅ · Approved
+- Task 4: complete — `fa8da3f` — Spec ✅ · Approved
+- Final: ready for finishing (already on local main)
