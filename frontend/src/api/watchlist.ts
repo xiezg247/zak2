@@ -232,11 +232,21 @@ export const watchlistApi = {
     api<{ ok: boolean }>(`/api/v1/watchlist/groups/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }),
+  renameGroup: (id: string, name: string) =>
+    api<WatchlistGroup>(`/api/v1/watchlist/groups/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    }),
   addToGroup: (groupId: string, symbol: string) =>
     api<{ ok: boolean }>(`/api/v1/watchlist/groups/${encodeURIComponent(groupId)}/members`, {
       method: 'POST',
       body: JSON.stringify({ symbol }),
     }),
+  removeFromGroup: (groupId: string, vtSymbol: string) =>
+    api<{ ok: boolean }>(
+      `/api/v1/watchlist/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(vtSymbol)}`,
+      { method: 'DELETE' },
+    ),
   bars: (vtSymbol: string, interval = 'd', limit = 120) =>
     api<BarsResponse>(
       `/api/v1/bars/${encodeURIComponent(vtSymbol)}?interval=${interval}&limit=${limit}`,

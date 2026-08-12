@@ -470,6 +470,60 @@ async function onCreateGroup() {
   }
 }
 
+async function onRenameGroup() {
+  if (!groupId.value) return
+  const cur = groups.value.find((g) => g.id === groupId.value)
+  const next = window.prompt('新分组名', cur?.name || '')
+  if (next == null) return
+  const name = next.trim()
+  if (!name) {
+    error.value = '分组名不能为空'
+    return
+  }
+  try {
+    error.value = ''
+    await watchlistApi.renameGroup(groupId.value, name)
+    await refresh()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '改名失败'
+  }
+}
+
+async function onDeleteGroup() {
+  if (!groupId.value) return
+  if (!window.confirm('确定删除该分组？自选标的不会被删除')) return
+  try {
+    error.value = ''
+    await watchlistApi.deleteGroup(groupId.value)
+    groupId.value = ''
+    await refresh()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '删组失败'
+  }
+}
+
+async function onAddToGroup() {
+  if (!groupId.value || !selected.value) return
+  try {
+    error.value = ''
+    await watchlistApi.addToGroup(groupId.value, selected.value.vt_symbol)
+    await refresh()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '加入分组失败'
+  }
+}
+
+async function onRemoveFromGroup() {
+  if (!groupId.value || !selected.value) return
+  try {
+    error.value = ''
+    await watchlistApi.removeFromGroup(groupId.value, selected.value.vt_symbol)
+    await refresh()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '移出分组失败'
+  }
+}
+
 function selectRow(item: WatchlistItem) {
   selected.value = item
 }
@@ -565,6 +619,14 @@ onUnmounted(() => {
             <div class="row">
               <input v-model="newGroup" placeholder="新分组名" @keyup.enter="onCreateGroup" />
               <button type="button" class="ghost" @click="onCreateGroup">建组</button>
+            </div>
+            <div v-if="groupId" class="row">
+              <button type="button" class="ghost" @click="onRenameGroup">改名</button>
+              <button type="button" class="ghost" @click="onDeleteGroup">删组</button>
+            </div>
+            <div v-if="groupId && selected" class="row">
+              <button type="button" class="ghost" @click="onAddToGroup">加入此组</button>
+              <button type="button" class="ghost" @click="onRemoveFromGroup">移出此组</button>
             </div>
           </div>
 
