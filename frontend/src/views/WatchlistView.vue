@@ -96,6 +96,66 @@ const subtitle = computed(() => {
   return sel ? `${n} 只 · ${sel}${ts}` : `${n} 只自选${ts}`
 })
 
+type SortKey = 'last_price' | 'change_pct' | 'turnover_rate' | 'volume_ratio' | 'amount' | null
+
+const listFilter = ref('')
+const sortKey = ref<SortKey>(null)
+const sortDir = ref<'asc' | 'desc'>('desc')
+
+function formatAmountYi(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v)) return '—'
+  return `${(v / 1e8).toFixed(2)}亿`
+}
+
+function formatNum2(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v)) return '—'
+  return v.toFixed(2)
+}
+
+function cmpNullable(a: number | null | undefined, b: number | null | undefined, dir: 'asc' | 'desc'): number {
+  const aMissing = a == null || Number.isNaN(a)
+  const bMissing = b == null || Number.isNaN(b)
+  if (aMissing && bMissing) return 0
+  if (aMissing) return 1 // 垫底
+  if (bMissing) return -1
+  const d = (a as number) - (b as number)
+  return dir === 'asc' ? d : -d
+}
+
+function toggleSort(key: Exclude<SortKey, null>) {
+  if (sortKey.value === key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortKey.value = key
+    sortDir.value = key === 'change_pct' || key === 'last_price' ? 'desc' : 'desc'
+  }
+}
+
+function clearSort() {
+  sortKey.value = null
+}
+
+const displayedItems = computed(() => {
+  const q = listFilter.value.trim().toLowerCase()
+  let rows = items.value
+  if (q) {
+    rows = rows.filter((it) => {
+      const vt = (it.vt_symbol || '').toLowerCase()
+      const name = (it.name || '').toLowerCase()
+      return vt.includes(q) || name.includes(q)
+    })
+  }
+  const key = sortKey.value
+  if (!key) return rows
+  const dir = sortDir.value
+  return [...rows].sort((a, b) => cmpNullable(a[key], b[key], dir))
+})
+
+function sortMark(key: Exclude<SortKey, null>): string {
+  if (sortKey.value !== key) return ''
+  return sortDir.value === 'asc' ? ' ▲' : ' ▼'
+}
+
 function applyRiskPrefs(prefs: {
   total_capital: number | null
   stop_loss_pct: number
@@ -521,6 +581,17 @@ onUnmounted(() => {
               <input v-model="autoRefresh" type="checkbox" />
               {{ connected ? 'WS 推送 + 慢轮询' : '每 15s 刷新行情' }}
             </label>
+            <div class="row">
+              <input v-model="listFilter" placeholder="过滤代码/名称" />
+              <button
+                v-if="sortKey"
+                type="button"
+                class="ghost"
+                @click="clearSort"
+              >
+                默认序
+              </button>
+            </div>
           </div>
 
           <p v-if="error" class="err">{{ error }}</p>
@@ -533,14 +604,17 @@ onUnmounted(() => {
                   <th>代码</th>
                   <th>名称</th>
                   <th>行业</th>
-                  <th>现价</th>
-                  <th>涨幅%</th>
+                  <th class="sortable" @click="toggleSort('last_price')">现价{{ sortMark('last_price') }}</th>
+                  <th class="sortable" @click="toggleSort('change_pct')">涨幅%{{ sortMark('change_pct') }}</th>
+                  <th class="sortable" @click="toggleSort('turnover_rate')">换手%{{ sortMark('turnover_rate') }}</th>
+                  <th class="sortable" @click="toggleSort('volume_ratio')">量比{{ sortMark('volume_ratio') }}</th>
+                  <th class="sortable" @click="toggleSort('amount')">成交额{{ sortMark('amount') }}</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 <tr
-                  v-for="item in items"
+                  v-for="item in displayedItems"
                   :key="item.vt_symbol"
                   :class="{ on: selected?.vt_symbol === item.vt_symbol }"
                   @click="selectRow(item)"
@@ -548,21 +622,24 @@ onUnmounted(() => {
                   <td class="mono">{{ item.vt_symbol }}</td>
                   <td>{{ item.name || '—' }}</td>
                   <td>{{ item.industry?.trim() ? item.industry : '—' }}</td>
-                  <td>{{ item.last_price != null ? item.last_price.toFixed(2) : '—' }}</td>
+                  <td>{{ formatNum2(item.last_price) }}</td>
                   <td
                     :class="{
                       up: (item.change_pct || 0) > 0,
                       down: (item.change_pct || 0) < 0,
                     }"
                   >
-                    {{ item.change_pct != null ? item.change_pct.toFixed(2) : '—' }}
+                    {{ formatNum2(item.change_pct) }}
                   </td>
+                  <td>{{ formatNum2(item.turnover_rate) }}</td>
+                  <td>{{ formatNum2(item.volume_ratio) }}</td>
+                  <td>{{ formatAmountYi(item.amount) }}</td>
                   <td>
                     <button type="button" class="link" @click.stop="onRemove(item)">删</button>
                   </td>
                 </tr>
-                <tr v-if="!items.length">
-                  <td colspan="6" class="empty">自选为空，上方输入代码添加</td>
+                <tr v-if="!displayedItems.length">
+                  <td colspan="9" class="empty">自选为空，上方输入代码添加</td>
                 </tr>
               </tbody>
             </table>
@@ -1291,6 +1368,13 @@ th {
   background: var(--surface-muted);
   position: sticky;
   top: 0;
+}
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+th.sortable:hover {
+  color: var(--text);
 }
 tbody tr {
   cursor: pointer;
