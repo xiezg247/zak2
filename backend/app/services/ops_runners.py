@@ -8,7 +8,9 @@ from app.services import (
     ops_auto_screen,
     ops_bars_fill,
     ops_enrich_quotes,
+    ops_prefetch_moneyflow,
     ops_prefetch_tushare,
+    ops_sync_watchlist_financials,
     ops_purge,
     ops_sync_bilibili_feed,
     ops_sync_calendar,
@@ -48,6 +50,8 @@ RUNNERS: dict[str, Callable[..., dict]] = {
     "sync_suspend_daily": ops_sync_suspend.sync_suspend_daily,
     "sync_disclosure_calendar": ops_sync_disclosure.sync_disclosure_calendar,
     "prefetch_tushare": ops_prefetch_tushare.prefetch_tushare,
+    "prefetch_moneyflow": ops_prefetch_moneyflow.prefetch_moneyflow,
+    "sync_watchlist_financials": ops_sync_watchlist_financials.sync_watchlist_financials,
     "warm_radar_card_snapshots": ops_warm_radar.warm_radar_card_snapshots,
 }
 

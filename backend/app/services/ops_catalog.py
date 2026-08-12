@@ -24,6 +24,8 @@ RUNNABLE_JOB_IDS = frozenset(
         "sync_suspend_daily",
         "sync_disclosure_calendar",
         "prefetch_tushare",
+        "prefetch_moneyflow",
+        "sync_watchlist_financials",
         "warm_radar_card_snapshots",
     }
 )
@@ -54,7 +56,12 @@ JOB_SPECS: tuple[JobSpec, ...] = (
     ),
     JobSpec("sync_trade_calendar", "同步交易日历", "Tushare → app.trade_calendar", "sync_trade_calendar"),
     JobSpec("batch_download_universe", "全市场日 K", "全 A 日 K 首下/补起点（Web 可跑，单次上限）", "batch_download_universe"),
-    JobSpec("prefetch_moneyflow", "主力资金预拉", "收盘后 moneyflow 预热", "prefetch_moneyflow"),
+    JobSpec(
+        "prefetch_moneyflow",
+        "主力资金预拉",
+        "moneyflow → app.tushare_factor_cache（Web 可跑）",
+        "prefetch_moneyflow",
+    ),
     JobSpec("sync_sector_flow_daily", "板块资金同步", "东财/同花顺板块资金 → sector_flow_daily", "sync_sector_flow_daily"),
     JobSpec("sync_limit_list", "涨停列表同步", "Tushare limit_list_d → limit_list_daily（封板时间）", "sync_limit_list"),
     JobSpec(
@@ -72,7 +79,12 @@ JOB_SPECS: tuple[JobSpec, ...] = (
     JobSpec("prefetch_concept_board", "概念板块预拉", "同花顺概念预热", "prefetch_concept_board"),
     JobSpec("warm_market_summary", "市场摘要预热", "情绪周期预热写入短 TTL 缓存", "warm_market_summary"),
     JobSpec("warm_watchlist_strategy_cache", "策略信号磁盘预热", "自选策略快照 cache", "warm_watchlist_strategy_cache"),
-    JobSpec("sync_watchlist_financials", "同步自选财报", "自选三表与指标", "sync_watchlist_financials"),
+    JobSpec(
+        "sync_watchlist_financials",
+        "同步自选财报",
+        "自选 income/balancesheet/cashflow → financial_*（Web 可跑，近 2 年）",
+        "sync_watchlist_financials",
+    ),
     JobSpec(
         "sync_disclosure_calendar",
         "同步披露计划",

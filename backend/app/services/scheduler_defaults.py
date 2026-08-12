@@ -28,6 +28,8 @@ DEFAULT_CRON: dict[str, dict] = {
     "sync_suspend_daily": {"hour": 17, "minute": 40, "day_of_week": "mon-fri"},
     "sync_disclosure_calendar": {"hour": 8, "minute": 30, "day_of_week": "mon"},
     "prefetch_tushare": {"hour": 15, "minute": 30, "day_of_week": "mon-fri"},
+    "prefetch_moneyflow": {"hour": 15, "minute": 35, "day_of_week": "mon-fri"},
+    "sync_watchlist_financials": {"hour": 9, "minute": 0, "day_of_week": "mon"},
     "warm_radar_card_snapshots": {
         "hours": [9, 10, 14],
         "minute": 20,
