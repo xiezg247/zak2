@@ -132,6 +132,72 @@ const displayedRows = computed(() => {
   return [...list].sort((a, b) => cmpNullable(sortValue(a, key), sortValue(b, key), dir))
 })
 
+const selectedVts = ref<Record<string, true>>({})
+const batchBusy = ref(false)
+
+function rowVt(row: Record<string, unknown>): string {
+  return String(row.vt_symbol || row.symbol || '').trim()
+}
+
+function clearSelected() {
+  selectedVts.value = {}
+}
+
+function isSelected(vt: string): boolean {
+  return !!selectedVts.value[vt]
+}
+
+function toggleVt(vt: string) {
+  if (!vt) return
+  const next = { ...selectedVts.value }
+  if (next[vt]) delete next[vt]
+  else next[vt] = true
+  selectedVts.value = next
+}
+
+const selectedCount = computed(() => Object.keys(selectedVts.value).length)
+
+const allDisplayedSelected = computed(() => {
+  const list = displayedRows.value as Record<string, unknown>[]
+  if (!list.length) return false
+  return list.every((row) => {
+    const vt = rowVt(row)
+    return vt && isSelected(vt)
+  })
+})
+
+function toggleSelectAllDisplayed() {
+  const list = displayedRows.value as Record<string, unknown>[]
+  if (allDisplayedSelected.value) {
+    const next = { ...selectedVts.value }
+    for (const row of list) {
+      const vt = rowVt(row)
+      if (vt) delete next[vt]
+    }
+    selectedVts.value = next
+    return
+  }
+  const next = { ...selectedVts.value }
+  for (const row of list) {
+    const vt = rowVt(row)
+    if (vt) next[vt] = true
+  }
+  selectedVts.value = next
+}
+
+function pruneSelectedToDisplayed() {
+  const allow = new Set(
+    (displayedRows.value as Record<string, unknown>[]).map(rowVt).filter(Boolean),
+  )
+  const next: Record<string, true> = {}
+  for (const vt of Object.keys(selectedVts.value)) {
+    if (allow.has(vt)) next[vt] = true
+  }
+  selectedVts.value = next
+}
+
+watch(displayedRows, () => pruneSelectedToDisplayed())
+
 const industry = computed(() => current.value?.result?.industry_dist || [])
 const diff = computed(() => current.value?.result?.diff)
 const isCustom = computed(() => selectedPreset.value === '自定义筛选')
@@ -372,6 +438,7 @@ async function pollJob(jobId: string) {
     statusText.value = `${job.status} · ${Math.round(job.progress * 100)}%`
     if (job.status === 'success' && job.result_ref) {
       current.value = await screenerApi.run(job.result_ref)
+      clearSelected()
       await loadHistory()
       return
     }
@@ -496,6 +563,7 @@ async function openRun(id: string) {
   try {
     current.value = await screenerApi.run(id)
     resultFilter.value = ''
+    clearSelected()
     showDiffDetail.value = false
   } catch (e) {
     error.value = e instanceof Error ? e.message : '打开运行记录失败'
@@ -520,6 +588,38 @@ async function addToWatchlist(row: Record<string, unknown>) {
     statusText.value = `已加入自选 ${vt}`
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加入自选失败'
+  }
+}
+
+async function addSelectedToWatchlist() {
+  const list = displayedRows.value as Record<string, unknown>[]
+  const queue = list.filter((row) => {
+    const vt = rowVt(row)
+    return vt && isSelected(vt)
+  })
+  if (!queue.length || batchBusy.value) return
+  batchBusy.value = true
+  error.value = ''
+  let ok = 0
+  let skip = 0
+  let fail = 0
+  try {
+    for (const row of queue) {
+      const vt = rowVt(row)
+      const name = String(row.name || '')
+      try {
+        await watchlistApi.add(vt, name)
+        ok++
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : ''
+        if (msg.includes('已在自选中')) skip++
+        else fail++
+      }
+    }
+    statusText.value = `已加入 ${ok} · 已在自选 ${skip} · 失败 ${fail}`
+    if (fail > 0) error.value = '部分加入失败，见上方汇总'
+  } finally {
+    batchBusy.value = false
   }
 }
 
@@ -824,6 +924,14 @@ onMounted(async () => {
           <input v-model="resultFilter" placeholder="过滤代码/名称/行业" />
           <button v-if="sortKey" type="button" class="ghost" @click="clearSort">默认序</button>
           <button class="ghost" type="button" @click="exportCsv">导出 CSV</button>
+          <button
+            type="button"
+            class="ghost"
+            :disabled="batchBusy || selectedCount === 0"
+            @click="addSelectedToWatchlist"
+          >
+            {{ batchBusy ? '加入中…' : `加入自选 (${selectedCount})` }}
+          </button>
         </div>
 
         <div v-if="diff" class="diff">
@@ -877,6 +985,14 @@ onMounted(async () => {
           <table>
             <thead>
               <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    :checked="allDisplayedSelected"
+                    :disabled="!displayedRows.length"
+                    @change="toggleSelectAllDisplayed"
+                  />
+                </th>
                 <th>#</th>
                 <th>代码</th>
                 <th>名称</th>
@@ -897,6 +1013,13 @@ onMounted(async () => {
             </thead>
             <tbody>
               <tr v-for="(row, i) in displayedRows" :key="String(row.symbol)">
+                <td @click.stop>
+                  <input
+                    type="checkbox"
+                    :checked="isSelected(rowVt(row))"
+                    @change="toggleVt(rowVt(row))"
+                  />
+                </td>
                 <td>{{ i + 1 }}</td>
                 <td class="mono">{{ row.vt_symbol || row.symbol }}</td>
                 <td>{{ row.name }}</td>
@@ -964,7 +1087,7 @@ onMounted(async () => {
                 </td>
               </tr>
               <tr v-if="!displayedRows.length">
-                <td colspan="16" class="empty">
+                <td colspan="17" class="empty">
                   {{ rows.length === 0 ? '运行选股后在此显示结果' : '无匹配结果' }}
                 </td>
               </tr>
@@ -1052,7 +1175,7 @@ onMounted(async () => {
   gap: 8px;
 }
 .filter-row {
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
 }
 label {
   display: grid;
