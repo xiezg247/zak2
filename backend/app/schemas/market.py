@@ -142,6 +142,28 @@ class RadarResonanceWeightsPut(BaseModel):
     weights: dict[str, float] = Field(default_factory=dict)
 
 
+class RadarHorizonRow(BaseModel):
+    vt_symbol: str
+    name: str = ""
+    resonance_score: float = 0
+    card_count: int = 0
+    card_titles: list[str] = Field(default_factory=list)
+    change_pct: float | None = None
+    last_price: float | None = None
+    seal_time_label: str = ""
+
+
+class RadarHorizonOut(BaseModel):
+    variant: str = "default"
+    strategy_key: str = ""
+    computed_at: str | None = None
+    scanned_total: int = 0
+    refined_total: int = 0
+    rows: list[RadarHorizonRow] = Field(default_factory=list)
+    empty: bool = True
+    label: str = "启发式展望（基于共振）"
+
+
 class LimitListRow(BaseModel):
     trade_date: str = ""
     vt_symbol: str = ""

@@ -15,6 +15,7 @@ from app.schemas.market import (
     PlanDraftOut,
     PlanDraftRequest,
     RadarCardOut,
+    RadarHorizonOut,
     RadarResonanceOut,
     RadarResonanceWeightsOut,
     RadarResonanceWeightsPut,
@@ -27,6 +28,7 @@ from app.services import emotion_thresholds as emotion_thresholds_svc
 from app.services import market as market_svc
 from app.services import plan_draft as plan_draft_svc
 from app.services import radar as radar_svc
+from app.services import radar_horizon as radar_horizon_svc
 from app.services import radar_resonance as resonance_svc
 from app.services import sector as sector_svc
 from app.services.limit_list_store import list_limit_list
@@ -185,6 +187,15 @@ def get_radar_resonance(
     return resonance_svc.list_radar_resonance(
         db, user_id=str(user.id), min_cards=min_cards, top_n=top_n
     )
+
+
+@router.get("/radar/horizon", response_model=RadarHorizonOut)
+def get_radar_horizon(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RadarHorizonOut:
+    _ = user
+    return radar_horizon_svc.load_horizon(db)
 
 
 @router.post("/radar/plan-draft", response_model=PlanDraftOut)
