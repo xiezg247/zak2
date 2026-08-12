@@ -13,6 +13,8 @@ def test_job_kind_mapping() -> None:
     assert job_kind_for("warm_radar_card_snapshots") == "runnable"
     assert job_kind_for("prefetch_moneyflow") == "runnable"
     assert job_kind_for("sync_watchlist_financials") == "runnable"
+    assert job_kind_for("warm_watchlist_strategy_cache") == "runnable"
+    assert job_kind_for("scan_horizon_outlook") == "runnable"
     assert job_kind_for("prefetch_concept_board") == "planned"
 
 

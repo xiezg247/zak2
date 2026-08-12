@@ -24,6 +24,8 @@ def test_catalog_runnable_jobs() -> None:
     assert "prefetch_moneyflow" in RUNNABLE_JOB_IDS
     assert "sync_watchlist_financials" in RUNNABLE_JOB_IDS
     assert "warm_radar_card_snapshots" in RUNNABLE_JOB_IDS
+    assert "warm_watchlist_strategy_cache" in RUNNABLE_JOB_IDS
+    assert "scan_horizon_outlook" in RUNNABLE_JOB_IDS
     ids = {s.job_id for s in JOB_SPECS}
     assert RUNNABLE_JOB_IDS <= ids
 
