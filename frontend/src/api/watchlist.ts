@@ -63,6 +63,7 @@ export type StrategyPositionRow = {
   volume: number
   buy_date: string
   last_price: number | null
+  market_value: number | null
   unrealized_pnl: number | null
   unrealized_pnl_pct: number | null
   t1_locked: boolean

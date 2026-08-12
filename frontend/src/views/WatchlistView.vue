@@ -47,6 +47,7 @@ const prefsReady = ref(false)
 const riskError = ref('')
 const riskMsg = ref('')
 const riskSaving = ref(false)
+const showOffPlanChips = ref(false)
 const notifyOpen = ref(false)
 const notifyLoaded = ref(false)
 const notifyLoading = ref(false)
@@ -172,6 +173,16 @@ function applyRiskPrefs(prefs: {
 function formatPctRatio(v: number | null | undefined): string {
   if (v == null || Number.isNaN(v)) return '—'
   return `${(v * 100).toFixed(1)}%`
+}
+
+function formatMarketValue(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v)) return '—'
+  return v.toLocaleString()
+}
+
+function toggleOffPlanChips() {
+  if (!riskSummary.value || riskSummary.value.off_plan_count <= 0) return
+  showOffPlanChips.value = !showOffPlanChips.value
 }
 
 async function refreshBoard(quiet = false) {
@@ -781,8 +792,21 @@ onUnmounted(() => {
           <h3>仓位与风控</h3>
           <div class="risk-summary muted" v-if="riskSummary">
             <span>实际仓位 {{ formatPctRatio(riskSummary.actual_position_pct) }}</span>
-            <span>计划外 {{ riskSummary.off_plan_count }}</span>
+            <button
+              v-if="riskSummary.off_plan_count > 0"
+              type="button"
+              class="link"
+              @click="toggleOffPlanChips"
+            >
+              计划外 {{ riskSummary.off_plan_count }}
+            </button>
+            <span v-else>计划外 {{ riskSummary.off_plan_count }}</span>
             <span>计划日 {{ riskSummary.active_plan_date || '—' }}</span>
+          </div>
+          <div v-if="showOffPlanChips && riskSummary?.off_plan_symbols?.length" class="chips">
+            <span v-for="vt in riskSummary.off_plan_symbols" :key="vt" class="chip-tag">
+              <button type="button" class="chip-link mono" @click="selectVt(vt)">{{ vt }}</button>
+            </span>
           </div>
           <div class="pos-grid risk-grid">
             <label>
@@ -831,7 +855,7 @@ onUnmounted(() => {
           <p v-if="!prefsReady" class="muted">加载风控偏好…</p>
           <p v-else-if="riskError" class="err">{{ riskError }}</p>
           <p v-else-if="riskMsg" class="muted">{{ riskMsg }}</p>
-          <p class="muted tip">止损按百分数填写（如 5 = 5%）；浮亏警戒为负数（如 -5）。与桌面同表 trading/risk。</p>
+          <p class="muted tip">止损按百分数填写（如 5 = 5%）；浮亏警戒为负数（如 -5）。写入用户风控偏好。</p>
         </div>
 
         <div class="pos-form plan-card">
@@ -1052,6 +1076,8 @@ onUnmounted(() => {
                     <th>代码</th>
                     <th>成本</th>
                     <th>数量</th>
+                    <th>现价</th>
+                    <th>市值</th>
                     <th>浮盈%</th>
                     <th>T+1</th>
                     <th>退出</th>
@@ -1072,6 +1098,8 @@ onUnmounted(() => {
                     <td class="mono">{{ row.vt_symbol }}</td>
                     <td>{{ row.cost_price.toFixed(2) }}</td>
                     <td>{{ row.volume }}</td>
+                    <td>{{ row.last_price != null ? row.last_price.toFixed(2) : '—' }}</td>
+                    <td>{{ formatMarketValue(row.market_value) }}</td>
                     <td
                       :class="{
                         up: (row.unrealized_pnl_pct || 0) > 0,
@@ -1091,7 +1119,7 @@ onUnmounted(() => {
                     </td>
                   </tr>
                   <tr v-if="!board.positions.length">
-                    <td colspan="8" class="empty">无持仓，上方可录入（投研记账，非实盘）</td>
+                    <td colspan="10" class="empty">无持仓，上方可录入（投研记账，非实盘）</td>
                   </tr>
                 </tbody>
               </table>
