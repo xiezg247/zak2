@@ -30,6 +30,7 @@
 16. ~~雷达首屏空态 UX~~（已完成 → [spec](./superpowers/specs/2026-08-12-radar-empty-loading-ux-design.md)）
 17. ~~雷达展望读路径薄壳~~（已完成 → [spec](./superpowers/specs/2026-08-12-radar-horizon-shell-ux-design.md)）
 18. ~~雷达卡片筛选排序~~（已完成 → [spec](./superpowers/specs/2026-08-12-radar-card-filter-sort-design.md)）
+19. ~~板块资金表过滤排序~~（已完成 → [spec](./superpowers/specs/2026-08-12-sector-flow-sort-filter-design.md)）
 
 ## 明确不做（直到本文件改口）
 
