@@ -27,6 +27,8 @@ RUNNABLE_JOB_IDS = frozenset(
         "prefetch_moneyflow",
         "sync_watchlist_financials",
         "warm_radar_card_snapshots",
+        "warm_watchlist_strategy_cache",
+        "scan_horizon_outlook",
     }
 )
 
@@ -78,7 +80,12 @@ JOB_SPECS: tuple[JobSpec, ...] = (
     ),
     JobSpec("prefetch_concept_board", "概念板块预拉", "同花顺概念预热", "prefetch_concept_board"),
     JobSpec("warm_market_summary", "市场摘要预热", "情绪周期预热写入短 TTL 缓存", "warm_market_summary"),
-    JobSpec("warm_watchlist_strategy_cache", "策略信号磁盘预热", "自选策略快照 cache", "warm_watchlist_strategy_cache"),
+    JobSpec(
+        "warm_watchlist_strategy_cache",
+        "策略信号磁盘预热",
+        "占位：尚未接入策略引擎（Web 可跑 → skipped）",
+        "warm_watchlist_strategy_cache",
+    ),
     JobSpec(
         "sync_watchlist_financials",
         "同步自选财报",
@@ -96,7 +103,12 @@ JOB_SPECS: tuple[JobSpec, ...] = (
     JobSpec("fill_focus_pool_minute", "关注池 1m K 补全", "信号/持仓 1 分钟线", "fill_focus_pool_minute"),
     JobSpec("screen_intraday", "盘中自动选股", "盘中选股写历史", "screen_intraday"),
     JobSpec("screen_post_close", "盘后自动选股", "盘后选股写历史", "screen_post_close"),
-    JobSpec("scan_horizon_outlook", "雷达展望扫描", "展望/预测写入 cache", "scan_horizon_outlook"),
+    JobSpec(
+        "scan_horizon_outlook",
+        "雷达展望扫描",
+        "占位：尚未接入展望扫描管线（Web 可跑 → skipped）",
+        "scan_horizon_outlook",
+    ),
     JobSpec(
         "warm_radar_card_snapshots",
         "雷达卡片预热",
