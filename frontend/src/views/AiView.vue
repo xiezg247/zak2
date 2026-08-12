@@ -28,6 +28,35 @@ const teamBodies = ref<Record<string, string>>({})
 const teamWeighted = ref<number | null>(null)
 const teamSavedReport = ref<{ id: number; title: string; vt: string } | null>(null)
 const listEl = ref<HTMLElement | null>(null)
+const sessionFilter = ref('')
+/** proposal_id -> args 是否展开 */
+const argsOpen = ref<Record<string, boolean>>({})
+
+function sessionTitle(s: { title: string }): string {
+  return (s.title || '').trim() || '未命名'
+}
+
+const displayedSessions = computed(() => {
+  const q = sessionFilter.value.trim().toLowerCase()
+  if (!q) return sessions.value
+  return sessions.value.filter((s) => sessionTitle(s).toLowerCase().includes(q))
+})
+
+function toggleArgs(id: string) {
+  argsOpen.value = { ...argsOpen.value, [id]: !argsOpen.value[id] }
+}
+
+function hasArgs(p: ConfirmProposal): boolean {
+  return Object.keys(p.args || {}).length > 0
+}
+
+function formatArgs(p: ConfirmProposal): string {
+  try {
+    return JSON.stringify(p.args || {}, null, 2)
+  } catch {
+    return String(p.args)
+  }
+}
 
 const subtitle = computed(() => {
   if (!status.value) return ''
@@ -275,6 +304,9 @@ onMounted(async () => {
 <template>
   <AppShell title="AI 助手" :subtitle="subtitle" active="ai">
     <div class="page">
+      <p v-if="status && !status.configured" class="warn-banner muted">
+        未配置 LLM_API_KEY，对话与团队分析不可用。
+      </p>
       <p v-if="error" class="err">{{ error }}</p>
       <div class="workspace">
         <aside class="left">
@@ -311,15 +343,20 @@ onMounted(async () => {
             <p v-if="teamMode === 'deep'" class="muted tiny">三分析师并行 LLM，更慢更耗 token</p>
             <p v-if="teamWeighted != null" class="muted">加权分 {{ teamWeighted }}</p>
           </div>
+          <div v-if="sessions.length" class="session-filter">
+            <input v-model="sessionFilter" placeholder="过滤会话" />
+          </div>
+          <p v-if="!sessions.length" class="muted tiny sess-empty">暂无会话，点上方新对话</p>
+          <p v-else-if="!displayedSessions.length" class="muted tiny sess-empty">无匹配会话</p>
           <button
-            v-for="s in sessions"
+            v-for="s in displayedSessions"
             :key="s.id"
             type="button"
             class="sess"
             :class="{ on: sessionId === s.id }"
             @click="selectSession(s.id)"
           >
-            <span>{{ s.title || '未命名' }}</span>
+            <span>{{ sessionTitle(s) }}</span>
             <span class="muted">{{ s.updated_at }}</span>
             <span class="del" @click.stop="removeSession(s.id)">删</span>
           </button>
@@ -366,6 +403,15 @@ onMounted(async () => {
                 <span class="muted">{{ p.tool }}</span>
               </div>
               <div class="confirm-body">{{ p.summary }}</div>
+              <button
+                v-if="hasArgs(p)"
+                type="button"
+                class="ghost tiny-btn"
+                @click="toggleArgs(p.proposal_id)"
+              >
+                {{ argsOpen[p.proposal_id] ? '收起参数' : '参数' }}
+              </button>
+              <pre v-if="hasArgs(p) && argsOpen[p.proposal_id]" class="args-pre">{{ formatArgs(p) }}</pre>
               <p v-if="p.detail" class="err">{{ p.detail }}</p>
               <div class="confirm-actions" v-if="p.status === 'pending'">
                 <button
@@ -374,7 +420,7 @@ onMounted(async () => {
                   :disabled="actingId === p.proposal_id"
                   @click="onConfirm(p)"
                 >
-                  确认
+                  {{ actingId === p.proposal_id ? '处理中…' : '确认' }}
                 </button>
                 <button
                   type="button"
@@ -432,6 +478,42 @@ onMounted(async () => {
 .err {
   color: var(--danger);
   margin: 0 0 8px;
+}
+.warn-banner {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface-muted, var(--bg-elevated));
+}
+.session-filter input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 0.5rem;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+.sess-empty {
+  margin: 4px 0;
+}
+.args-pre {
+  margin: 6px 0 0;
+  padding: 8px;
+  font-size: 0.75rem;
+  overflow: auto;
+  max-height: 160px;
+  background: var(--bg);
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+}
+.tiny-btn {
+  justify-self: start;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  padding: 4px 8px;
 }
 .workspace {
   display: grid;
