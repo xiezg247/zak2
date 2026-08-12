@@ -127,7 +127,7 @@ function toggleSort(key: Exclude<SortKey, null>) {
     sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
   } else {
     sortKey.value = key
-    sortDir.value = key === 'change_pct' || key === 'last_price' ? 'desc' : 'desc'
+    sortDir.value = 'desc'
   }
 }
 
@@ -639,7 +639,9 @@ onUnmounted(() => {
                   </td>
                 </tr>
                 <tr v-if="!displayedItems.length">
-                  <td colspan="9" class="empty">自选为空，上方输入代码添加</td>
+                  <td colspan="9" class="empty">
+                    {{ items.length === 0 ? '自选为空，上方输入代码添加' : '无匹配结果' }}
+                  </td>
                 </tr>
               </tbody>
             </table>
