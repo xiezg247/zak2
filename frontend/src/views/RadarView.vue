@@ -5,6 +5,7 @@ import AppShell from '../components/AppShell.vue'
 import {
   marketApi,
   type RadarCard,
+  type RadarHorizon,
   type RadarResonanceEntry,
   type ResonanceWeightItem,
 } from '../api/market'
@@ -26,6 +27,8 @@ const weightBusy = ref(false)
 const weightErr = ref('')
 const draftBusy = ref(false)
 const draftMsg = ref('')
+const horizon = ref<RadarHorizon | null>(null)
+const horizonErr = ref('')
 const horizonOpen = ref(false)
 
 const cardFilter = ref('')
@@ -122,6 +125,14 @@ const subtitle = computed(() => {
   return n ? `${cards.value.length} 张卡片 · 共振 ${n}` : `${cards.value.length} 张卡片`
 })
 
+const horizonHasCache = computed(() => Boolean(horizon.value?.computed_at))
+
+const horizonHeadLabel = computed(() => {
+  if (!horizonHasCache.value) return '暂无数据'
+  const h = horizon.value!
+  return (h.label || '').trim() || '启发式展望（基于共振）'
+})
+
 const cardCountByVt = computed(() => {
   const m = new Map<string, number>()
   for (const e of resonance.value) {
@@ -153,8 +164,13 @@ async function load() {
   loading.value = true
   error.value = ''
   sideMsg.value = ''
+  horizonErr.value = ''
   const weightsPromise = marketApi.resonanceWeights().catch((e) => {
     weightErr.value = e instanceof Error ? e.message : '权重加载失败'
+    return null
+  })
+  const horizonPromise = marketApi.radarHorizon().catch((e) => {
+    horizonErr.value = e instanceof Error ? e.message : '展望加载失败'
     return null
   })
   try {
@@ -170,10 +186,14 @@ async function load() {
   } finally {
     loading.value = false
   }
-  const w = await weightsPromise
+  const [w, h] = await Promise.all([weightsPromise, horizonPromise])
   if (w) {
     applyWeights(w)
     weightErr.value = ''
+  }
+  if (h) {
+    horizon.value = h
+    horizonErr.value = ''
   }
 }
 
@@ -319,17 +339,83 @@ onMounted(() => {
       <div class="horizon-block">
         <div class="horizon-head">
           <strong>展望</strong>
-          <span class="muted">暂不可用</span>
+          <span class="muted">{{ horizonHeadLabel }}</span>
+          <span v-if="horizonHasCache && horizon?.computed_at" class="muted tiny">
+            · {{ horizon.computed_at }}
+          </span>
           <button type="button" class="ghost tiny-btn" @click="horizonOpen = !horizonOpen">
             {{ horizonOpen ? '收起' : '展开' }}
           </button>
         </div>
-        <div v-if="horizonOpen" class="horizon-panel muted">
-          <p>
-            zak2 尚未接入雷达展望扫描管线（horizon / predict），当前无展望数据可读。
-            Ops 中的 scan_horizon_outlook 为可跑占位（恒 skipped），待管线落地后再展示结果。
-          </p>
-          <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
+        <div v-if="horizonOpen" class="horizon-panel">
+          <p v-if="horizonErr" class="horizon-err">{{ horizonErr }}</p>
+          <template v-else-if="horizonHasCache">
+            <p v-if="horizon?.empty" class="muted">
+              上次扫描无达标共振标的（扫描 {{ horizon.scanned_total }} · 入选 {{ horizon.refined_total }}）。
+            </p>
+            <div v-else-if="horizon?.rows.length" class="table-wrap horizon-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>标的</th>
+                    <th>共振</th>
+                    <th>卡数</th>
+                    <th>细节</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row, i) in horizon.rows" :key="row.vt_symbol">
+                    <td>{{ i + 1 }}</td>
+                    <td>
+                      <span v-if="row.card_count >= 2" class="star">★</span>
+                      {{ row.name || row.vt_symbol }}
+                      <div class="mono muted tiny">{{ row.vt_symbol }}</div>
+                    </td>
+                    <td class="mono">{{ row.resonance_score.toFixed(1) }}</td>
+                    <td>{{ row.card_count }}</td>
+                    <td class="mono muted">
+                      <template v-if="row.change_pct != null">涨幅 {{ row.change_pct.toFixed(2) }}%</template>
+                      <template v-if="row.last_price != null">
+                        <template v-if="row.change_pct != null"> · </template>
+                        现价 {{ row.last_price.toFixed(2) }}
+                      </template>
+                      <template v-if="row.card_titles.length">
+                        <template v-if="row.change_pct != null || row.last_price != null"> · </template>
+                        {{ row.card_titles.join(' / ') }}
+                      </template>
+                      <template v-if="sealLabel(row)">
+                        <template
+                          v-if="row.change_pct != null || row.last_price != null || row.card_titles.length"
+                        >
+                          ·
+                        </template>
+                        {{ sealLabel(row) }}
+                      </template>
+                      <template
+                        v-if="
+                          row.change_pct == null &&
+                          row.last_price == null &&
+                          !row.card_titles.length &&
+                          !sealLabel(row)
+                        "
+                      >
+                        —
+                      </template>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+          <template v-else>
+            <p class="muted">
+              暂无启发式展望数据。请于 Ops 手动执行
+              <code class="mono">scan_horizon_outlook</code>
+              生成展望（基于雷达卡片共振；需先有 warm_radar_card_snapshots 预热卡片）。
+            </p>
+            <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
+          </template>
         </div>
       </div>
 
@@ -571,6 +657,20 @@ onMounted(() => {
   margin-top: 8px;
   padding: 10px 12px;
   line-height: 1.6;
+}
+.horizon-panel p {
+  margin: 0 0 8px;
+}
+.horizon-panel p:last-child {
+  margin-bottom: 0;
+}
+.horizon-err {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+.horizon-table {
+  margin-top: 8px;
 }
 .muted {
   color: var(--muted);

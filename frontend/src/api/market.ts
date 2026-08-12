@@ -119,6 +119,26 @@ export type RadarResonance = {
   entries: RadarResonanceEntry[]
 }
 
+export type RadarHorizon = {
+  variant: string
+  strategy_key: string
+  computed_at: string | null
+  scanned_total: number
+  refined_total: number
+  rows: Array<{
+    vt_symbol: string
+    name: string
+    resonance_score: number
+    card_count: number
+    card_titles: string[]
+    change_pct: number | null
+    last_price: number | null
+    seal_time_label?: string
+  }>
+  empty: boolean
+  label: string
+}
+
 export type ResonanceWeightItem = {
   card_id: string
   title: string
@@ -178,6 +198,7 @@ export const marketApi = {
     return api<SectorFlowRow[]>(`/api/v1/sectors/flow?${q}`)
   },
   radarCards: () => api<RadarCard[]>('/api/v1/radar/cards'),
+  radarHorizon: () => api<RadarHorizon>('/api/v1/radar/horizon'),
   radarResonance: (opts: { top_n?: number; min_cards?: number } = {}) => {
     const q = new URLSearchParams()
     q.set('top_n', String(opts.top_n ?? 20))
