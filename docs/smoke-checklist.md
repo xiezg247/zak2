@@ -100,10 +100,10 @@ cd frontend && npm run dev
 - [ ] Ops 手动跑 **`sync_watchlist_financials`**（需 `TUSHARE_TOKEN` + 已有自选；写入 `financial_reports`/`financial_snapshots`/`financial_sync_meta`；无 token / 空自选有 skipped 文案）
 - [ ] Ops 手动跑 **`warm_radar_card_snapshots`**（写入 `cache.radar_card_snapshot`；无合成卡片时有 skipped 文案；成功后 `/radar` 首屏可命中缓存）
 - [ ] Ops 手动跑 **`enrich_market_quotes`**（需 `TUSHARE_TOKEN` + collector 已有行情键；无 token / 无 Redis 行情 / 无匹配键 / 当日 Tushare 因子未出时有明确 skipped 文案，可稍后重试；成功后可看换手/量比/净流入榜更新）
-- [ ] Ops 手动跑 **`warm_watchlist_strategy_cache`**（恒 skipped；文案含「策略引擎」）
+- [ ] Ops 手动跑 **`warm_watchlist_strategy_cache`** 非 skipped（Redis→PG 桥；无信号亦 success）；文案含桥接/Redis
 - [ ] Ops 手动跑 **`scan_horizon_outlook`** 非 skipped（可写入启发式展望）；`/radar` 展望区可读行或空态引导（文案含启发式/共振，无「恒 skipped」）
-- [ ] Ops 手动跑 **`prefetch_concept_board`**（恒 skipped；文案含「同花顺概念预热落点」或「concept board」）
-- [ ] Ops 手动跑 **`fill_focus_pool_minute`**（恒 skipped；文案含「关注池 1m K 补全管线」或「1m K 补全」）
+- [ ] Ops 手动跑 **`prefetch_concept_board`**（复用 sector sync；有 token 非 skipped；无 token 可 skipped）；文案含「概念预拉」或 sector
+- [ ] Ops 手动跑 **`fill_focus_pool_minute`** 非 skipped（盘点 pool/daily/1m）；文案含「1m 下载未接入」与「盘点」
 - [ ] （可选）配置 `SCHEDULER_SCREEN_USER_ID` 后，盘中/盘后选股定时可写入该用户 `screener_runs`（未配置则跳过选股定时）
 
 ## 7. 自动化冒烟
