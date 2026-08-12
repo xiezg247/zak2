@@ -28,6 +28,7 @@
 14. ~~选股 Hub 运行历史打磨~~（已完成 → [spec](./superpowers/specs/2026-08-12-screener-hub-history-ux-design.md)）
 15. ~~选股 Hub 批量入自选~~（已完成 → [spec](./superpowers/specs/2026-08-12-screener-hub-batch-watchlist-design.md)）
 16. ~~雷达首屏空态 UX~~（已完成 → [spec](./superpowers/specs/2026-08-12-radar-empty-loading-ux-design.md)）
+17. ~~雷达展望读路径薄壳~~（已完成 → [spec](./superpowers/specs/2026-08-12-radar-horizon-shell-ux-design.md)）
 
 ## 明确不做（直到本文件改口）
 
