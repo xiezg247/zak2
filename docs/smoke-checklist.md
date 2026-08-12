@@ -84,6 +84,7 @@ cd frontend && npm run dev
 - [ ] `/playbook` 章节可读、纪律可勾
 - [ ] `/notes` 备忘/流水可写；**研报 Tab** 可看团队落库（`?symbol=&report=` 可直达）
 - [ ] `/feed` 时间线可读；左侧输入 **mid** →「添加」可新增 UP 订阅（无 `BILIBILI_COOKIES` 时 400 提示明确）；**关键词搜索** → 结果点「添加」走现有添加路径（可勾选「并同步」）；勾选「并同步」可立即拉动态（失败仍保留订阅，页内提示 `sync_error`）；每行「删」confirm 后订阅及条目移除；配置 Cookie 后 Ops 跑 `sync_bilibili_feed` 可见新条目（无 Cookie / 无启用订阅时 skipped）；亦可 `pytest backend/tests/test_bilibili_user_search.py backend/tests/test_feed_search.py backend/tests/test_feed_subscriptions.py`
+- [ ] `/feed` 有动态时可按标题/作者过滤与「仅未读」；无匹配显示「无匹配动态」；无订阅/无动态空态可区分（无动态可见去 Ops）
 - [ ] `/backtest` 对有日 K 的票跑通双均线
 - [ ] `/ai` 流式回复；写操作确认卡；可提议 `upsert_position` / `delete_position` / `add_signal_panel` / `remove_signal_panel`，确认卡后落库（缺自选时 upsert 应失败）；**团队分析**快速/深度；结束后可「研报已保存」并跳转笔记；Agent 可调用 `list_skills` / `read_skill` 加载内置 Skill 说明（亦可 `pytest backend/tests/test_ai_write_positions.py backend/tests/test_ai_tools_skills.py backend/tests/test_skills_catalog.py` 单测覆盖）
 - [ ] Agent / 工具：`list_note_symbols` / `get_stock_notes` 只读可用；`get_positions` / `get_signal_panel` / `get_trading_risk` 只读可用；`run_skill` 对 watchlist / screener / radar / market-emotion / **notes** / **positions** 可用（只读；emotion 需情绪数据或可接受空结构；notes 无 vt_symbol 列符号、有则读备忘+流水；positions 默认聚合持仓/信号/风控，可 `section=positions|signals|risk`；亦可 `pytest backend/tests/test_ai_read_tools.py backend/tests/test_skills_catalog.py backend/tests/test_ai_tools_skills.py` 单测覆盖）
