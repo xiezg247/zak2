@@ -22,6 +22,15 @@ export type WatchlistGroup = {
   sort_order: number
 }
 
+export type GroupMembersBatchResult = {
+  ok: boolean
+  action: 'add' | 'remove'
+  added: number
+  removed: number
+  skipped: number
+  errors: Array<{ symbol: string; detail: string }>
+}
+
 export type Bar = {
   datetime: string
   open: number
@@ -238,6 +247,11 @@ export const watchlistApi = {
       method: 'PATCH',
       body: JSON.stringify({ name }),
     }),
+  reorderGroups: (groupIds: string[]) =>
+    api<WatchlistGroup[]>('/api/v1/watchlist/groups/reorder', {
+      method: 'PUT',
+      body: JSON.stringify({ group_ids: groupIds }),
+    }),
   addToGroup: (groupId: string, symbol: string) =>
     api<{ ok: boolean }>(`/api/v1/watchlist/groups/${encodeURIComponent(groupId)}/members`, {
       method: 'POST',
@@ -247,6 +261,14 @@ export const watchlistApi = {
     api<{ ok: boolean }>(
       `/api/v1/watchlist/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(vtSymbol)}`,
       { method: 'DELETE' },
+    ),
+  batchGroupMembers: (groupId: string, symbols: string[], action: 'add' | 'remove') =>
+    api<GroupMembersBatchResult>(
+      `/api/v1/watchlist/groups/${encodeURIComponent(groupId)}/members/batch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ symbols, action }),
+      },
     ),
   bars: (vtSymbol: string, interval = 'd', limit = 120) =>
     api<BarsResponse>(

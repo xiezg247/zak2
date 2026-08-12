@@ -6,6 +6,7 @@ import CandleChart from '../components/CandleChart.vue'
 import {
   watchlistApi,
   type Bar,
+  type GroupMembersBatchResult,
   type NotifyLogItem,
   type PlanSymbolStatus,
   type PositionItem,
@@ -102,6 +103,9 @@ type SortKey = 'last_price' | 'change_pct' | 'turnover_rate' | 'volume_ratio' | 
 const listFilter = ref('')
 const sortKey = ref<SortKey>(null)
 const sortDir = ref<'asc' | 'desc'>('desc')
+const checked = ref<Set<string>>(new Set())
+const batchTargetGroupId = ref('')
+const batchMsg = ref('')
 
 const COL_PREFS_KEY = 'zak2:watchlist:list_columns'
 
@@ -150,11 +154,26 @@ const optionalColLabels: { key: OptionalCol; label: string }[] = [
 ]
 
 const tableColspan = computed(() => {
-  let n = 5
+  let n = 6
   for (const k of Object.keys(DEFAULT_COL_VISIBLE) as OptionalCol[]) {
     if (colVisible.value[k]) n += 1
   }
   return n
+})
+
+const groupIndex = computed(() => {
+  if (!groupId.value) return -1
+  return groups.value.findIndex((g) => g.id === groupId.value)
+})
+
+const otherGroups = computed(() => groups.value.filter((g) => g.id !== groupId.value))
+
+const hasChecked = computed(() => checked.value.size > 0)
+
+const allDisplayedChecked = computed(() => {
+  const rows = displayedItems.value
+  if (!rows.length) return false
+  return rows.every((r) => checked.value.has(r.vt_symbol))
 })
 
 function formatAmountYi(v: number | null | undefined): string {
@@ -561,9 +580,89 @@ async function onDeleteGroup() {
     error.value = ''
     await watchlistApi.deleteGroup(groupId.value)
     groupId.value = ''
+    checked.value = new Set()
     await refresh()
   } catch (e) {
     error.value = e instanceof Error ? e.message : '删组失败'
+  }
+}
+
+async function onMoveGroup(delta: -1 | 1) {
+  const idx = groupIndex.value
+  if (idx < 0) return
+  const next = idx + delta
+  if (next < 0 || next >= groups.value.length) return
+  const reordered = [...groups.value]
+  const tmp = reordered[idx]
+  reordered[idx] = reordered[next]
+  reordered[next] = tmp
+  try {
+    error.value = ''
+    const gs = await watchlistApi.reorderGroups(reordered.map((g) => g.id))
+    groups.value = gs
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '排序失败'
+  }
+}
+
+function toggleChecked(vt: string) {
+  const next = new Set(checked.value)
+  if (next.has(vt)) next.delete(vt)
+  else next.add(vt)
+  checked.value = next
+}
+
+function toggleAllDisplayed() {
+  const rows = displayedItems.value
+  if (allDisplayedChecked.value) {
+    checked.value = new Set()
+  } else {
+    checked.value = new Set(rows.map((r) => r.vt_symbol))
+  }
+}
+
+function formatBatchResult(result: GroupMembersBatchResult): string {
+  const parts: string[] = []
+  const n = result.action === 'add' ? result.added : result.removed
+  if (n > 0) parts.push(`${result.action === 'add' ? '加入' : '移出'} ${n} 只`)
+  if (result.skipped > 0) parts.push(`跳过 ${result.skipped}`)
+  if (result.errors.length > 0) parts.push(`${result.errors.length} 条失败`)
+  return parts.join('，') || '已完成'
+}
+
+async function onBatchAddToGroup() {
+  if (!batchTargetGroupId.value || checked.value.size === 0) return
+  try {
+    error.value = ''
+    batchMsg.value = ''
+    const symbols = [...checked.value]
+    const result = await watchlistApi.batchGroupMembers(batchTargetGroupId.value, symbols, 'add')
+    checked.value = new Set()
+    batchMsg.value = formatBatchResult(result)
+    if (result.skipped > 0 || result.errors.length > 0) {
+      error.value = batchMsg.value
+    }
+    await refresh()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '批量加入失败'
+  }
+}
+
+async function onBatchRemoveFromGroup() {
+  if (!groupId.value || checked.value.size === 0) return
+  try {
+    error.value = ''
+    batchMsg.value = ''
+    const symbols = [...checked.value]
+    const result = await watchlistApi.batchGroupMembers(groupId.value, symbols, 'remove')
+    checked.value = new Set()
+    batchMsg.value = formatBatchResult(result)
+    if (result.skipped > 0 || result.errors.length > 0) {
+      error.value = batchMsg.value
+    }
+    await refresh()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '批量移出失败'
   }
 }
 
@@ -637,6 +736,12 @@ watch(selected, () => {
   void loadBars()
 })
 
+watch(groupId, () => {
+  checked.value = new Set()
+  batchTargetGroupId.value = ''
+  batchMsg.value = ''
+})
+
 watch(barLimit, () => {
   void loadBars()
 })
@@ -690,6 +795,24 @@ onUnmounted(() => {
               <button type="button" class="ghost" @click="onRenameGroup">改名</button>
               <button type="button" class="ghost" @click="onDeleteGroup">删组</button>
             </div>
+            <div v-if="groupId" class="row">
+              <button
+                type="button"
+                class="ghost"
+                :disabled="groupIndex <= 0"
+                @click="onMoveGroup(-1)"
+              >
+                上移
+              </button>
+              <button
+                type="button"
+                class="ghost"
+                :disabled="groupIndex < 0 || groupIndex >= groups.length - 1"
+                @click="onMoveGroup(1)"
+              >
+                下移
+              </button>
+            </div>
             <div v-if="groupId && selected" class="row">
               <button type="button" class="ghost" @click="onAddToGroup">加入此组</button>
               <button type="button" class="ghost" @click="onRemoveFromGroup">移出此组</button>
@@ -734,12 +857,48 @@ onUnmounted(() => {
           </div>
 
           <p v-if="error" class="err">{{ error }}</p>
+          <p v-else-if="batchMsg" class="muted">{{ batchMsg }}</p>
           <p v-if="loading" class="muted">刷新中…</p>
+
+          <div v-if="hasChecked" class="row batch-bar">
+            <span class="muted batch-count">已选 {{ checked.size }} 只</span>
+            <label>
+              目标组
+              <select v-model="batchTargetGroupId">
+                <option value="">选择分组</option>
+                <option v-for="g in otherGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              class="ghost"
+              :disabled="!batchTargetGroupId"
+              @click="onBatchAddToGroup"
+            >
+              批量加入
+            </button>
+            <button
+              v-if="groupId"
+              type="button"
+              class="ghost"
+              @click="onBatchRemoveFromGroup"
+            >
+              批量移出此组
+            </button>
+          </div>
 
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
+                  <th class="check-col">
+                    <input
+                      type="checkbox"
+                      :checked="allDisplayedChecked"
+                      :disabled="!displayedItems.length"
+                      @change="toggleAllDisplayed"
+                    />
+                  </th>
                   <th>代码</th>
                   <th>名称</th>
                   <th v-if="colVisible.industry">行业</th>
@@ -764,6 +923,13 @@ onUnmounted(() => {
                   :class="{ on: selected?.vt_symbol === item.vt_symbol }"
                   @click="selectRow(item)"
                 >
+                  <td class="check-col" @click.stop>
+                    <input
+                      type="checkbox"
+                      :checked="checked.has(item.vt_symbol)"
+                      @change="toggleChecked(item.vt_symbol)"
+                    />
+                  </td>
                   <td class="mono">{{ item.vt_symbol }}</td>
                   <td>{{ item.name || '—' }}</td>
                   <td v-if="colVisible.industry">{{ item.industry?.trim() ? item.industry : '—' }}</td>
@@ -1435,6 +1601,28 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
+}
+.batch-bar {
+  grid-template-columns: auto 1fr auto auto;
+  align-items: end;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface-muted);
+}
+.batch-count {
+  align-self: center;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.check-col {
+  width: 32px;
+  text-align: center;
+  padding-left: 8px;
+  padding-right: 4px;
+}
+.check-col input[type='checkbox'] {
+  cursor: pointer;
 }
 .auto {
   display: flex;
