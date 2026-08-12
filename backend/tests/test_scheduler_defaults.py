@@ -67,6 +67,18 @@ def test_resolve_sync_watchlist_financials() -> None:
     assert r["hours"] is None
 
 
+def test_resolve_prefetch_concept_board() -> None:
+    r = resolve_cron("prefetch_concept_board", {})
+    assert r["hour"] == 17 and r["minute"] == 30 and r["day_of_week"] == "mon-fri"
+    assert r["hours"] is None
+
+
+def test_resolve_fill_focus_pool_minute() -> None:
+    r = resolve_cron("fill_focus_pool_minute", {})
+    assert r["hour"] == 19 and r["minute"] == 0 and r["day_of_week"] == "mon-fri"
+    assert r["hours"] is None
+
+
 def test_config_overrides_hour() -> None:
     r = resolve_cron("purge_stale_cache", {"cron_hour": 20, "cron_minute": 1})
     assert r["hour"] == 20 and r["minute"] == 1

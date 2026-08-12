@@ -8,6 +8,8 @@ from app.services import (
     ops_auto_screen,
     ops_bars_fill,
     ops_enrich_quotes,
+    ops_fill_focus_pool_minute,
+    ops_prefetch_concept_board,
     ops_prefetch_moneyflow,
     ops_prefetch_tushare,
     ops_sync_watchlist_financials,
@@ -57,6 +59,8 @@ RUNNERS: dict[str, Callable[..., dict]] = {
     "warm_radar_card_snapshots": ops_warm_radar.warm_radar_card_snapshots,
     "warm_watchlist_strategy_cache": ops_warm_watchlist_strategy.warm_watchlist_strategy_cache,
     "scan_horizon_outlook": ops_scan_horizon_outlook.scan_horizon_outlook,
+    "prefetch_concept_board": ops_prefetch_concept_board.prefetch_concept_board,
+    "fill_focus_pool_minute": ops_fill_focus_pool_minute.fill_focus_pool_minute,
 }
 
 

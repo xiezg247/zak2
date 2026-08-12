@@ -29,6 +29,8 @@ RUNNABLE_JOB_IDS = frozenset(
         "warm_radar_card_snapshots",
         "warm_watchlist_strategy_cache",
         "scan_horizon_outlook",
+        "prefetch_concept_board",
+        "fill_focus_pool_minute",
     }
 )
 
@@ -78,7 +80,12 @@ JOB_SPECS: tuple[JobSpec, ...] = (
         "daily_basic/moneyflow → app.tushare_factor_cache（Web 可跑）",
         "prefetch_tushare",
     ),
-    JobSpec("prefetch_concept_board", "概念板块预拉", "同花顺概念预热", "prefetch_concept_board"),
+    JobSpec(
+        "prefetch_concept_board",
+        "概念板块预拉",
+        "占位：尚未接入同花顺概念预热落点（Web 可跑 → skipped）",
+        "prefetch_concept_board",
+    ),
     JobSpec("warm_market_summary", "市场摘要预热", "情绪周期预热写入短 TTL 缓存", "warm_market_summary"),
     JobSpec(
         "warm_watchlist_strategy_cache",
@@ -100,7 +107,12 @@ JOB_SPECS: tuple[JobSpec, ...] = (
     ),
     JobSpec("fill_watchlist_bars", "补全自选日 K", "自选过期/缺失日 K → dbbardata", "fill_watchlist_bars"),
     JobSpec("batch_fill_stale", "补全过期日 K", "全市场 overview 过期日 K 增量补全（Web 可跑）", "batch_fill_stale"),
-    JobSpec("fill_focus_pool_minute", "关注池 1m K 补全", "信号/持仓 1 分钟线", "fill_focus_pool_minute"),
+    JobSpec(
+        "fill_focus_pool_minute",
+        "关注池 1m K 补全",
+        "占位：尚未接入关注池 1m 补全管线（Web 可跑 → skipped）",
+        "fill_focus_pool_minute",
+    ),
     JobSpec("screen_intraday", "盘中自动选股", "盘中选股写历史", "screen_intraday"),
     JobSpec("screen_post_close", "盘后自动选股", "盘后选股写历史", "screen_post_close"),
     JobSpec(

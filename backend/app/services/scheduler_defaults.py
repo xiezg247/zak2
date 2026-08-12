@@ -37,6 +37,8 @@ DEFAULT_CRON: dict[str, dict] = {
     },
     "scan_horizon_outlook": {"hour": 18, "minute": 15, "day_of_week": "mon-fri"},
     "warm_watchlist_strategy_cache": {"hour": 18, "minute": 45, "day_of_week": "mon-fri"},
+    "prefetch_concept_board": {"hour": 17, "minute": 30, "day_of_week": "mon-fri"},
+    "fill_focus_pool_minute": {"hour": 19, "minute": 0, "day_of_week": "mon-fri"},
 }
 
 _FALLBACK = {"hour": 8, "minute": 0, "day_of_week": "mon-fri", "hours": None}

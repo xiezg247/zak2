@@ -43,9 +43,9 @@ def _api_client(user: User | None = None) -> TestClient:
 
 def _planned_job_row(*, enabled: bool = False) -> dict[str, object]:
     return {
-        "job_id": "prefetch_concept_board",
-        "name": "概念板块预拉",
-        "description": "同花顺概念预热",
+        "job_id": "purge_stale_cache",
+        "name": "清理过期缓存",
+        "description": "删除 cache schema 中过期 LLM/雷达 hint 与过旧策略缓存",
         "job_kind": "planned",
         "runnable": False,
         "run_hint": "未实现：见 docs/product-roadmap.md",
@@ -61,8 +61,11 @@ def _planned_job_row(*, enabled: bool = False) -> dict[str, object]:
 
 def test_patch_planned_job_enabled_true_returns_400() -> None:
     client = _api_client()
-    with patch("app.services.ops_scheduler.patch_job_enabled") as p:
-        r = client.patch("/api/v1/ops/scheduler/jobs/prefetch_concept_board", json={"enabled": True})
+    with (
+        patch("app.api.v1.ops.ops_scheduler.job_kind_for", return_value="planned"),
+        patch("app.services.ops_scheduler.patch_job_enabled") as p,
+    ):
+        r = client.patch("/api/v1/ops/scheduler/jobs/purge_stale_cache", json={"enabled": True})
     assert r.status_code == 400
     p.assert_not_called()
 
@@ -70,11 +73,12 @@ def test_patch_planned_job_enabled_true_returns_400() -> None:
 def test_patch_planned_job_enabled_false_returns_200() -> None:
     client = _api_client()
     with (
+        patch("app.api.v1.ops.ops_scheduler.job_kind_for", return_value="planned"),
         patch("app.services.ops_scheduler.patch_job_enabled") as p,
         patch("app.services.ops_scheduler.list_scheduler_jobs") as list_jobs,
     ):
         list_jobs.return_value = [_planned_job_row(enabled=False)]
-        r = client.patch("/api/v1/ops/scheduler/jobs/prefetch_concept_board", json={"enabled": False})
+        r = client.patch("/api/v1/ops/scheduler/jobs/purge_stale_cache", json={"enabled": False})
     assert r.status_code == 200
     p.assert_called_once()
     assert r.json()["enabled"] is False
