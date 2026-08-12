@@ -32,6 +32,10 @@ class WatchlistReorderRequest(BaseModel):
     items: list[str] = Field(description="vt_symbol 列表，按期望顺序")
 
 
+class GroupsReorderRequest(BaseModel):
+    group_ids: list[str] = Field(min_length=1, description="分组 id 期望顺序")
+
+
 class GroupOut(BaseModel):
     id: str
     name: str

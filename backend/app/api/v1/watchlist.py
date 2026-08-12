@@ -12,6 +12,7 @@ from app.schemas.watchlist import (
     GroupMemberRequest,
     GroupOut,
     GroupRename,
+    GroupsReorderRequest,
     NotifyLogOut,
     PositionOut,
     PositionUpsertRequest,
@@ -285,6 +286,16 @@ def put_reorder(
 @router.get("/watchlist/groups", response_model=list[GroupOut])
 def get_groups(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[GroupOut]:
     return [GroupOut(id=g.id, name=g.name, sort_order=g.sort_order) for g in repo.list_groups(db, str(user.id))]
+
+
+@router.put("/watchlist/groups/reorder", response_model=list[GroupOut])
+def put_groups_reorder(
+    body: GroupsReorderRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[GroupOut]:
+    rows = repo.reorder_groups(db, str(user.id), body.group_ids)
+    return [GroupOut(id=g.id, name=g.name, sort_order=g.sort_order) for g in rows]
 
 
 @router.post("/watchlist/groups", response_model=GroupOut)

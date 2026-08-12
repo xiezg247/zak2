@@ -101,6 +101,23 @@ def reorder_items(db: Session, user_id: str, vt_symbols: list[str]) -> list[Watc
     return ordered
 
 
+def reorder_groups(db: Session, user_id: str, group_ids: list[str]) -> list[WatchlistGroup]:
+    groups = {g.id: g for g in list_groups(db, user_id)}
+    ordered: list[WatchlistGroup] = []
+    seen: set[str] = set()
+    for gid in group_ids:
+        if gid in groups and gid not in seen:
+            ordered.append(groups[gid])
+            seen.add(gid)
+    for gid, g in groups.items():
+        if gid not in seen:
+            ordered.append(g)
+    for index, g in enumerate(ordered):
+        g.sort_order = index
+    db.commit()
+    return ordered
+
+
 def list_groups(db: Session, user_id: str) -> list[WatchlistGroup]:
     return list(
         db.scalars(

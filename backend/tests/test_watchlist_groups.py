@@ -49,3 +49,28 @@ def test_rename_conflict() -> None:
         with pytest.raises(HTTPException) as ei:
             repo.rename_group(db, "u1", g.id, "已有")
     assert ei.value.status_code == 409
+
+
+def test_reorder_groups_order() -> None:
+    db = MagicMock()
+    g1 = _group(gid="g1", name="A")
+    g1.sort_order = 0
+    g2 = _group(gid="g2", name="B")
+    g2.sort_order = 1
+    with patch.object(repo, "list_groups", return_value=[g1, g2]):
+        out = repo.reorder_groups(db, "u1", ["g2", "g1"])
+    assert [g.id for g in out] == ["g2", "g1"]
+    assert g2.sort_order == 0
+    assert g1.sort_order == 1
+    db.commit.assert_called()
+
+
+def test_reorder_groups_ignores_unknown_and_appends() -> None:
+    db = MagicMock()
+    g1 = _group(gid="g1", name="A")
+    g2 = _group(gid="g2", name="B")
+    with patch.object(repo, "list_groups", return_value=[g1, g2]):
+        out = repo.reorder_groups(db, "u1", ["g2", "missing"])
+    assert [g.id for g in out] == ["g2", "g1"]
+    assert g2.sort_order == 0
+    assert g1.sort_order == 1
