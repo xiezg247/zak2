@@ -212,6 +212,7 @@ onMounted(() => {
     <div class="page">
       <div class="toolbar">
         <button class="ghost" type="button" :disabled="loading" @click="load">刷新</button>
+        <span v-if="loading" class="muted">加载中…</span>
         <button class="primary" type="button" @click="goLeaderScreen">龙头选股 → Hub</button>
         <button class="ghost" type="button" @click="goResonanceScreen">共振选股 → Hub</button>
         <button class="ghost" type="button" :disabled="draftBusy || loading" @click="createPlanDraft">
@@ -230,7 +231,11 @@ onMounted(() => {
 
       <div class="body" :class="{ withSide: sideOpen }">
         <div class="main">
-          <div class="grid">
+          <p v-if="!loading && !error && !cards.length" class="muted empty-main">
+            暂无雷达卡片。可点刷新，或于 Ops 手动执行 warm_radar_card_snapshots 预热缓存。
+            <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
+          </p>
+          <div v-else class="grid">
             <button
               v-for="c in cards"
               :key="c.card_id"
@@ -359,7 +364,9 @@ onMounted(() => {
                 加自选
               </button>
             </div>
-            <p v-if="!resonance.length" class="muted empty-side">暂无共振（刷新雷达卡片后再试）</p>
+            <p v-if="!resonance.length" class="muted empty-side">
+              暂无共振标的（需至少 2 张卡片命中同一标的；可调权重后刷新）
+            </p>
           </div>
         </aside>
       </div>
@@ -619,6 +626,10 @@ th {
   padding: 0;
   cursor: pointer;
   font-size: 0.8rem;
+}
+.empty-main {
+  padding: 24px 8px;
+  line-height: 1.6;
 }
 .empty-side {
   text-align: center;
