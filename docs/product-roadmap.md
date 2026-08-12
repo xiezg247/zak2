@@ -24,6 +24,7 @@
 10. ~~自选分组管理闭环~~（已完成 → [spec](./superpowers/specs/2026-08-12-watchlist-groups-manage-design.md)）
 11. ~~策略看盘 UX 闭环~~（已完成 → [spec](./superpowers/specs/2026-08-12-watchlist-strategy-board-ux-design.md)）
 12. ~~持仓与风控 UX 打磨~~（已完成 → [spec](./superpowers/specs/2026-08-12-watchlist-positions-risk-ux-design.md)）
+13. ~~选股 Hub 结果表排序过滤~~（已完成 → [spec](./superpowers/specs/2026-08-12-screener-hub-result-sort-filter-design.md)）
 
 ## 明确不做（直到本文件改口）
 
