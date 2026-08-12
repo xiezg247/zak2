@@ -57,24 +57,6 @@ def test_warm_strategy_skips() -> None:
     assert out["success"] is False
     assert "策略引擎" in out["message"]
     save.assert_called_once()
-    assert save.call_args.kwargs.get("last_success") is False or (
-        len(save.call_args.args) >= 1 and save.call_args[1].get("last_success") is False
-        if save.call_args[1]
-        else save.call_args.kwargs.get("last_success") is False
-    )
-```
-
-简化断言（推荐实现时用）：
-
-```python
-def test_warm_strategy_skips() -> None:
-    db = MagicMock()
-    with patch("app.services.ops_warm_watchlist_strategy.save_job_run_meta") as save:
-        out = m.warm_watchlist_strategy_cache(db)
-    assert out["skipped"] is True
-    assert out["success"] is False
-    assert "策略引擎" in out["message"]
-    save.assert_called_once()
     assert save.call_args.kwargs["last_success"] is False
 ```
 
