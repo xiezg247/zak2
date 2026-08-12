@@ -35,6 +35,7 @@
 21. ~~市场情绪周期展示 UX~~（已完成 → [spec](./superpowers/specs/2026-08-12-market-emotion-cycle-ux-design.md)）
 22. ~~市场与板块页眉互链~~（已完成 → [spec](./superpowers/specs/2026-08-12-market-sector-crosslink-design.md)）
 23. ~~Feed 时间线过滤空态~~（已完成 → [spec](./superpowers/specs/2026-08-12-feed-timeline-filter-ux-design.md)）
+24. ~~AI 会话过滤与确认卡 UX~~（已完成 → [spec](./superpowers/specs/2026-08-12-ai-session-confirm-ux-design.md)）
 
 ## 明确不做（直到本文件改口）
 
