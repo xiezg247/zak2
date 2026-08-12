@@ -101,7 +101,10 @@ const displayedCards = computed(() => {
   })
 })
 
-const active = computed(() => cards.value.find((c) => c.card_id === activeId.value) || cards.value[0] || null)
+const active = computed(() => {
+  if (!activeId.value) return null
+  return cards.value.find((c) => c.card_id === activeId.value) || null
+})
 
 watch(displayedCards, (list) => {
   if (!list.length) {
