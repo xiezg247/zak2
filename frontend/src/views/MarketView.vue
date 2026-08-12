@@ -74,6 +74,72 @@ const fields = [
 
 const fieldMeta = computed(() => fields.find((f) => f.id === field.value) || fields[0])
 
+type SortKey =
+  | 'last_price'
+  | 'change_pct'
+  | 'turnover_rate'
+  | 'amount'
+  | 'volume_ratio'
+  | 'limit_times'
+  | null
+
+const listFilter = ref('')
+const sortKey = ref<SortKey>(null)
+const sortDir = ref<'asc' | 'desc'>('desc')
+
+function cmpNullable(a: number | null | undefined, b: number | null | undefined, dir: 'asc' | 'desc'): number {
+  const aMissing = a == null || Number.isNaN(a)
+  const bMissing = b == null || Number.isNaN(b)
+  if (aMissing && bMissing) return 0
+  if (aMissing) return 1
+  if (bMissing) return -1
+  const d = (a as number) - (b as number)
+  return dir === 'asc' ? d : -d
+}
+
+function toggleSort(key: Exclude<SortKey, null>) {
+  if (sortKey.value === key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortKey.value = key
+    sortDir.value = 'desc'
+  }
+}
+
+function clearSort() {
+  sortKey.value = null
+}
+
+function sortMark(key: Exclude<SortKey, null>): string {
+  if (sortKey.value !== key) return ''
+  return sortDir.value === 'asc' ? ' ▲' : ' ▼'
+}
+
+const scoreSortKey = computed((): Exclude<SortKey, null> | null => {
+  const id = field.value
+  if (id === 'change_pct') return null
+  if (id === 'turnover_rate' || id === 'amount' || id === 'volume_ratio' || id === 'limit_times') {
+    return id
+  }
+  return null
+})
+
+const displayedRanks = computed(() => {
+  const q = listFilter.value.trim().toLowerCase()
+  let list = ranks.value
+  if (q) {
+    list = list.filter((r) => {
+      const vt = (r.vt_symbol || '').toLowerCase()
+      const name = (r.name || '').toLowerCase()
+      return vt.includes(q) || name.includes(q)
+    })
+  }
+  const key = sortKey.value
+  if (!key) return list
+  const dir = sortDir.value
+  return [...list].sort((a, b) => cmpNullable(a[key], b[key], dir))
+})
+
 const subtitle = computed(() => {
   const o = overview.value
   if (!o) return ''
@@ -223,6 +289,10 @@ function tick() {
 }
 
 watch(field, () => {
+  const sk = sortKey.value
+  if (sk && sk !== 'last_price' && sk !== 'change_pct' && sk !== field.value) {
+    sortKey.value = null
+  }
   void onField()
 })
 
@@ -373,27 +443,40 @@ onUnmounted(() => {
 
       <p v-if="error" class="err">{{ error }}</p>
 
+      <div v-if="ranks.length" class="filter-row">
+        <input v-model="listFilter" placeholder="过滤代码/名称" />
+        <button type="button" class="ghost" :class="{ on: !sortKey }" @click="clearSort">默认序</button>
+      </div>
+
       <div class="split">
         <div class="table-wrap">
-          <table>
+          <p v-if="ranks.length && !displayedRanks.length" class="muted empty-hint">无匹配标的</p>
+          <table v-else>
             <thead>
               <tr>
                 <th>#</th>
                 <th>代码</th>
                 <th>名称</th>
-                <th>现价</th>
-                <th>涨幅%</th>
-                <th>{{ fieldMeta.col }}</th>
+                <th class="sortable" @click="toggleSort('last_price')">现价{{ sortMark('last_price') }}</th>
+                <th class="sortable" @click="toggleSort('change_pct')">涨幅%{{ sortMark('change_pct') }}</th>
+                <th
+                  v-if="scoreSortKey"
+                  class="sortable"
+                  @click="toggleSort(scoreSortKey)"
+                >
+                  {{ fieldMeta.col }}{{ sortMark(scoreSortKey) }}
+                </th>
+                <th v-else>{{ fieldMeta.col }}</th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="r in ranks"
+                v-for="(r, i) in displayedRanks"
                 :key="r.tf_symbol"
                 :class="{ on: selected?.vt_symbol === r.vt_symbol }"
                 @click="selectRank(r)"
               >
-                <td>{{ r.rank }}</td>
+                <td>{{ i + 1 }}</td>
                 <td class="mono">{{ r.vt_symbol }}</td>
                 <td>{{ r.name || '—' }}</td>
                 <td>{{ r.last_price != null ? r.last_price.toFixed(2) : '—' }}</td>
@@ -521,6 +604,29 @@ onUnmounted(() => {
   background: transparent;
   color: var(--text);
 }
+.ghost.on {
+  border-color: var(--brand, #333);
+  color: var(--text);
+  font-weight: 500;
+}
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.filter-row input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  padding: 6px 10px;
+  min-width: 160px;
+}
+.empty-hint {
+  margin: 0;
+  padding: 12px;
+}
 .primary {
   background: var(--accent);
   border-color: transparent;
@@ -591,6 +697,10 @@ th {
   position: sticky;
   top: 0;
   font-weight: 500;
+}
+th.sortable {
+  cursor: pointer;
+  user-select: none;
 }
 tbody tr {
   cursor: pointer;
