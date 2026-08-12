@@ -90,7 +90,7 @@ JOB_SPECS: tuple[JobSpec, ...] = (
     JobSpec(
         "warm_watchlist_strategy_cache",
         "策略信号磁盘预热",
-        "占位：尚未接入策略引擎（Web 可跑 → skipped）",
+        "Redis signal/position → watchlist_*_cache（桥接，Web 可跑）",
         "warm_watchlist_strategy_cache",
     ),
     JobSpec(
