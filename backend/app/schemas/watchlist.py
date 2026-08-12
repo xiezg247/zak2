@@ -42,6 +42,10 @@ class GroupCreate(BaseModel):
     name: str = Field(min_length=1, max_length=40)
 
 
+class GroupRename(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+
+
 class GroupMemberRequest(BaseModel):
     symbol: str
     exchange: str | None = None

@@ -11,6 +11,7 @@ from app.schemas.watchlist import (
     GroupCreate,
     GroupMemberRequest,
     GroupOut,
+    GroupRename,
     NotifyLogOut,
     PositionOut,
     PositionUpsertRequest,
@@ -293,6 +294,17 @@ def post_group(
     db: Session = Depends(get_db),
 ) -> GroupOut:
     g = repo.create_group(db, str(user.id), body.name)
+    return GroupOut(id=g.id, name=g.name, sort_order=g.sort_order)
+
+
+@router.patch("/watchlist/groups/{group_id}", response_model=GroupOut)
+def patch_group(
+    group_id: str,
+    body: GroupRename,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> GroupOut:
+    g = repo.rename_group(db, str(user.id), group_id, body.name)
     return GroupOut(id=g.id, name=g.name, sort_order=g.sort_order)
 
 

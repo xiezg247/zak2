@@ -127,6 +127,24 @@ def create_group(db: Session, user_id: str, name: str) -> WatchlistGroup:
     return row
 
 
+def rename_group(db: Session, user_id: str, group_id: str, name: str) -> WatchlistGroup:
+    name = name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="分组名不能为空")
+    row = db.scalar(
+        select(WatchlistGroup).where(WatchlistGroup.user_id == user_id, WatchlistGroup.id == group_id)
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="分组不存在")
+    groups = list_groups(db, user_id)
+    if any(g.id != group_id and g.name.lower() == name.lower() for g in groups):
+        raise HTTPException(status_code=409, detail="分组名已存在")
+    row.name = name
+    db.commit()
+    db.refresh(row)
+    return row
+
+
 def delete_group(db: Session, user_id: str, group_id: str) -> bool:
     row = db.scalar(
         select(WatchlistGroup).where(WatchlistGroup.user_id == user_id, WatchlistGroup.id == group_id)
