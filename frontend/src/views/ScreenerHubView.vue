@@ -47,6 +47,10 @@ const statusText = ref('')
 const error = ref('')
 const current = ref<RunDetail | null>(null)
 const history = ref<RunSummary[]>([])
+const historyBusy = ref(false)
+const runBusy = ref(false)
+const historyErr = ref('')
+const showDiffDetail = ref(false)
 const weightOpen = ref(true)
 const weightItems = ref<RecipeWeightItem[]>([])
 const weightDraft = ref<Record<string, number>>({})
@@ -351,7 +355,15 @@ async function loadMeta() {
 }
 
 async function loadHistory() {
-  history.value = await screenerApi.runs()
+  historyBusy.value = true
+  historyErr.value = ''
+  try {
+    history.value = await screenerApi.runs()
+  } catch (e) {
+    historyErr.value = e instanceof Error ? e.message : '加载历史失败'
+  } finally {
+    historyBusy.value = false
+  }
 }
 
 async function pollJob(jobId: string) {
@@ -479,7 +491,25 @@ async function deleteScheme(id: string) {
 }
 
 async function openRun(id: string) {
-  current.value = await screenerApi.run(id)
+  runBusy.value = true
+  error.value = ''
+  try {
+    current.value = await screenerApi.run(id)
+    resultFilter.value = ''
+    showDiffDetail.value = false
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '打开运行记录失败'
+  } finally {
+    runBusy.value = false
+  }
+}
+
+function applyDiffFilter(vt: string) {
+  resultFilter.value = vt
+}
+
+function toggleDiffDetail() {
+  showDiffDetail.value = !showDiffDetail.value
 }
 
 async function addToWatchlist(row: Record<string, unknown>) {
@@ -755,8 +785,30 @@ onMounted(async () => {
         <p v-if="error" class="err">{{ error }}</p>
 
         <div class="block history">
-          <h3>运行历史</h3>
-          <button v-for="h in history" :key="h.id" type="button" class="hist" @click="openRun(h.id)">
+          <div class="history-head">
+            <h3>运行历史</h3>
+            <button
+              type="button"
+              class="ghost tiny-btn"
+              :disabled="historyBusy"
+              @click="loadHistory"
+            >
+              {{ historyBusy ? '刷新中…' : '刷新' }}
+            </button>
+          </div>
+          <p v-if="historyErr" class="err">{{ historyErr }}</p>
+          <p v-else-if="!historyBusy && !history.length" class="muted">
+            暂无运行记录，点上方「运行」生成
+          </p>
+          <button
+            v-for="h in history"
+            :key="h.id"
+            type="button"
+            class="hist"
+            :class="{ on: current?.id === h.id }"
+            :disabled="runBusy"
+            @click="openRun(h.id)"
+          >
             <span>{{ h.condition }}</span>
             <span class="muted">{{ h.row_count }} 只 · {{ h.created_at }}</span>
           </button>
@@ -775,9 +827,50 @@ onMounted(async () => {
         </div>
 
         <div v-if="diff" class="diff">
-          <span>新增 {{ diff.added.length }}</span>
-          <span>移除 {{ diff.removed.length }}</span>
-          <span>保留 {{ diff.kept.length }}</span>
+          <div class="diff-summary">
+            <span>新增 {{ diff.added.length }}</span>
+            <span>移除 {{ diff.removed.length }}</span>
+            <span>保留 {{ diff.kept.length }}</span>
+            <button type="button" class="link" @click="toggleDiffDetail">
+              {{ showDiffDetail ? '收起' : '详情' }}
+            </button>
+          </div>
+          <div v-if="showDiffDetail" class="diff-detail">
+            <div v-if="diff.added.length" class="diff-group">
+              <strong>新增</strong>
+              <div class="chips">
+                <button
+                  v-for="vt in diff.added"
+                  :key="'a-' + vt"
+                  type="button"
+                  class="chip-link mono"
+                  @click="applyDiffFilter(vt)"
+                >
+                  {{ vt }}
+                </button>
+              </div>
+            </div>
+            <div v-if="diff.removed.length" class="diff-group">
+              <strong>移除</strong>
+              <div class="chips">
+                <button
+                  v-for="vt in diff.removed"
+                  :key="'r-' + vt"
+                  type="button"
+                  class="chip-link mono"
+                  @click="applyDiffFilter(vt)"
+                >
+                  {{ vt }}
+                </button>
+              </div>
+            </div>
+            <p
+              v-if="!diff.added.length && !diff.removed.length"
+              class="muted tip"
+            >
+              无新增或移除
+            </p>
+          </div>
         </div>
 
         <div class="table-wrap">
@@ -1030,10 +1123,19 @@ input {
   color: var(--danger);
   font-size: 0.85rem;
 }
-.history h3,
 .scheme h3 {
   margin: 0 0 8px;
   font-size: 0.9rem;
+}
+.history-head h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 .hist {
   width: 100%;
@@ -1074,10 +1176,43 @@ input {
   align-items: center;
 }
 .diff {
-  display: flex;
-  gap: 16px;
   color: var(--muted);
   font-size: 0.85rem;
+}
+.diff-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.diff-detail {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+.diff-group {
+  display: grid;
+  gap: 6px;
+}
+.diff-group strong {
+  font-size: 0.8rem;
+  color: var(--text);
+}
+.chip-link {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  color: var(--text);
+  cursor: pointer;
+}
+.chip-link:hover {
+  border-color: var(--brand-soft);
+  color: var(--brand);
+}
+.tip {
+  margin: 0;
 }
 .table-wrap {
   border: 1px solid var(--line);
