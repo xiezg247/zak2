@@ -103,6 +103,60 @@ const listFilter = ref('')
 const sortKey = ref<SortKey>(null)
 const sortDir = ref<'asc' | 'desc'>('desc')
 
+const COL_PREFS_KEY = 'zak2:watchlist:list_columns'
+
+type OptionalCol = 'industry' | 'turnover_rate' | 'volume_ratio' | 'amount'
+
+const DEFAULT_COL_VISIBLE: Record<OptionalCol, boolean> = {
+  industry: true,
+  turnover_rate: true,
+  volume_ratio: true,
+  amount: true,
+}
+
+const columnsOpen = ref(false)
+const colVisible = ref<Record<OptionalCol, boolean>>({ ...DEFAULT_COL_VISIBLE })
+
+function loadColPrefs() {
+  try {
+    const raw = localStorage.getItem(COL_PREFS_KEY)
+    if (!raw) return
+    const parsed = JSON.parse(raw) as Partial<Record<OptionalCol, unknown>>
+    const next = { ...DEFAULT_COL_VISIBLE }
+    for (const k of Object.keys(DEFAULT_COL_VISIBLE) as OptionalCol[]) {
+      if (typeof parsed[k] === 'boolean') next[k] = parsed[k] as boolean
+    }
+    colVisible.value = next
+  } catch {
+    colVisible.value = { ...DEFAULT_COL_VISIBLE }
+  }
+}
+
+function saveColPrefs() {
+  localStorage.setItem(COL_PREFS_KEY, JSON.stringify(colVisible.value))
+}
+
+function setColVisible(key: OptionalCol, on: boolean) {
+  colVisible.value = { ...colVisible.value, [key]: on }
+  if (!on && sortKey.value === key) clearSort()
+  saveColPrefs()
+}
+
+const optionalColLabels: { key: OptionalCol; label: string }[] = [
+  { key: 'industry', label: '行业' },
+  { key: 'turnover_rate', label: '换手%' },
+  { key: 'volume_ratio', label: '量比' },
+  { key: 'amount', label: '成交额' },
+]
+
+const tableColspan = computed(() => {
+  let n = 5
+  for (const k of Object.keys(DEFAULT_COL_VISIBLE) as OptionalCol[]) {
+    if (colVisible.value[k]) n += 1
+  }
+  return n
+})
+
 function formatAmountYi(v: number | null | undefined): string {
   if (v == null || Number.isNaN(v)) return '—'
   return `${(v / 1e8).toFixed(2)}亿`
@@ -588,6 +642,7 @@ watch(barLimit, () => {
 })
 
 onMounted(async () => {
+  loadColPrefs()
   await refresh(false, true)
   await refreshBoard()
   const q = String(route.query.symbol || '').trim()
@@ -654,16 +709,27 @@ onUnmounted(() => {
               <input v-model="autoRefresh" type="checkbox" />
               {{ connected ? 'WS 推送 + 慢轮询' : '每 15s 刷新行情' }}
             </label>
-            <div class="row">
+            <div class="row col-prefs-row">
               <input v-model="listFilter" placeholder="过滤代码/名称" />
+              <button v-if="sortKey" type="button" class="ghost" @click="clearSort">默认序</button>
               <button
-                v-if="sortKey"
                 type="button"
                 class="ghost"
-                @click="clearSort"
+                :class="{ on: columnsOpen }"
+                @click="columnsOpen = !columnsOpen"
               >
-                默认序
+                列
               </button>
+            </div>
+            <div v-if="columnsOpen" class="col-prefs-panel">
+              <label v-for="c in optionalColLabels" :key="c.key" class="col-pref-item">
+                <input
+                  type="checkbox"
+                  :checked="colVisible[c.key]"
+                  @change="setColVisible(c.key, ($event.target as HTMLInputElement).checked)"
+                />
+                {{ c.label }}
+              </label>
             </div>
           </div>
 
@@ -676,12 +742,18 @@ onUnmounted(() => {
                 <tr>
                   <th>代码</th>
                   <th>名称</th>
-                  <th>行业</th>
+                  <th v-if="colVisible.industry">行业</th>
                   <th class="sortable" @click="toggleSort('last_price')">现价{{ sortMark('last_price') }}</th>
                   <th class="sortable" @click="toggleSort('change_pct')">涨幅%{{ sortMark('change_pct') }}</th>
-                  <th class="sortable" @click="toggleSort('turnover_rate')">换手%{{ sortMark('turnover_rate') }}</th>
-                  <th class="sortable" @click="toggleSort('volume_ratio')">量比{{ sortMark('volume_ratio') }}</th>
-                  <th class="sortable" @click="toggleSort('amount')">成交额{{ sortMark('amount') }}</th>
+                  <th v-if="colVisible.turnover_rate" class="sortable" @click="toggleSort('turnover_rate')">
+                    换手%{{ sortMark('turnover_rate') }}
+                  </th>
+                  <th v-if="colVisible.volume_ratio" class="sortable" @click="toggleSort('volume_ratio')">
+                    量比{{ sortMark('volume_ratio') }}
+                  </th>
+                  <th v-if="colVisible.amount" class="sortable" @click="toggleSort('amount')">
+                    成交额{{ sortMark('amount') }}
+                  </th>
                   <th></th>
                 </tr>
               </thead>
@@ -694,7 +766,7 @@ onUnmounted(() => {
                 >
                   <td class="mono">{{ item.vt_symbol }}</td>
                   <td>{{ item.name || '—' }}</td>
-                  <td>{{ item.industry?.trim() ? item.industry : '—' }}</td>
+                  <td v-if="colVisible.industry">{{ item.industry?.trim() ? item.industry : '—' }}</td>
                   <td>{{ formatNum2(item.last_price) }}</td>
                   <td
                     :class="{
@@ -704,15 +776,15 @@ onUnmounted(() => {
                   >
                     {{ formatNum2(item.change_pct) }}
                   </td>
-                  <td>{{ formatNum2(item.turnover_rate) }}</td>
-                  <td>{{ formatNum2(item.volume_ratio) }}</td>
-                  <td>{{ formatAmountYi(item.amount) }}</td>
+                  <td v-if="colVisible.turnover_rate">{{ formatNum2(item.turnover_rate) }}</td>
+                  <td v-if="colVisible.volume_ratio">{{ formatNum2(item.volume_ratio) }}</td>
+                  <td v-if="colVisible.amount">{{ formatAmountYi(item.amount) }}</td>
                   <td>
                     <button type="button" class="link" @click.stop="onRemove(item)">删</button>
                   </td>
                 </tr>
                 <tr v-if="!displayedItems.length">
-                  <td colspan="9" class="empty">
+                  <td :colspan="tableColspan" class="empty">
                     {{ items.length === 0 ? '自选为空，上方输入代码添加' : '无匹配结果' }}
                   </td>
                 </tr>
@@ -1400,6 +1472,24 @@ select {
   color: var(--text);
   border-radius: 0.5rem;
   padding: 8px 12px;
+}
+.ghost.on {
+  border-color: var(--brand, var(--accent));
+  color: var(--text);
+}
+.col-prefs-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 8px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.col-pref-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
 }
 .chip {
   padding: 4px 8px;
