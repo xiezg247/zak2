@@ -117,6 +117,7 @@ onMounted(async () => {
         <select v-model="tradeDate">
           <option v-for="d in dates" :key="d" :value="d">{{ d }}</option>
         </select>
+        <RouterLink to="/market" class="cross-link toolbar-cross">← 市场</RouterLink>
       </div>
 
       <p v-if="error" class="err">{{ error }}</p>
@@ -192,6 +193,19 @@ select {
   border-radius: 0.5rem;
   color: var(--text);
   padding: 6px 10px;
+}
+.toolbar-cross {
+  margin-left: auto;
+}
+.cross-link {
+  color: var(--brand);
+  text-decoration: none;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  align-self: center;
+}
+.cross-link:hover {
+  text-decoration: underline;
 }
 .filter-row {
   display: flex;

@@ -474,6 +474,7 @@ onUnmounted(() => {
             {{ connected ? 'WS+慢轮询' : '15s 刷新' }}
           </label>
           <button class="ghost" type="button" :disabled="loading" @click="load()">刷新</button>
+          <RouterLink to="/sectors" class="cross-link">板块资金 →</RouterLink>
         </div>
       </div>
 
@@ -626,6 +627,15 @@ onUnmounted(() => {
 .draft-link {
   color: var(--brand);
   margin-left: 4px;
+}
+.cross-link {
+  color: var(--brand);
+  text-decoration: none;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.cross-link:hover {
+  text-decoration: underline;
 }
 .empty-cycle-hint {
   margin: 6px 0 0;
