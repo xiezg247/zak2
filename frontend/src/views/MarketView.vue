@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import CandleChart from '../components/CandleChart.vue'
@@ -19,6 +19,8 @@ const bars = ref<Bar[]>([])
 const barsError = ref('')
 const addMsg = ref('')
 const thresholdsOpen = ref(false)
+const cycleInputsOpen = ref(false)
+const thresholdsSectionEl = ref<HTMLElement | null>(null)
 const thresholdsDraft = ref<EmotionThresholds | null>(null)
 const thresholdsBusy = ref(false)
 const thresholdsErr = ref('')
@@ -157,6 +159,13 @@ function posPct(cycle: NonNullable<MarketOverview['emotion_cycle']>): string {
   const lo = Math.round(cycle.position_pct_min * 100)
   const hi = Math.round(cycle.position_pct_max * 100)
   return `${lo}–${hi}%`
+}
+
+function openThresholdsFromCard() {
+  thresholdsOpen.value = true
+  void nextTick(() => {
+    thresholdsSectionEl.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  })
 }
 
 function scoreLabel(r: RankRow): string {
@@ -321,10 +330,17 @@ onUnmounted(() => {
         </div>
         <div class="card" v-if="overview.emotion_cycle">
           <div class="k">情绪周期</div>
-          <div class="v">{{ overview.emotion_cycle.stage_label }}</div>
+          <div class="cycle-head">
+            <div class="v">{{ overview.emotion_cycle.stage_label }}</div>
+            <span
+              class="cycle-gate"
+              :class="overview.emotion_cycle.allow_new_positions ? 'ok' : 'warn'"
+            >
+              {{ overview.emotion_cycle.allow_new_positions ? '可新开' : '不宜新开' }}
+            </span>
+          </div>
           <div class="s muted">
-            仓位建议 {{ posPct(overview.emotion_cycle) }} ·
-            {{ overview.emotion_cycle.allow_new_positions ? '可新开' : '不宜新开' }}
+            仓位建议 {{ posPct(overview.emotion_cycle) }}
             <template v-if="overview.emotion_cycle.allowed_mode_labels.length">
               · {{ overview.emotion_cycle.allowed_mode_labels.join('/') }}
             </template>
@@ -336,7 +352,19 @@ onUnmounted(() => {
           >
             {{ w }}
           </div>
-          <div class="s muted" v-if="overview.emotion_cycle.inputs">
+          <div class="cycle-actions">
+            <button
+              type="button"
+              class="ghost tiny-btn"
+              @click="cycleInputsOpen = !cycleInputsOpen"
+            >
+              {{ cycleInputsOpen ? '收起明细' : '明细' }}
+            </button>
+            <button type="button" class="ghost tiny-btn" @click="openThresholdsFromCard">
+              阈值
+            </button>
+          </div>
+          <div class="s muted" v-if="cycleInputsOpen && overview.emotion_cycle.inputs">
             涨停 {{ overview.emotion_cycle.inputs.limit_up_count ?? '—' }} · 跌停
             {{ overview.emotion_cycle.inputs.limit_down_count ?? '—' }} · 最高板
             {{ overview.emotion_cycle.inputs.max_limit_times ?? '—' }}
@@ -350,6 +378,10 @@ onUnmounted(() => {
         <div class="card" v-else>
           <div class="k">情绪周期</div>
           <div class="v muted">暂无数据</div>
+          <p class="s muted empty-cycle-hint">
+            可到 Ops 执行 warm_market_summary 预热。
+            <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
+          </p>
         </div>
         <div class="card" v-if="overview.emotion">
           <div class="k">连板情绪</div>
@@ -365,7 +397,11 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <section v-if="overview?.emotion_cycle" class="thresholds-section">
+      <section
+        v-if="overview?.emotion_cycle"
+        ref="thresholdsSectionEl"
+        class="thresholds-section"
+      >
         <div class="thresholds-head">
           <div>
             <strong>判定阈值</strong>
@@ -555,6 +591,44 @@ onUnmounted(() => {
 .s {
   margin-top: 4px;
   font-size: 0.8rem;
+}
+.cycle-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+}
+.cycle-head .v {
+  margin-top: 0;
+}
+.cycle-gate {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+}
+.cycle-gate.ok {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+.cycle-gate.warn {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.cycle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.draft-link {
+  color: var(--brand);
+  margin-left: 4px;
+}
+.empty-cycle-hint {
+  margin: 6px 0 0;
 }
 .warn {
   color: var(--danger);
