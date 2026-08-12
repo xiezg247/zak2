@@ -26,6 +26,7 @@ const weightBusy = ref(false)
 const weightErr = ref('')
 const draftBusy = ref(false)
 const draftMsg = ref('')
+const horizonOpen = ref(false)
 
 const active = computed(() => cards.value.find((c) => c.card_id === activeId.value) || cards.value[0] || null)
 
@@ -229,6 +230,23 @@ onMounted(() => {
         <RouterLink v-if="draftMsg.startsWith('已写入')" to="/playbook" class="draft-link">去守则看计划</RouterLink>
       </p>
 
+      <div class="horizon-block">
+        <div class="horizon-head">
+          <strong>展望</strong>
+          <span class="muted">暂不可用</span>
+          <button type="button" class="ghost tiny-btn" @click="horizonOpen = !horizonOpen">
+            {{ horizonOpen ? '收起' : '展开' }}
+          </button>
+        </div>
+        <div v-if="horizonOpen" class="horizon-panel muted">
+          <p>
+            zak2 尚未接入雷达展望扫描管线（horizon / predict），当前无展望数据可读。
+            Ops 中的 scan_horizon_outlook 为可跑占位（恒 skipped），待管线落地后再展示结果。
+          </p>
+          <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
+        </div>
+      </div>
+
       <div class="body" :class="{ withSide: sideOpen }">
         <div class="main">
           <p v-if="!loading && !error && !cards.length" class="muted empty-main">
@@ -427,6 +445,20 @@ onMounted(() => {
   color: var(--accent);
   text-decoration: underline;
   font-size: 0.85rem;
+}
+.horizon-block {
+  margin: 0 0 12px;
+}
+.horizon-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.horizon-panel {
+  margin-top: 8px;
+  padding: 10px 12px;
+  line-height: 1.6;
 }
 .muted {
   color: var(--muted);
