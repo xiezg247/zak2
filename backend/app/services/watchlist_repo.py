@@ -246,6 +246,84 @@ def remove_group_member(db: Session, user_id: str, group_id: str, symbol: str, e
     return True
 
 
+def batch_group_members(
+    db: Session,
+    user_id: str,
+    group_id: str,
+    symbols: list[str],
+    action: str,
+) -> dict:
+    group = db.scalar(
+        select(WatchlistGroup).where(WatchlistGroup.user_id == user_id, WatchlistGroup.id == group_id)
+    )
+    if not group:
+        raise HTTPException(status_code=404, detail="分组不存在")
+
+    added = 0
+    removed = 0
+    skipped = 0
+    errors: list[dict[str, str]] = []
+
+    for raw in symbols:
+        try:
+            symbol, exch = parse_flexible_symbol(raw)
+        except Exception:  # noqa: BLE001
+            errors.append({"symbol": raw, "detail": "无法解析代码"})
+            continue
+
+        if action == "add":
+            in_wl = db.scalar(
+                select(WatchlistItem).where(
+                    WatchlistItem.user_id == user_id,
+                    WatchlistItem.symbol == symbol,
+                    WatchlistItem.exchange == exch,
+                )
+            )
+            if not in_wl:
+                errors.append({"symbol": raw, "detail": "请先加入自选池"})
+                continue
+            existing = db.scalar(
+                select(WatchlistGroupMember).where(
+                    WatchlistGroupMember.group_id == group_id,
+                    WatchlistGroupMember.symbol == symbol,
+                    WatchlistGroupMember.exchange == exch,
+                )
+            )
+            if existing:
+                skipped += 1
+                continue
+            db.add(
+                WatchlistGroupMember(
+                    user_id=user_id, group_id=group_id, symbol=symbol, exchange=exch
+                )
+            )
+            added += 1
+        else:
+            row = db.scalar(
+                select(WatchlistGroupMember).where(
+                    WatchlistGroupMember.user_id == user_id,
+                    WatchlistGroupMember.group_id == group_id,
+                    WatchlistGroupMember.symbol == symbol,
+                    WatchlistGroupMember.exchange == exch,
+                )
+            )
+            if not row:
+                skipped += 1
+                continue
+            db.delete(row)
+            removed += 1
+
+    db.commit()
+    return {
+        "ok": True,
+        "action": action,
+        "added": added,
+        "removed": removed,
+        "skipped": skipped,
+        "errors": errors,
+    }
+
+
 def resolve_symbol_pair(raw: str, exchange: str | None = None) -> tuple[str, str]:
     if exchange:
         return raw.strip(), normalize_exchange(exchange)

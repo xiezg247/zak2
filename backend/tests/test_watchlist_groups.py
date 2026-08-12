@@ -74,3 +74,55 @@ def test_reorder_groups_ignores_unknown_and_appends() -> None:
     assert [g.id for g in out] == ["g2", "g1"]
     assert g2.sort_order == 0
     assert g1.sort_order == 1
+
+
+def test_batch_add_counts() -> None:
+    db = MagicMock()
+    g = _group(gid="g1")
+    from app.models.watchlist import WatchlistItem
+
+    item = WatchlistItem(symbol="600519", exchange="SSE", user_id="u1", name="", sort_order=0)
+
+    with (
+        patch.object(repo, "parse_flexible_symbol", return_value=("600519", "SSE")),
+        patch.object(repo, "normalize_exchange", side_effect=lambda e: e),
+    ):
+        db.scalar.side_effect = [g, item, None]
+        out = repo.batch_group_members(db, "u1", "g1", ["600519.SSE"], "add")
+    assert out["ok"] is True
+    assert out["action"] == "add"
+    assert out["added"] == 1
+    assert out["skipped"] == 0
+    assert out["errors"] == []
+    db.commit.assert_called()
+    db.add.assert_called()
+
+
+def test_batch_add_not_in_watchlist_error() -> None:
+    db = MagicMock()
+    g = _group(gid="g1")
+    db.scalar.side_effect = [g, None]
+    with patch.object(repo, "parse_flexible_symbol", return_value=("600519", "SSE")):
+        out = repo.batch_group_members(db, "u1", "g1", ["600519.SSE"], "add")
+    assert out["added"] == 0
+    assert len(out["errors"]) == 1
+    assert "自选" in out["errors"][0]["detail"]
+
+
+def test_batch_remove_skips_missing() -> None:
+    db = MagicMock()
+    g = _group(gid="g1")
+    db.scalar.side_effect = [g, None]
+    with patch.object(repo, "parse_flexible_symbol", return_value=("600519", "SSE")):
+        out = repo.batch_group_members(db, "u1", "g1", ["600519.SSE"], "remove")
+    assert out["removed"] == 0
+    assert out["skipped"] == 1
+    db.commit.assert_called()
+
+
+def test_batch_group_missing_404() -> None:
+    db = MagicMock()
+    db.scalar.return_value = None
+    with pytest.raises(HTTPException) as ei:
+        repo.batch_group_members(db, "u1", "missing", ["600519.SSE"], "add")
+    assert ei.value.status_code == 404

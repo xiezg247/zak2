@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -53,6 +53,25 @@ class GroupRename(BaseModel):
 class GroupMemberRequest(BaseModel):
     symbol: str
     exchange: str | None = None
+
+
+class GroupMembersBatchRequest(BaseModel):
+    symbols: list[str] = Field(min_length=1, max_length=100)
+    action: Literal["add", "remove"]
+
+
+class GroupMembersBatchError(BaseModel):
+    symbol: str
+    detail: str
+
+
+class GroupMembersBatchOut(BaseModel):
+    ok: bool = True
+    action: Literal["add", "remove"]
+    added: int = 0
+    removed: int = 0
+    skipped: int = 0
+    errors: list[GroupMembersBatchError] = Field(default_factory=list)
 
 
 class QuoteOut(BaseModel):

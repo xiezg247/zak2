@@ -10,6 +10,8 @@ from app.schemas.watchlist import (
     BarsResponse,
     GroupCreate,
     GroupMemberRequest,
+    GroupMembersBatchOut,
+    GroupMembersBatchRequest,
     GroupOut,
     GroupRename,
     GroupsReorderRequest,
@@ -339,6 +341,17 @@ def post_group_member(
 ) -> dict:
     row = repo.add_group_member(db, str(user.id), group_id, body.symbol, body.exchange)
     return {"ok": True, "symbol": row.symbol, "exchange": row.exchange}
+
+
+@router.post("/watchlist/groups/{group_id}/members/batch", response_model=GroupMembersBatchOut)
+def post_group_members_batch(
+    group_id: str,
+    body: GroupMembersBatchRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> GroupMembersBatchOut:
+    raw = repo.batch_group_members(db, str(user.id), group_id, body.symbols, body.action)
+    return GroupMembersBatchOut(**raw)
 
 
 @router.delete("/watchlist/groups/{group_id}/members/{vt_symbol}")
