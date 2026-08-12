@@ -39,6 +39,7 @@
 25. ~~自选列表列偏好~~（已完成 → [spec](./superpowers/specs/2026-08-12-watchlist-column-prefs-design.md)）
 26. ~~雷达展望启发式写读闭环~~（已完成 → [spec](./superpowers/specs/2026-08-12-radar-horizon-heuristic-design.md)）
 27. ~~Ops 三 skipped job 薄做实~~（已完成 → [spec](./superpowers/specs/2026-08-12-ops-skipped-jobs-thin-design.md)）
+28. ~~自选分组排序与批量移组~~（已完成 → [spec](./superpowers/specs/2026-08-12-watchlist-groups-sort-batch-design.md)）
 
 ## 明确不做（直到本文件改口）
 
