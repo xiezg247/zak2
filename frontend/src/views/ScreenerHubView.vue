@@ -58,6 +58,76 @@ const industryOpen = ref(false)
 const industryErr = ref('')
 
 const rows = computed(() => current.value?.result?.rows || [])
+
+type ResultSortKey = 'last_price' | 'change_pct' | 'turnover_rate' | 'volume_ratio' | 'score' | null
+
+const resultFilter = ref('')
+const sortKey = ref<ResultSortKey>(null)
+const sortDir = ref<'asc' | 'desc'>('desc')
+
+function rowNum(row: Record<string, unknown>, key: string): number | null {
+  const v = Number(row[key])
+  return Number.isFinite(v) ? v : null
+}
+
+function rowScore(row: Record<string, unknown>): number | null {
+  for (const k of ['similarity_score', 'pattern_score', 'leader_score', 'score'] as const) {
+    const v = rowNum(row, k)
+    if (v != null) return v
+  }
+  return null
+}
+
+function cmpNullable(a: number | null | undefined, b: number | null | undefined, dir: 'asc' | 'desc'): number {
+  const aMissing = a == null || Number.isNaN(a)
+  const bMissing = b == null || Number.isNaN(b)
+  if (aMissing && bMissing) return 0
+  if (aMissing) return 1
+  if (bMissing) return -1
+  const d = (a as number) - (b as number)
+  return dir === 'asc' ? d : -d
+}
+
+function toggleSort(key: Exclude<ResultSortKey, null>) {
+  if (sortKey.value === key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortKey.value = key
+    sortDir.value = 'desc'
+  }
+}
+
+function clearSort() {
+  sortKey.value = null
+}
+
+function sortMark(key: Exclude<ResultSortKey, null>): string {
+  if (sortKey.value !== key) return ''
+  return sortDir.value === 'asc' ? ' ▲' : ' ▼'
+}
+
+function sortValue(row: Record<string, unknown>, key: Exclude<ResultSortKey, null>): number | null {
+  if (key === 'score') return rowScore(row)
+  return rowNum(row, key)
+}
+
+const displayedRows = computed(() => {
+  const q = resultFilter.value.trim().toLowerCase()
+  let list = rows.value as Record<string, unknown>[]
+  if (q) {
+    list = list.filter((row) => {
+      const vt = String(row.vt_symbol || row.symbol || '').toLowerCase()
+      const name = String(row.name || '').toLowerCase()
+      const ind = String(row.industry || '').toLowerCase()
+      return vt.includes(q) || name.includes(q) || ind.includes(q)
+    })
+  }
+  const key = sortKey.value
+  if (!key) return list
+  const dir = sortDir.value
+  return [...list].sort((a, b) => cmpNullable(sortValue(a, key), sortValue(b, key), dir))
+})
+
 const industry = computed(() => current.value?.result?.industry_dist || [])
 const diff = computed(() => current.value?.result?.diff)
 const isCustom = computed(() => selectedPreset.value === '自定义筛选')
@@ -697,6 +767,10 @@ onMounted(async () => {
         <div class="toolbar" v-if="current">
           <strong>{{ current.condition }}</strong>
           <span class="muted">扫描 {{ current.total_scanned }} · 命中 {{ current.row_count }}</span>
+        </div>
+        <div v-if="current" class="row filter-row">
+          <input v-model="resultFilter" placeholder="过滤代码/名称/行业" />
+          <button v-if="sortKey" type="button" class="ghost" @click="clearSort">默认序</button>
           <button class="ghost" type="button" @click="exportCsv">导出 CSV</button>
         </div>
 
@@ -713,25 +787,27 @@ onMounted(async () => {
                 <th>#</th>
                 <th>代码</th>
                 <th>名称</th>
-                <th>现价</th>
-                <th>涨幅%</th>
-                <th>换手%</th>
+                <th>行业</th>
+                <th class="sortable" @click="toggleSort('last_price')">现价{{ sortMark('last_price') }}</th>
+                <th class="sortable" @click="toggleSort('change_pct')">涨幅%{{ sortMark('change_pct') }}</th>
+                <th class="sortable" @click="toggleSort('turnover_rate')">换手%{{ sortMark('turnover_rate') }}</th>
                 <th>连板</th>
                 <th>分层</th>
                 <th>PE</th>
                 <th>市值亿</th>
                 <th>净流入万</th>
-                <th>量比</th>
-                <th>得分</th>
+                <th class="sortable" @click="toggleSort('volume_ratio')">量比{{ sortMark('volume_ratio') }}</th>
+                <th class="sortable" @click="toggleSort('score')">得分{{ sortMark('score') }}</th>
                 <th>形态说明</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(row, i) in rows" :key="String(row.symbol)">
+              <tr v-for="(row, i) in displayedRows" :key="String(row.symbol)">
                 <td>{{ i + 1 }}</td>
                 <td class="mono">{{ row.vt_symbol || row.symbol }}</td>
                 <td>{{ row.name }}</td>
+                <td>{{ String(row.industry || '').trim() || '—' }}</td>
                 <td>{{ Number(row.last_price || 0).toFixed(2) }}</td>
                 <td :class="{ up: Number(row.change_pct) > 0, down: Number(row.change_pct) < 0 }">
                   {{ Number(row.change_pct || 0).toFixed(2) }}
@@ -794,8 +870,10 @@ onMounted(async () => {
                   <button type="button" class="link" @click="findPeers(row)">找同类</button>
                 </td>
               </tr>
-              <tr v-if="!rows.length">
-                <td colspan="15" class="empty">运行选股后在此显示结果</td>
+              <tr v-if="!displayedRows.length">
+                <td colspan="16" class="empty">
+                  {{ rows.length === 0 ? '运行选股后在此显示结果' : '无匹配结果' }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -879,6 +957,9 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
+}
+.filter-row {
+  grid-template-columns: 1fr auto auto;
 }
 label {
   display: grid;
@@ -1019,6 +1100,13 @@ th {
   background: var(--surface-muted);
   position: sticky;
   top: 0;
+}
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+th.sortable:hover {
+  color: var(--text);
 }
 .mono {
   font-family: var(--mono);
