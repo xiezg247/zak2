@@ -83,7 +83,7 @@ JOB_SPECS: tuple[JobSpec, ...] = (
     JobSpec(
         "prefetch_concept_board",
         "概念板块预拉",
-        "占位：尚未接入同花顺概念预热落点（Web 可跑 → skipped）",
+        "复用 sync_sector_flow_daily 概念资金 → sector_flow_daily（Web 可跑）",
         "prefetch_concept_board",
     ),
     JobSpec("warm_market_summary", "市场摘要预热", "情绪周期预热写入短 TTL 缓存", "warm_market_summary"),
