@@ -78,7 +78,7 @@ cd frontend && npm run dev
 - [ ] 同日再点「生成次日计划草案」覆盖已有 draft（提示含「已覆盖」）
 - [ ] `/radar` 刷新时可见「加载中…」；无卡片时见空态并可「去 Ops」；无共振时侧栏文案说明需 ≥2 卡命中
 - [ ] `/radar` 有卡片时可按 source chip / 标题过滤与标题·行数排序；无匹配显示「无匹配卡片」；真无卡仍见 Ops 空态
-- [ ] `/radar` 可见「展望 · 暂不可用」可展开；文案说明管线未接入与 scan_horizon_outlook 占位；可「去 Ops」
+- [ ] `/radar` 展望区可展开；有 cache 时展示启发式共振行与时间；无数据时见空态引导跑 `scan_horizon_outlook`（文案含启发式/共振）；可「去 Ops」
 
 ## 6. 内容 · 回测 · AI · 运维
 
@@ -101,7 +101,7 @@ cd frontend && npm run dev
 - [ ] Ops 手动跑 **`warm_radar_card_snapshots`**（写入 `cache.radar_card_snapshot`；无合成卡片时有 skipped 文案；成功后 `/radar` 首屏可命中缓存）
 - [ ] Ops 手动跑 **`enrich_market_quotes`**（需 `TUSHARE_TOKEN` + collector 已有行情键；无 token / 无 Redis 行情 / 无匹配键 / 当日 Tushare 因子未出时有明确 skipped 文案，可稍后重试；成功后可看换手/量比/净流入榜更新）
 - [ ] Ops 手动跑 **`warm_watchlist_strategy_cache`**（恒 skipped；文案含「策略引擎」）
-- [ ] Ops 手动跑 **`scan_horizon_outlook`**（恒 skipped；文案含「展望扫描管线」或「展望管线」）
+- [ ] Ops 手动跑 **`scan_horizon_outlook`** 非 skipped（可写入启发式展望）；`/radar` 展望区可读行或空态引导（文案含启发式/共振，无「恒 skipped」）
 - [ ] Ops 手动跑 **`prefetch_concept_board`**（恒 skipped；文案含「同花顺概念预热落点」或「concept board」）
 - [ ] Ops 手动跑 **`fill_focus_pool_minute`**（恒 skipped；文案含「关注池 1m K 补全管线」或「1m K 补全」）
 - [ ] （可选）配置 `SCHEDULER_SCREEN_USER_ID` 后，盘中/盘后选股定时可写入该用户 `screener_runs`（未配置则跳过选股定时）
