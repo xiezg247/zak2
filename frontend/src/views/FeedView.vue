@@ -15,8 +15,27 @@ const searchQ = ref('')
 const searchHits = ref<BilibiliUserHit[]>([])
 const searching = ref(false)
 const searchTried = ref(false)
+const listFilter = ref('')
+const unreadOnly = ref(false)
 
 const subtitle = computed(() => `${subs.value.length} 订阅 · ${items.value.length} 条`)
+
+const displayedItems = computed(() => {
+  const q = listFilter.value.trim().toLowerCase()
+  let list = items.value
+  if (q) {
+    list = list.filter((it) => {
+      const t = (it.title || '').toLowerCase()
+      const a = (it.author_name || '').toLowerCase()
+      const s = (it.summary || '').toLowerCase()
+      return t.includes(q) || a.includes(q) || s.includes(q)
+    })
+  }
+  if (unreadOnly.value) {
+    list = list.filter((it) => !it.is_read)
+  }
+  return list
+})
 
 async function load() {
   loading.value = true
@@ -159,6 +178,9 @@ onMounted(() => {
             </div>
           </div>
           <p v-else-if="searchTried && !searching" class="muted tiny-text">无搜索结果</p>
+          <p v-if="!subs.length && !loading" class="muted tiny-text sub-hint">
+            先搜索关键词或填写 mid 添加订阅。
+          </p>
           <button type="button" class="sub" :class="{ on: !subId }" @click="subId = ''">全部</button>
           <div v-for="s in subs" :key="s.id" class="sub-row">
             <button type="button" class="sub" :class="{ on: subId === s.id }" @click="subId = s.id">
@@ -169,22 +191,40 @@ onMounted(() => {
           </div>
         </aside>
         <section class="right">
-          <button class="ghost" type="button" :disabled="loading" @click="load">刷新</button>
-          <article
-            v-for="item in items"
-            :key="item.id"
-            class="item"
-            :class="{ unread: !item.is_read }"
-            @click="openItem(item)"
-          >
-            <div class="meta muted">
-              {{ item.author_name }} · {{ item.published_at }}
-              <span v-if="!item.is_read">· 未读</span>
+          <div class="right-tools">
+            <button class="ghost" type="button" :disabled="loading" @click="load">刷新</button>
+            <div v-if="items.length" class="filter-row">
+              <input v-model="listFilter" placeholder="过滤标题/作者" />
+              <label class="unread-label">
+                <input v-model="unreadOnly" type="checkbox" />
+                仅未读
+              </label>
             </div>
-            <h3>{{ item.title || '(无标题)' }}</h3>
-            <p class="summary">{{ item.summary }}</p>
-          </article>
-          <p v-if="!items.length" class="empty muted">暂无动态</p>
+          </div>
+
+          <p v-if="loading" class="muted">加载中…</p>
+          <template v-else>
+            <p v-if="!subs.length" class="empty muted">暂无订阅</p>
+            <p v-else-if="!items.length" class="empty muted">
+              暂无动态。可到 Ops 执行 sync_bilibili_feed。
+              <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
+            </p>
+            <p v-else-if="!displayedItems.length" class="empty muted">无匹配动态</p>
+            <article
+              v-for="item in displayedItems"
+              :key="item.id"
+              class="item"
+              :class="{ unread: !item.is_read }"
+              @click="openItem(item)"
+            >
+              <div class="meta muted">
+                {{ item.author_name }} · {{ item.published_at }}
+                <span v-if="!item.is_read">· 未读</span>
+              </div>
+              <h3>{{ item.title || '(无标题)' }}</h3>
+              <p class="summary">{{ item.summary }}</p>
+            </article>
+          </template>
         </section>
       </div>
     </div>
@@ -286,6 +326,40 @@ onMounted(() => {
   color: var(--text);
   border-radius: 0.5rem;
   padding: 6px 10px;
+}
+.right-tools {
+  display: grid;
+  gap: 8px;
+}
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.filter-row input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 0.5rem;
+  padding: 6px 10px;
+  min-width: 140px;
+  flex: 1;
+}
+.unread-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.draft-link {
+  color: var(--brand);
+  margin-left: 4px;
+}
+.sub-hint {
+  margin: 0;
 }
 .item {
   border: 1px solid var(--border);
