@@ -110,7 +110,7 @@ JOB_SPECS: tuple[JobSpec, ...] = (
     JobSpec(
         "fill_focus_pool_minute",
         "关注池 1m K 补全",
-        "占位：尚未接入关注池 1m 补全管线（Web 可跑 → skipped）",
+        "自选关注池 d/1m overview 盘点（1m 下载未接入，Web 可跑）",
         "fill_focus_pool_minute",
     ),
     JobSpec("screen_intraday", "盘中自动选股", "盘中选股写历史", "screen_intraday"),
