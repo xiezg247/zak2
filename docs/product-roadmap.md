@@ -22,6 +22,7 @@
 8. ~~Ops planned 第四批~~（已完成 → [spec](./superpowers/specs/2026-08-12-ops-planned-batch4-design.md)）：`prefetch_concept_board` / `fill_focus_pool_minute` 可跑占位（恒 skipped）；catalog 已无 planned
 9. ~~自选列表扩列排序过滤~~（已完成 → [spec](./superpowers/specs/2026-08-12-watchlist-list-sort-filter-design.md)）
 10. ~~自选分组管理闭环~~（已完成 → [spec](./superpowers/specs/2026-08-12-watchlist-groups-manage-design.md)）
+11. ~~策略看盘 UX 闭环~~（已完成 → [spec](./superpowers/specs/2026-08-12-watchlist-strategy-board-ux-design.md)）
 
 ## 明确不做（直到本文件改口）
 

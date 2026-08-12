@@ -952,7 +952,7 @@ onUnmounted(() => {
                   <button type="button" class="link" @click="removeFromSignalPanel(vt)">×</button>
                 </span>
               </div>
-              <p v-else class="muted tip">名单为空时回退「自选 ∩ 策略 cache」；上限 {{ panelMax }} 只（存 PG，与桌面本地暂不同步）。</p>
+              <p v-else class="muted tip">名单为空时回退「自选 ∩ 策略 cache」；上限 {{ panelMax }} 只（存 PG）。</p>
               <p v-if="signalError" class="err">{{ signalError }}</p>
               <p v-else-if="signalMsg" class="muted">{{ signalMsg }}</p>
             </div>
@@ -1002,7 +1002,7 @@ onUnmounted(() => {
                     </td>
                   </tr>
                   <tr v-if="!board.signals.length">
-                    <td colspan="7" class="empty">无信号（可先编辑名单，或等桌面刷新 cache）</td>
+                    <td colspan="7" class="empty">无信号（可先编辑名单，或确认策略 cache 已写入）</td>
                   </tr>
                 </tbody>
               </table>
@@ -1043,7 +1043,7 @@ onUnmounted(() => {
               </div>
               <p v-if="posError" class="err">{{ posError }}</p>
               <p v-else-if="posMsg" class="muted">{{ posMsg }}</p>
-              <p class="muted tip">须先加入自选；数量 100 股整手；与桌面同表 `watchlist_positions`。</p>
+              <p class="muted tip">须先加入自选；数量 100 股整手；写入持仓记账表。</p>
             </div>
             <div class="table-wrap">
               <table>
