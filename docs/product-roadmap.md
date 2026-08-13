@@ -42,6 +42,7 @@
 28. ~~自选分组排序与批量移组~~（已完成 → [spec](./superpowers/specs/2026-08-12-watchlist-groups-sort-batch-design.md)）
 29. ~~策略信号日 K 双均线启发式~~（已完成 → [spec](./superpowers/specs/2026-08-13-strategy-ma-signal-heuristic-design.md)）
 30. ~~关注池 1m K 真下载~~（已完成 → [spec](./superpowers/specs/2026-08-13-focus-pool-1m-download-design.md)）
+31. ~~笔记侧栏过滤与空态~~（已完成 → [spec](./superpowers/specs/2026-08-13-notes-sidebar-filter-ux-design.md)）
 
 ## 明确不做（直到本文件改口）
 
