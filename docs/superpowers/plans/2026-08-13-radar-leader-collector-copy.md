@@ -125,3 +125,10 @@ EOF
 | 不改 job_id | Global |
 
 无 TBD。
+
+---
+
+# RLCC SDD progress
+
+- Task 1: done @ c08479c (approved)
+- Final review: APPROVED (single-task)
