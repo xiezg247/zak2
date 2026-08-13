@@ -17,8 +17,19 @@ const searching = ref(false)
 const searchTried = ref(false)
 const listFilter = ref('')
 const unreadOnly = ref(false)
+const subFilter = ref('')
 
 const subtitle = computed(() => `${subs.value.length} 订阅 · ${items.value.length} 条`)
+
+const displayedSubs = computed(() => {
+  const q = subFilter.value.trim().toLowerCase()
+  if (!q) return subs.value
+  return subs.value.filter((s) => {
+    const name = (s.display_name || '').toLowerCase()
+    const mid = (s.source_id || '').toLowerCase()
+    return name.includes(q) || mid.includes(q)
+  })
+})
 
 const displayedItems = computed(() => {
   const q = listFilter.value.trim().toLowerCase()
@@ -181,8 +192,15 @@ onMounted(() => {
           <p v-if="!subs.length && !loading" class="muted tiny-text sub-hint">
             先搜索关键词或填写 mid 添加订阅。
           </p>
+          <input
+            v-if="subs.length"
+            v-model="subFilter"
+            class="sub-filter"
+            placeholder="过滤订阅名/mid"
+          />
           <button type="button" class="sub" :class="{ on: !subId }" @click="subId = ''">全部</button>
-          <div v-for="s in subs" :key="s.id" class="sub-row">
+          <p v-if="subs.length && !displayedSubs.length" class="muted tiny-text">无匹配订阅</p>
+          <div v-for="s in displayedSubs" :key="s.id" class="sub-row">
             <button type="button" class="sub" :class="{ on: subId === s.id }" @click="subId = s.id">
               {{ s.display_name || s.source_id }}
             </button>
@@ -360,6 +378,15 @@ onMounted(() => {
 }
 .sub-hint {
   margin: 0;
+}
+.sub-filter {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  padding: 8px 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .item {
   border: 1px solid var(--border);
