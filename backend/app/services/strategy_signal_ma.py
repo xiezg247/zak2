@@ -34,9 +34,9 @@ def parse_config_key(config_key: str) -> tuple[int, int] | None:
 
 
 def cross_kind(pf: float, ps: float, f: float, s: float) -> str:
-    if pf < ps and f > s:
+    if pf <= ps and f > s:
         return "buy"
-    if pf > ps and f < s:
+    if pf >= ps and f < s:
         return "sell"
     return "hold"
 
