@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import {
@@ -25,6 +25,18 @@ const newSymbol = ref('')
 const error = ref('')
 const saving = ref(false)
 const tab = ref<'memo' | 'reports'>('memo')
+const listFilter = ref('')
+const loading = ref(false)
+
+const displayedSymbols = computed(() => {
+  const q = listFilter.value.trim().toLowerCase()
+  if (!q) return symbols.value
+  return symbols.value.filter((s) => {
+    const vt = (s.vt_symbol || '').toLowerCase()
+    const preview = (s.memo_preview || '').toLowerCase()
+    return vt.includes(q) || preview.includes(q)
+  })
+})
 
 async function loadSymbols() {
   symbols.value = await contentApi.noteSymbols()
@@ -113,6 +125,8 @@ watch(selected, () => {
 })
 
 onMounted(async () => {
+  loading.value = true
+  error.value = ''
   try {
     const qSym = String(route.query.symbol || '').trim()
     if (qSym) selected.value = qSym
@@ -120,6 +134,8 @@ onMounted(async () => {
     await loadDetail()
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败'
+  } finally {
+    loading.value = false
   }
 })
 </script>
@@ -134,20 +150,31 @@ onMounted(async () => {
             <input v-model="newSymbol" placeholder="600519.SSE" @keyup.enter="openOrCreate" />
             <button class="primary" type="button" @click="openOrCreate">打开</button>
           </div>
-          <button
-            v-for="s in symbols"
-            :key="s.vt_symbol"
-            type="button"
-            class="sym"
-            :class="{ on: selected === s.vt_symbol }"
-            @click="selected = s.vt_symbol"
-          >
-            <span class="mono">{{ s.vt_symbol }}</span>
-            <span class="muted">流水 {{ s.entry_count }}</span>
-            <span class="preview muted">{{ s.memo_preview || '无备忘' }}</span>
-          </button>
+          <input
+            v-if="symbols.length"
+            v-model="listFilter"
+            class="filter"
+            placeholder="过滤代码/备忘"
+          />
+          <p v-if="loading" class="empty muted">加载中…</p>
+          <template v-else>
+            <p v-if="!symbols.length" class="hint muted">输入代码打开笔记</p>
+            <p v-else-if="!displayedSymbols.length" class="empty muted">无匹配标的</p>
+            <button
+              v-for="s in displayedSymbols"
+              :key="s.vt_symbol"
+              type="button"
+              class="sym"
+              :class="{ on: selected === s.vt_symbol }"
+              @click="selected = s.vt_symbol"
+            >
+              <span class="mono">{{ s.vt_symbol }}</span>
+              <span class="muted">流水 {{ s.entry_count }}</span>
+              <span class="preview muted">{{ s.memo_preview || '无备忘' }}</span>
+            </button>
+          </template>
         </aside>
-        <section class="right" v-if="selected">
+        <section v-if="selected" class="right">
           <h2 class="mono">{{ selected }}</h2>
           <div class="tabs">
             <button type="button" :class="{ on: tab === 'memo' }" @click="tab = 'memo'">备忘/流水</button>
@@ -193,7 +220,11 @@ onMounted(async () => {
             </article>
           </template>
         </section>
-        <section v-else class="right muted">选择或打开一只股票</section>
+        <section v-else class="right muted">
+          <template v-if="loading">加载中…</template>
+          <template v-else-if="!symbols.length">暂无笔记标的</template>
+          <template v-else>选择或打开一只股票</template>
+        </section>
       </div>
     </div>
   </AppShell>
@@ -228,6 +259,19 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
+}
+.filter {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  padding: 8px 10px;
+  width: 100%;
+}
+.empty,
+.hint {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
 }
 .tabs {
   display: flex;
