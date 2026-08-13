@@ -14,6 +14,7 @@ from app.services.symbols import normalize_exchange, parse_flexible_symbol
 from app.services.tushare_screener import latest_open_yyyymmdd
 
 INTERVAL_DAILY = "d"
+INTERVAL_1M = "1m"
 DEFAULT_MISSING_LOOKBACK_DAYS = 365
 DEFAULT_UNIVERSE_START = date(2020, 1, 1)
 
@@ -98,7 +99,13 @@ def is_stale_end(end_raw: Any, *, as_of: date) -> bool:
     return end_d < as_of
 
 
-def get_overview_row(db: Session, *, symbol: str, exchange: str) -> dict[str, Any] | None:
+def get_overview_row(
+    db: Session,
+    *,
+    symbol: str,
+    exchange: str,
+    interval: str = INTERVAL_DAILY,
+) -> dict[str, Any] | None:
     row = db.execute(
         text(
             """
@@ -107,7 +114,7 @@ def get_overview_row(db: Session, *, symbol: str, exchange: str) -> dict[str, An
             WHERE symbol = :s AND exchange = :e AND interval = :iv
             """
         ),
-        {"s": symbol, "e": normalize_exchange(exchange), "iv": INTERVAL_DAILY},
+        {"s": symbol, "e": normalize_exchange(exchange), "iv": interval},
     ).mappings().first()
     return dict(row) if row else None
 
@@ -150,7 +157,13 @@ def fetch_daily_rows(*, ts_code: str, start: date, end: date) -> list[dict[str, 
     )
 
 
-def refresh_overview(db: Session, *, symbol: str, exchange: str) -> None:
+def refresh_overview(
+    db: Session,
+    *,
+    symbol: str,
+    exchange: str,
+    interval: str = INTERVAL_DAILY,
+) -> None:
     exch = normalize_exchange(exchange)
     stats = db.execute(
         text(
@@ -160,7 +173,7 @@ def refresh_overview(db: Session, *, symbol: str, exchange: str) -> None:
             WHERE symbol = :s AND exchange = :e AND interval = :iv
             """
         ),
-        {"s": symbol, "e": exch, "iv": INTERVAL_DAILY},
+        {"s": symbol, "e": exch, "iv": interval},
     ).mappings().first()
     db.execute(
         text(
@@ -169,7 +182,7 @@ def refresh_overview(db: Session, *, symbol: str, exchange: str) -> None:
             WHERE symbol = :s AND exchange = :e AND interval = :iv
             """
         ),
-        {"s": symbol, "e": exch, "iv": INTERVAL_DAILY},
+        {"s": symbol, "e": exch, "iv": interval},
     )
     if not stats or not stats["n"]:
         return
@@ -183,7 +196,7 @@ def refresh_overview(db: Session, *, symbol: str, exchange: str) -> None:
         {
             "s": symbol,
             "e": exch,
-            "iv": INTERVAL_DAILY,
+            "iv": interval,
             "start": stats["start_dt"],
             "end": stats["end_dt"],
             "n": int(stats["n"]),
@@ -264,6 +277,108 @@ def download_daily_bars(
     ts_code = to_ts_code(symbol, exchange)
     rows = fetch_daily_rows(ts_code=ts_code, start=start, end=end)
     return upsert_daily_bars(db, symbol=symbol, exchange=exchange, rows=rows)
+
+
+def fetch_minute_rows(*, ts_code: str, start: datetime, end: datetime) -> list[dict[str, Any]]:
+    return ts.query(
+        "stk_mins",
+        {
+            "ts_code": ts_code,
+            "freq": "1min",
+            "start_date": start.strftime("%Y-%m-%d %H:%M:%S"),
+            "end_date": end.strftime("%Y-%m-%d %H:%M:%S"),
+        },
+        fields="ts_code,trade_time,open,high,low,close,vol,amount",
+    )
+
+
+def _parse_trade_time(raw: Any) -> datetime | None:
+    text_v = str(raw or "").strip()
+    if not text_v:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y%m%d%H%M%S"):
+        try:
+            return datetime.strptime(text_v[:19] if fmt.startswith("%Y-%") else text_v[:14], fmt)
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(text_v.replace("Z", ""))
+    except ValueError:
+        return None
+
+
+def upsert_minute_bars(
+    db: Session,
+    *,
+    symbol: str,
+    exchange: str,
+    rows: list[dict[str, Any]],
+) -> int:
+    if not rows:
+        return 0
+    exch = normalize_exchange(exchange)
+    written = 0
+    for row in rows:
+        dt = _parse_trade_time(row.get("trade_time"))
+        if dt is None:
+            continue
+        db.execute(
+            text(
+                """
+                DELETE FROM public.dbbardata
+                WHERE symbol = :s AND exchange = :e AND interval = :iv AND datetime = :dt
+                """
+            ),
+            {"s": symbol, "e": exch, "iv": INTERVAL_1M, "dt": dt},
+        )
+        db.execute(
+            text(
+                """
+                INSERT INTO public.dbbardata (
+                    symbol, exchange, datetime, interval,
+                    volume, turnover, open_interest,
+                    open_price, high_price, low_price, close_price
+                ) VALUES (
+                    :s, :e, :dt, :iv,
+                    :vol, :amt, 0,
+                    :o, :h, :l, :c
+                )
+                """
+            ),
+            {
+                "s": symbol,
+                "e": exch,
+                "dt": dt,
+                "iv": INTERVAL_1M,
+                "vol": ts.safe_float(row.get("vol")),
+                "amt": ts.safe_float(row.get("amount")),
+                "o": ts.safe_float(row.get("open")),
+                "h": ts.safe_float(row.get("high")),
+                "l": ts.safe_float(row.get("low")),
+                "c": ts.safe_float(row.get("close")),
+            },
+        )
+        written += 1
+    if written:
+        refresh_overview(db, symbol=symbol, exchange=exch, interval=INTERVAL_1M)
+    return written
+
+
+def download_minute_bars(
+    db: Session,
+    *,
+    symbol: str,
+    exchange: str,
+    start: date,
+    end: date,
+) -> int:
+    if start > end:
+        return 0
+    ts_code = to_ts_code(symbol, exchange)
+    start_dt = datetime(start.year, start.month, start.day, 9, 0, 0)
+    end_dt = datetime(end.year, end.month, end.day, 19, 0, 0)
+    rows = fetch_minute_rows(ts_code=ts_code, start=start_dt, end=end_dt)
+    return upsert_minute_bars(db, symbol=symbol, exchange=exchange, rows=rows)
 
 
 def resolve_fill_range(
