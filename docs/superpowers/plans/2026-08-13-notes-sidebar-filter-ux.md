@@ -208,3 +208,11 @@ EOF
 | 不改 API | Global |
 
 无 TBD。
+
+---
+
+# NSF SDD progress
+
+- Task 1: done @ 4be432c (approved)
+- Task 2: done @ 5f813cb (approved)
+- Final review: APPROVED
