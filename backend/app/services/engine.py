@@ -42,7 +42,10 @@ def _require_quotes(store: QuoteStore) -> None:
         raise HTTPException(status_code=503, detail="Redis 不可用，请检查 REDIS_URL 或先启动 Redis")
     meta = store.meta()
     if not meta.get("quote_count"):
-        raise HTTPException(status_code=503, detail="行情快照为空，请先在 zak 侧执行 collect_quotes")
+        raise HTTPException(
+            status_code=503,
+            detail="行情快照为空，请启动 quote-collector（python -m app.quote_collector）",
+        )
 
 
 def _pack_result(

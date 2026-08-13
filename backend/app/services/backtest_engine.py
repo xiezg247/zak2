@@ -84,7 +84,7 @@ def load_daily_bars(
         )
     )
     if len(rows) < 30:
-        raise HTTPException(status_code=404, detail=f"日 K 不足（{len(rows)}），请先在 zak 下载日 K")
+        raise HTTPException(status_code=404, detail=f"日 K 不足（{len(rows)}），请先在 Ops 补全日 K")
     return [
         Bar(
             dt=r.datetime,

@@ -42,7 +42,7 @@ def load_bars(
     rows = list(db.scalars(stmt))
     rows.reverse()
     if not rows:
-        raise HTTPException(status_code=404, detail="无 K 线数据，请先在 Ops 补全日 K 或使用 zak 下载")
+        raise HTTPException(status_code=404, detail="无 K 线数据，请先在 Ops 补全日 K")
 
     bars = [
         BarOut(
