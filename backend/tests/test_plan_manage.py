@@ -107,6 +107,7 @@ def test_update_symbols_replace() -> None:
     plan = _plan(status="draft")
     db = MagicMock()
     db.scalar.return_value = plan
+    db.scalars.return_value = iter([])
     with (
         patch("app.services.plan_manage._now", return_value="t2"),
         patch(
@@ -146,6 +147,7 @@ def test_update_symbols_empty_clears() -> None:
     plan = _plan(status="draft")
     db = MagicMock()
     db.scalar.return_value = plan
+    db.scalars.return_value = iter([])
     with (
         patch("app.services.plan_manage._now", return_value="t2"),
         patch(
@@ -157,6 +159,74 @@ def test_update_symbols_empty_clears() -> None:
     db.execute.assert_called()
     assert db.add.call_count == 0
     db.commit.assert_called()
+
+
+def test_replace_symbols_preserves_entry_conditions() -> None:
+    """同 vt 重建时保留 allowed_modes / entry_conditions / exit_conditions；新 vt 为空串。"""
+    plan = _plan(status="draft")
+    existing = MagicMock()
+    existing.symbol = "600519"
+    existing.exchange = "SSE"
+    existing.allowed_modes = "swing"
+    existing.entry_conditions = "雷达共振文案"
+    existing.exit_conditions = "止损"
+    db = MagicMock()
+    db.scalar.return_value = plan
+    db.scalars.return_value = iter([existing])
+    with (
+        patch("app.services.plan_manage._now", return_value="t2"),
+        patch(
+            "app.services.plan_manage.load_plan_out",
+            return_value=MagicMock(id="p1"),
+        ),
+    ):
+        pm.update_plan(db, "u1", "p1", symbols=["600519.SSE", "000001.SZSE"])
+    assert db.add.call_count == 2
+    kept = db.add.call_args_list[0].args[0]
+    assert kept.symbol == "600519"
+    assert kept.allowed_modes == "swing"
+    assert kept.entry_conditions == "雷达共振文案"
+    assert kept.exit_conditions == "止损"
+    brand_new = db.add.call_args_list[1].args[0]
+    assert brand_new.symbol == "000001"
+    assert brand_new.allowed_modes == ""
+    assert brand_new.entry_conditions == ""
+    assert brand_new.exit_conditions == ""
+
+
+def test_activate_then_off_plan_uses_plan_symbols() -> None:
+    """activate 后 status=active；snapshot 的 vt 集合可正确驱动 list_off_plan_vt_symbols。"""
+    from app.services import off_plan as op
+
+    draft = _plan(id="d1", status="draft", trade_date="2026-08-14")
+    db_act = MagicMock()
+    db_act.scalar.side_effect = [draft]
+    db_act.scalars.return_value = iter([])
+    with (
+        patch("app.services.plan_manage._now", return_value="t1"),
+        patch(
+            "app.services.plan_manage.load_plan_out",
+            return_value=MagicMock(status="active", id="d1"),
+        ),
+    ):
+        out = pm.activate_plan(db_act, "u1", "d1")
+    assert draft.status == "active"
+    assert out.status == "active"
+    db_act.commit.assert_called()
+
+    sym = MagicMock()
+    sym.symbol = "600519"
+    sym.exchange = "SSE"
+    db_snap = MagicMock()
+    db_snap.scalar.return_value = draft
+    db_snap.scalars.return_value = iter([sym])
+    snap = op.load_active_plan_snapshot(db_snap, "u1", "2026-08-14")
+    assert snap is not None
+    assert snap["vt_symbols"] == {"600519.SSE"}
+    assert op.list_off_plan_vt_symbols(["600519.SSE", "000001.SZSE"], snap["vt_symbols"]) == [
+        "000001.SZSE"
+    ]
+    assert op.list_off_plan_vt_symbols(["600519.SSE", "000001.SZSE"], None) == []
 
 
 def test_update_notes_only_skips_symbols() -> None:

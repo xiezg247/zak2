@@ -100,6 +100,23 @@ def _replace_symbols(db: Session, user_id: str, plan: TradingPlan, raw_list: lis
             continue
         seen.add(vt)
         parsed.append((code, exch))
+    # 重建前保留同 vt 的条件字段，避免仅改 notes/仓位或重排时清空雷达共振文案
+    existing = list(
+        db.scalars(
+            select(TradingPlanSymbol).where(
+                TradingPlanSymbol.plan_id == plan.id,
+                TradingPlanSymbol.user_id == user_id,
+            )
+        )
+    )
+    preserve: dict[str, tuple[str, str, str]] = {}
+    for s in existing:
+        vt = to_vt_symbol(s.symbol, s.exchange)
+        preserve[vt] = (
+            s.allowed_modes or "",
+            s.entry_conditions or "",
+            s.exit_conditions or "",
+        )
     db.execute(
         delete(TradingPlanSymbol).where(
             TradingPlanSymbol.plan_id == plan.id,
@@ -107,15 +124,17 @@ def _replace_symbols(db: Session, user_id: str, plan: TradingPlan, raw_list: lis
         )
     )
     for i, (code, exch) in enumerate(parsed):
+        vt = to_vt_symbol(code, exch)
+        modes, entry, exit_c = preserve.get(vt, ("", "", ""))
         db.add(
             TradingPlanSymbol(
                 plan_id=plan.id,
                 symbol=code,
                 exchange=exch,
                 user_id=user_id,
-                allowed_modes="",
-                entry_conditions="",
-                exit_conditions="",
+                allowed_modes=modes,
+                entry_conditions=entry,
+                exit_conditions=exit_c,
                 sort_order=i,
             )
         )

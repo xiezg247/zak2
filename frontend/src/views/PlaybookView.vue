@@ -113,11 +113,19 @@ async function saveEdit(id: string) {
   error.value = ''
   msg.value = ''
   try {
-    await contentApi.patchPlan(id, {
+    const plan = plans.value.find((p) => p.id === id)
+    const current = plan?.symbols.map((s) => s.vt_symbol) ?? []
+    const next = [...editSymbols.value]
+    const symbolsChanged =
+      current.length !== next.length || current.some((vt, i) => vt !== next[i])
+    const pct = Math.min(100, Math.max(1, Number(editMaxPct.value) || 1))
+    editMaxPct.value = pct
+    const body: { notes: string; max_position_pct: number; symbols?: string[] } = {
       notes: editNotes.value,
-      max_position_pct: editMaxPct.value / 100,
-      symbols: [...editSymbols.value],
-    })
+      max_position_pct: pct / 100,
+    }
+    if (symbolsChanged) body.symbols = next
+    await contentApi.patchPlan(id, body)
     await reloadPlans()
     editingId.value = ''
     msg.value = '已保存'
@@ -269,14 +277,16 @@ onMounted(() => {
           <button type="button" class="ghost" @click="historyOpen = !historyOpen">
             {{ historyOpen ? '收起历史' : `历史（${historyPlans.length}）` }}
           </button>
-          <div v-if="historyOpen" class="plan muted-block" v-for="p in historyPlans" :key="p.id">
-            <strong>{{ p.trade_date }}</strong>
-            <span class="badge" data-status="abandoned">abandoned</span>
-            <div class="syms">
-              <span v-for="s in p.symbols" :key="s.vt_symbol" class="chip">{{ s.vt_symbol }}</span>
+          <template v-if="historyOpen">
+            <div class="plan muted-block" v-for="p in historyPlans" :key="p.id">
+              <strong>{{ p.trade_date }}</strong>
+              <span class="badge" data-status="abandoned">abandoned</span>
+              <div class="syms">
+                <span v-for="s in p.symbols" :key="s.vt_symbol" class="chip">{{ s.vt_symbol }}</span>
+              </div>
+              <p v-if="p.notes" class="muted">{{ p.notes }}</p>
             </div>
-            <p v-if="p.notes" class="muted">{{ p.notes }}</p>
-          </div>
+          </template>
         </div>
       </section>
     </div>
