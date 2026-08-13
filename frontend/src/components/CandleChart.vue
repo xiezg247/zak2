@@ -15,9 +15,27 @@ const props = withDefaults(
     bars: CandleBar[]
     width?: number
     height?: number
+    interval?: 'd' | '1m'
   }>(),
-  { width: 640, height: 280 },
+  { width: 640, height: 280, interval: 'd' },
 )
+
+function axisLabel(dt: string): string {
+  if (props.interval === '1m') {
+    const m = dt.match(/(\d{2}):(\d{2})/)
+    return m ? `${m[1]}:${m[2]}` : dt.slice(11, 16)
+  }
+  return dt.slice(5, 10)
+}
+
+function hintTime(dt: string): string {
+  if (props.interval === '1m') {
+    const date = dt.slice(5, 10)
+    const m = dt.match(/(\d{2}):(\d{2})/)
+    return m ? `${date} ${m[1]}:${m[2]}` : dt.slice(0, 16)
+  }
+  return dt.slice(0, 10)
+}
 
 const pad = { top: 12, right: 12, bottom: 28, left: 12 }
 const volH = 56
@@ -74,7 +92,7 @@ const layout = computed(() => {
   for (let i = 0; i < data.length; i += step) {
     labels.push({
       x: pad.left + slot * i + slot / 2,
-      text: data[i].datetime.slice(5, 10),
+      text: axisLabel(data[i].datetime),
     })
   }
   return { candles, labels, midY: pad.top + chartH }
@@ -117,7 +135,7 @@ const last = computed(() => (props.bars.length ? props.bars[props.bars.length - 
       </text>
     </svg>
     <div v-if="last" class="hint">
-      <span>{{ last.datetime.slice(0, 10) }}</span>
+      <span>{{ hintTime(last.datetime) }}</span>
       <span>O {{ last.open.toFixed(2) }}</span>
       <span>H {{ last.high.toFixed(2) }}</span>
       <span>L {{ last.low.toFixed(2) }}</span>
