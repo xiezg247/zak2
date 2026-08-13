@@ -123,3 +123,98 @@ def test_update_max_pct_percent_form() -> None:
     ):
         pm.update_plan(db, "u1", "p1", max_position_pct=30)
     assert abs(plan.max_position_pct - 0.3) < 1e-9
+
+
+def test_update_rejects_all_none() -> None:
+    plan = _plan(status="draft")
+    db = MagicMock()
+    db.scalar.return_value = plan
+    with pytest.raises(HTTPException) as ei:
+        pm.update_plan(db, "u1", "p1")
+    assert ei.value.status_code == 400
+
+
+def test_update_symbols_empty_clears() -> None:
+    plan = _plan(status="draft")
+    db = MagicMock()
+    db.scalar.return_value = plan
+    with (
+        patch("app.services.plan_manage._now", return_value="t2"),
+        patch(
+            "app.services.plan_manage.load_plan_out",
+            return_value=MagicMock(id="p1"),
+        ),
+    ):
+        pm.update_plan(db, "u1", "p1", symbols=[])
+    db.execute.assert_called()
+    assert db.add.call_count == 0
+    db.commit.assert_called()
+
+
+def test_update_notes_only_skips_symbols() -> None:
+    plan = _plan(status="draft")
+    db = MagicMock()
+    db.scalar.return_value = plan
+    with (
+        patch("app.services.plan_manage._now", return_value="t2"),
+        patch(
+            "app.services.plan_manage.load_plan_out",
+            return_value=MagicMock(id="p1", notes="x"),
+        ),
+    ):
+        pm.update_plan(db, "u1", "p1", notes="x")
+    assert plan.notes == "x"
+    db.execute.assert_not_called()
+    db.add.assert_not_called()
+    db.commit.assert_called()
+
+
+def test_update_rejects_too_many_symbols() -> None:
+    plan = _plan(status="draft")
+    db = MagicMock()
+    db.scalar.return_value = plan
+    symbols = [f"{600500 + i}.SSE" for i in range(21)]
+    with pytest.raises(HTTPException) as ei:
+        pm.update_plan(db, "u1", "p1", symbols=symbols)
+    assert ei.value.status_code == 400
+
+
+@pytest.mark.parametrize(
+    "symbols",
+    [
+        [""],
+        ["600519.SSE", "   "],
+    ],
+)
+def test_update_rejects_empty_symbol(symbols: list[str]) -> None:
+    plan = _plan(status="draft")
+    db = MagicMock()
+    db.scalar.return_value = plan
+    with pytest.raises(HTTPException) as ei:
+        pm.update_plan(db, "u1", "p1", symbols=symbols)
+    assert ei.value.status_code == 400
+
+
+def test_update_rejects_invalid_symbol() -> None:
+    plan = _plan(status="draft")
+    db = MagicMock()
+    db.scalar.return_value = plan
+    with (
+        patch(
+            "app.services.plan_manage.parse_flexible_symbol",
+            side_effect=ValueError("无效 vt_symbol：bogus"),
+        ),
+        pytest.raises(HTTPException) as ei,
+    ):
+        pm.update_plan(db, "u1", "p1", symbols=["bogus"])
+    assert ei.value.status_code == 400
+
+
+@pytest.mark.parametrize("max_position_pct", [0, -1, 0.0])
+def test_update_rejects_non_positive_max_pct(max_position_pct: float) -> None:
+    plan = _plan(status="draft")
+    db = MagicMock()
+    db.scalar.return_value = plan
+    with pytest.raises(HTTPException) as ei:
+        pm.update_plan(db, "u1", "p1", max_position_pct=max_position_pct)
+    assert ei.value.status_code == 400
