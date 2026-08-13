@@ -1,4 +1,4 @@
-"""自选策略 cache 预热：Redis → PG 桥（不跑策略引擎）。"""
+"""自选策略 cache 预热：Redis → PG 桥 + 日 K 双均线启发式。"""
 
 from __future__ import annotations
 
@@ -6,15 +6,20 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.redis_keys import KEY_PREFIX
+from app.models.bars import DbBarData
+from app.services.ops_bars_fill import list_watchlist_symbols
 from app.services.ops_scheduler import save_job_run_meta
 from app.services.quotes import get_quote_store
 from app.services.strategy_board import DEFAULT_CONFIG_KEY, _parse_payload
+from app.services.strategy_signal_ma import compute_ma_signal, parse_config_key
+from app.services.symbols import to_vt_symbol
 
 JOB_ID = "warm_watchlist_strategy_cache"
+POOL_CAP = 500
 _CHINA_TZ = timezone(timedelta(hours=8))
 
 
@@ -189,6 +194,75 @@ def _bridge_config(db: Session, client: Any, config_key: str) -> tuple[int, int]
     return written_s, written_p
 
 
+def _load_daily_closes(
+    db: Session, *, symbol: str, exchange: str, limit: int
+) -> tuple[list[float], list[float], str] | None:
+    """返回 (closes, volumes, as_of)；无数据返回 None（不抛）。"""
+    from app.services.symbols import normalize_exchange
+
+    exch = normalize_exchange(exchange)
+    rows = list(
+        db.scalars(
+            select(DbBarData)
+            .where(
+                DbBarData.symbol == symbol,
+                DbBarData.exchange == exch,
+                DbBarData.interval == "d",
+            )
+            .order_by(DbBarData.datetime.desc())
+            .limit(limit)
+        )
+    )
+    if not rows:
+        return None
+    rows.reverse()
+    closes = [float(r.close_price or 0) for r in rows]
+    volumes = [float(r.volume or 0) for r in rows]
+    as_of = rows[-1].datetime.date().isoformat()
+    return closes, volumes, as_of
+
+
+def _compute_pool(db: Session, config_keys: list[str]) -> tuple[int, int]:
+    pool = list_watchlist_symbols(db)[:POOL_CAP]
+    computed = 0
+    skipped_bars = 0
+    today = _today()
+    for ck in config_keys:
+        parsed = parse_config_key(ck)
+        if not parsed:
+            continue
+        fast, slow = parsed
+        limit = min(200, max(slow * 3, 60))
+        for symbol, exchange in pool:
+            loaded = _load_daily_closes(db, symbol=symbol, exchange=exchange, limit=limit)
+            if not loaded:
+                skipped_bars += 1
+                continue
+            closes, volumes, as_of = loaded
+            vt = to_vt_symbol(symbol, exchange)
+            snap = compute_ma_signal(
+                closes,
+                volumes=volumes,
+                fast=fast,
+                slow=slow,
+                vt_symbol=vt,
+                as_of=as_of,
+            )
+            if not snap:
+                skipped_bars += 1
+                continue
+            _upsert_signal(
+                db,
+                vt_symbol=vt,
+                config_key=ck,
+                bar_as_of=as_of,
+                payload=json.dumps(snap, ensure_ascii=False),
+                updated_at=today,
+            )
+            computed += 1
+    return computed, skipped_bars
+
+
 def warm_watchlist_strategy_cache(db: Session) -> dict[str, Any]:
     config_keys = _list_config_keys(db)
     client = _redis_client()
@@ -200,11 +274,12 @@ def warm_watchlist_strategy_cache(db: Session) -> dict[str, Any]:
             written_s += s
             written_p += p
         db.commit()
-    msg = f"策略 cache 桥接：signals={written_s} positions={written_p}"
-    if client is None:
-        msg = "无 Redis 信号可桥接（client 不可用）"
-    elif written_s == 0 and written_p == 0:
-        msg = "无 Redis 信号可桥接（0 命中）"
+    computed, skipped_bars = _compute_pool(db, config_keys)
+    db.commit()
+    msg = (
+        f"策略 cache：桥接 signals={written_s} positions={written_p}；"
+        f"双均线启发式 computed={computed} skipped_bars={skipped_bars}"
+    )
     save_job_run_meta(db, JOB_ID, last_message=msg, last_success=True)
     return {
         "success": True,
@@ -212,4 +287,6 @@ def warm_watchlist_strategy_cache(db: Session) -> dict[str, Any]:
         "message": msg,
         "written_signals": written_s,
         "written_positions": written_p,
+        "computed": computed,
+        "skipped_bars": skipped_bars,
     }
