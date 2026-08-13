@@ -179,3 +179,11 @@ EOF
 | 不自动 runTeam / 无移出 API | Global |
 
 无 TBD。
+
+---
+
+# NSR SDD progress
+
+- Task 1: done @ 3cfb2c2 (approved)
+- Task 2: done @ 34211ca (approved)
+- Final review: APPROVED
