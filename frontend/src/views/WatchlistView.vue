@@ -28,6 +28,7 @@ const autoRefresh = ref(true)
 const selected = ref<WatchlistItem | null>(null)
 const bars = ref<Bar[]>([])
 const barsError = ref('')
+const barsLoading = ref(false)
 const barLimit = ref(90)
 const lastRefresh = ref('')
 const board = ref<StrategyBoard | null>(null)
@@ -511,12 +512,18 @@ async function refresh(quiet = false, skipBoard = false) {
 async function loadBars() {
   barsError.value = ''
   bars.value = []
-  if (!selected.value) return
+  if (!selected.value) {
+    barsLoading.value = false
+    return
+  }
+  barsLoading.value = true
   try {
     const resp = await watchlistApi.bars(selected.value.vt_symbol, 'd', barLimit.value)
     bars.value = resp.bars
   } catch (e) {
     barsError.value = e instanceof Error ? e.message : '无 K 线'
+  } finally {
+    barsLoading.value = false
   }
 }
 
@@ -951,7 +958,7 @@ onUnmounted(() => {
                 </tr>
                 <tr v-if="!displayedItems.length">
                   <td :colspan="tableColspan" class="empty">
-                    {{ items.length === 0 ? '自选为空，上方输入代码添加' : '无匹配结果' }}
+                    {{ items.length === 0 ? '暂无自选标的，上方输入代码添加' : '无匹配标的' }}
                   </td>
                 </tr>
               </tbody>
@@ -988,40 +995,55 @@ onUnmounted(() => {
             </div>
           </div>
           <p v-else class="muted">选择左侧标的查看日 K</p>
-          <p v-if="barsError" class="err">{{ barsError }}</p>
+          <template v-if="selected">
+            <p v-if="barsLoading" class="muted">加载日 K…</p>
+            <template v-else-if="barsError">
+              <p class="err">
+                {{ barsError }}
+                <RouterLink to="/ops" class="draft-link">去 Ops 补全日 K</RouterLink>
+              </p>
+            </template>
+            <template v-else-if="!bars.length">
+              <p class="muted">
+                暂无日 K
+                <RouterLink to="/ops" class="draft-link">去 Ops 补全日 K</RouterLink>
+              </p>
+            </template>
+            <template v-else>
+              <div class="chart">
+                <CandleChart :bars="bars" />
+                <div class="bar-meta muted">
+                  {{ bars[0].datetime.slice(0, 10) }} → {{ bars[bars.length - 1].datetime.slice(0, 10) }}
+                  · {{ bars.length }} 根日 K
+                </div>
+              </div>
 
-          <div class="chart" v-if="bars.length">
-            <CandleChart :bars="bars" />
-            <div class="bar-meta muted">
-              {{ bars[0].datetime.slice(0, 10) }} → {{ bars[bars.length - 1].datetime.slice(0, 10) }}
-              · {{ bars.length }} 根日 K
-            </div>
-          </div>
-
-          <div class="table-wrap mini" v-if="bars.length">
-            <table>
-              <thead>
-                <tr>
-                  <th>日期</th>
-                  <th>开</th>
-                  <th>高</th>
-                  <th>低</th>
-                  <th>收</th>
-                  <th>量</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="b in bars.slice().reverse().slice(0, 20)" :key="b.datetime">
-                  <td class="mono">{{ b.datetime.slice(0, 10) }}</td>
-                  <td>{{ b.open.toFixed(2) }}</td>
-                  <td>{{ b.high.toFixed(2) }}</td>
-                  <td>{{ b.low.toFixed(2) }}</td>
-                  <td>{{ b.close.toFixed(2) }}</td>
-                  <td>{{ Math.round(b.volume).toLocaleString() }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+              <div class="table-wrap mini">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>日期</th>
+                      <th>开</th>
+                      <th>高</th>
+                      <th>低</th>
+                      <th>收</th>
+                      <th>量</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="b in bars.slice().reverse().slice(0, 20)" :key="b.datetime">
+                      <td class="mono">{{ b.datetime.slice(0, 10) }}</td>
+                      <td>{{ b.open.toFixed(2) }}</td>
+                      <td>{{ b.high.toFixed(2) }}</td>
+                      <td>{{ b.low.toFixed(2) }}</td>
+                      <td>{{ b.close.toFixed(2) }}</td>
+                      <td>{{ Math.round(b.volume).toLocaleString() }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+          </template>
         </section>
       </div>
 
@@ -1708,6 +1730,10 @@ select {
   margin: 0;
   color: var(--danger);
   font-size: 0.85rem;
+}
+.draft-link {
+  color: var(--brand);
+  margin-left: 4px;
 }
 .muted {
   color: var(--muted);
