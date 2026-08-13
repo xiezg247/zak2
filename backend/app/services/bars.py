@@ -42,7 +42,13 @@ def load_bars(
     rows = list(db.scalars(stmt))
     rows.reverse()
     if not rows:
-        raise HTTPException(status_code=404, detail="无 K 线数据，请先在 Ops 补全日 K")
+        if interval == "1m":
+            detail = "无 1 分 K 线，请先在 Ops 运行 fill_focus_pool_minute"
+        elif interval == "d":
+            detail = "无 K 线数据，请先在 Ops 补全日 K"
+        else:
+            detail = "无 K 线数据"
+        raise HTTPException(status_code=404, detail=detail)
 
     bars = [
         BarOut(
