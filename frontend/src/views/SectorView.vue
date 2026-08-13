@@ -130,6 +130,7 @@ onMounted(async () => {
       <p v-if="loading" class="muted">加载中…</p>
       <p v-else-if="!error && !rows.length" class="muted empty-hint">
         暂无板块资金。可先到 Ops 执行 sync_sector_flow_daily。
+        <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
       </p>
       <p v-else-if="rows.length && !displayedRows.length" class="muted empty-hint">无匹配板块</p>
 
@@ -280,5 +281,9 @@ th.sortable {
 }
 .down {
   color: var(--ok);
+}
+.draft-link {
+  color: var(--brand);
+  margin-left: 4px;
 }
 </style>

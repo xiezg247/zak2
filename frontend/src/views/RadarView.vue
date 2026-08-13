@@ -14,6 +14,18 @@ import { watchlistApi } from '../api/watchlist'
 const router = useRouter()
 const cards = ref<RadarCard[]>([])
 const resonance = ref<RadarResonanceEntry[]>([])
+const resonanceFilter = ref('')
+
+const displayedResonance = computed(() => {
+  const q = resonanceFilter.value.trim().toLowerCase()
+  if (!q) return resonance.value
+  return resonance.value.filter((e) => {
+    const vt = (e.vt_symbol || '').toLowerCase()
+    const name = (e.name || '').toLowerCase()
+    return vt.includes(q) || name.includes(q)
+  })
+})
+
 const activeId = ref('')
 const error = ref('')
 const loading = ref(false)
@@ -554,8 +566,14 @@ onMounted(() => {
           <p v-if="sideMsg" class="side-msg">{{ sideMsg }}</p>
           <button class="primary full" type="button" @click="goLeaderScreen">龙头选股 → Hub</button>
           <button class="ghost full" type="button" @click="goResonanceScreen">共振选股 → Hub</button>
+          <input
+            v-if="resonance.length"
+            v-model="resonanceFilter"
+            class="side-filter"
+            placeholder="过滤代码/名称"
+          />
           <div class="side-list">
-            <div v-for="(e, i) in resonance" :key="e.vt_symbol" class="side-row">
+            <div v-for="(e, i) in displayedResonance" :key="e.vt_symbol" class="side-row">
               <div class="side-top">
                 <span class="rank">{{ i + 1 }}</span>
                 <div class="side-meta">
@@ -583,6 +601,7 @@ onMounted(() => {
             <p v-if="!resonance.length" class="muted empty-side">
               暂无共振标的（需至少 2 张卡片命中同一标的；可调权重后刷新）
             </p>
+            <p v-else-if="!displayedResonance.length" class="muted empty-side">无匹配共振</p>
           </div>
         </aside>
       </div>
@@ -869,6 +888,15 @@ th {
   margin: 0;
   font-size: 0.8rem;
   color: var(--accent);
+}
+.side-filter {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  padding: 6px 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .side-list {
   display: grid;
