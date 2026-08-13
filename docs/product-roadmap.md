@@ -12,7 +12,7 @@
 
 ## 近期待办
 
-1. 完成本独立演进落地（Compose / Alembic / `zak2:` 前缀 / 去 CLI 文案 / 导入脚本）
+1. ~~完成本独立演进落地~~（已完成 → [总纲](./superpowers/specs/2026-08-11-zak2-independent-evolution-design.md)；收口 → [spec](./superpowers/specs/2026-08-13-independent-evolution-closeout-design.md)）
 2. ~~Ops planned job 透明化与健康面板打磨~~（已完成 → [spec](./superpowers/specs/2026-08-11-ops-planned-health-polish-design.md)）
 3. ~~日 K 绿场建表~~（已完成 → [spec](./superpowers/specs/2026-08-11-public-bars-schema-design.md)）；拉数仍靠 Ops 手动
 4. ~~行情 enrich 因子~~（已完成 → [spec](./superpowers/specs/2026-08-11-quote-enrich-design.md)）；~~AI 只读持仓/信号工具~~（已完成 → [spec](./superpowers/specs/2026-08-11-ai-read-positions-signals-design.md)）；候选：其它 Web 体验
