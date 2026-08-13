@@ -205,3 +205,11 @@ EOF
 | 不自动开跑 | Global |
 
 无 TBD。
+
+---
+
+# BPO SDD progress
+
+- Task 1: done @ 66017e2 (approved)
+- Task 2: done @ 711b4ed (approved)
+- Final review: APPROVED
