@@ -91,6 +91,7 @@ cd frontend && npm run dev
 ## 6. 内容 · 回测 · AI · 运维
 
 - [ ] `/playbook` 章节可读、纪律可勾
+- [ ] `/playbook` 交易计划：draft 可编辑/激活/废弃；激活后 status=active；同日再激活其它 draft 会废弃旧 active；active 可改标的；abandoned 在「历史」只读；激活后 `/watchlist` 持仓不在计划内可见「计划外」
 - [ ] `/notes` 备忘/流水可写；**研报 Tab** 可看团队落库（`?symbol=&report=` 可直达）
 - [ ] `/notes` 有标的时可按代码/备忘过滤；无匹配见「无匹配标的」；无标的见「暂无笔记标的」与打开引导；加载中可见提示
 - [ ] `/notes` 删流水有 confirm；研报 Tab 可按标题/摘要过滤；无匹配见「无匹配研报」；无研报可「去 AI 跑投研团队」（带当前代码）；`/ai?symbol=` 打开后投研输入框预填该代码

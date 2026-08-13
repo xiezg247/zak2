@@ -53,6 +53,7 @@
 39. ~~雷达卡片详情行操作~~（已完成 → [spec](./superpowers/specs/2026-08-13-radar-card-detail-actions-ux-design.md)）
 40. ~~雷达详情反馈清空与操作钮样式~~（已完成 → [spec](./superpowers/specs/2026-08-13-radar-detail-msg-btn-polish-ux-design.md)）
 41. ~~自选列表空态与日 K Ops 引导~~（已完成 → [spec](./superpowers/specs/2026-08-13-watchlist-empty-bars-ops-ux-design.md)）
+42. ~~交易计划生命周期闭环~~（已完成 → [spec](./superpowers/specs/2026-08-13-trading-plan-lifecycle-design.md)）
 
 ## 明确不做（直到本文件改口）
 
