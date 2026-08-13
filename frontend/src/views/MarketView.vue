@@ -18,6 +18,21 @@ const selected = ref<RankRow | null>(null)
 const bars = ref<Bar[]>([])
 const barsError = ref('')
 const barsLoading = ref(false)
+const barInterval = ref<'d' | '1m'>('d')
+const barLimitDaily = ref(90)
+const barLimit1m = ref(480)
+
+const barLimit = computed({
+  get: () => (barInterval.value === '1m' ? barLimit1m.value : barLimitDaily.value),
+  set: (n: number) => {
+    if (barInterval.value === '1m') barLimit1m.value = n
+    else barLimitDaily.value = n
+  },
+})
+
+const barLimitChoices = computed(() =>
+  barInterval.value === '1m' ? [240, 480, 1200] : [60, 90, 120],
+)
 const addMsg = ref('')
 const thresholdsOpen = ref(false)
 const cycleInputsOpen = ref(false)
@@ -266,20 +281,32 @@ async function onField() {
   }
 }
 
-async function selectRank(r: RankRow) {
-  selected.value = r
+async function loadBars() {
   barsError.value = ''
   bars.value = []
-  addMsg.value = ''
+  if (!selected.value) {
+    barsLoading.value = false
+    return
+  }
   barsLoading.value = true
   try {
-    const resp = await watchlistApi.bars(r.vt_symbol, 'd', 90)
+    const resp = await watchlistApi.bars(
+      selected.value.vt_symbol,
+      barInterval.value,
+      barLimit.value,
+    )
     bars.value = resp.bars
   } catch (e) {
     barsError.value = e instanceof Error ? e.message : '无 K 线'
   } finally {
     barsLoading.value = false
   }
+}
+
+async function selectRank(r: RankRow) {
+  selected.value = r
+  addMsg.value = ''
+  await loadBars()
 }
 
 async function addSelected() {
@@ -313,6 +340,10 @@ watch(field, () => {
 
 watch(thresholdsOpen, (open) => {
   if (open) void loadThresholds()
+})
+
+watch([barLimit, barInterval], () => {
+  if (selected.value) void loadBars()
 })
 
 onMounted(() => {
@@ -559,25 +590,43 @@ onUnmounted(() => {
             <button type="button" class="primary" @click="addSelected">加自选</button>
             <button type="button" class="ghost" @click="openInWatchlist">在自选打开</button>
           </div>
+          <div class="bar-controls">
+            <div class="limits">
+              <button type="button" class="chip" :class="{ on: barInterval === 'd' }" @click="barInterval = 'd'">日K</button>
+              <button type="button" class="chip" :class="{ on: barInterval === '1m' }" @click="barInterval = '1m'">1分</button>
+            </div>
+            <div class="limits">
+              <button
+                v-for="n in barLimitChoices"
+                :key="n"
+                type="button"
+                class="chip"
+                :class="{ on: barLimit === n }"
+                @click="barLimit = n"
+              >
+                {{ barInterval === '1m' ? `${n}根` : `${n}日` }}
+              </button>
+            </div>
+          </div>
           <p v-if="addMsg" class="muted">{{ addMsg }}</p>
-          <p v-if="barsLoading" class="muted">加载日 K…</p>
+          <p v-if="barsLoading" class="muted">{{ barInterval === '1m' ? '加载 1 分 K…' : '加载日 K…' }}</p>
           <template v-else-if="barsError">
             <p class="err">
               {{ barsError }}
-              <RouterLink to="/ops" class="draft-link">去 Ops 补全日 K</RouterLink>
+              <RouterLink to="/ops" class="draft-link">{{ barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K' }}</RouterLink>
             </p>
           </template>
           <template v-else-if="!bars.length">
             <p class="muted">
-              暂无日 K
-              <RouterLink to="/ops" class="draft-link">去 Ops 补全日 K</RouterLink>
+              {{ barInterval === '1m' ? '暂无 1 分 K' : '暂无日 K' }}
+              <RouterLink to="/ops" class="draft-link">{{ barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K' }}</RouterLink>
             </p>
           </template>
           <div v-else class="chart">
-            <CandleChart :bars="bars" :height="240" />
+            <CandleChart :bars="bars" :height="240" :interval="barInterval" />
           </div>
         </aside>
-        <aside v-else class="detail empty-panel muted">点击排行行查看日 K 与操作</aside>
+        <aside v-else class="detail empty-panel muted">点击排行行查看 K 线与操作</aside>
       </div>
     </div>
   </AppShell>
@@ -782,6 +831,31 @@ onUnmounted(() => {
 .detail-actions {
   display: flex;
   gap: 8px;
+}
+.bar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.limits {
+  display: flex;
+  gap: 4px;
+}
+.chip {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 0.5rem;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.chip.on {
+  background: var(--brand-light);
+  color: var(--brand);
+  border-color: var(--brand-soft);
+  font-weight: 500;
 }
 .chart {
   border-top: 1px solid var(--border);

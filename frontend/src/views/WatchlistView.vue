@@ -30,7 +30,21 @@ const selected = ref<WatchlistItem | null>(null)
 const bars = ref<Bar[]>([])
 const barsError = ref('')
 const barsLoading = ref(false)
-const barLimit = ref(90)
+const barInterval = ref<'d' | '1m'>('d')
+const barLimitDaily = ref(90)
+const barLimit1m = ref(480)
+
+const barLimit = computed({
+  get: () => (barInterval.value === '1m' ? barLimit1m.value : barLimitDaily.value),
+  set: (n: number) => {
+    if (barInterval.value === '1m') barLimit1m.value = n
+    else barLimitDaily.value = n
+  },
+})
+
+const barLimitChoices = computed(() =>
+  barInterval.value === '1m' ? [240, 480, 1200] : [60, 90, 120],
+)
 const fundOpen = ref(true)
 const fundLoading = ref(false)
 const fundError = ref('')
@@ -523,7 +537,11 @@ async function loadBars() {
   }
   barsLoading.value = true
   try {
-    const resp = await watchlistApi.bars(selected.value.vt_symbol, 'd', barLimit.value)
+    const resp = await watchlistApi.bars(
+      selected.value.vt_symbol,
+      barInterval.value,
+      barLimit.value,
+    )
     bars.value = resp.bars
   } catch (e) {
     barsError.value = e instanceof Error ? e.message : '无 K 线'
@@ -791,7 +809,7 @@ watch(groupId, () => {
   batchMsg.value = ''
 })
 
-watch(barLimit, () => {
+watch([barLimit, barInterval], () => {
   void loadBars()
 })
 
@@ -1028,39 +1046,44 @@ onUnmounted(() => {
               {{ selected.change_pct != null ? selected.change_pct.toFixed(2) + '%' : '—' }}
             </span>
             <div class="limits">
+              <button type="button" class="chip" :class="{ on: barInterval === 'd' }" @click="barInterval = 'd'">日K</button>
+              <button type="button" class="chip" :class="{ on: barInterval === '1m' }" @click="barInterval = '1m'">1分</button>
+            </div>
+            <div class="limits">
               <button
-                v-for="n in [60, 90, 120]"
+                v-for="n in barLimitChoices"
                 :key="n"
                 type="button"
                 class="chip"
                 :class="{ on: barLimit === n }"
                 @click="barLimit = n"
               >
-                {{ n }}日
+                {{ barInterval === '1m' ? `${n}根` : `${n}日` }}
               </button>
             </div>
           </div>
-          <p v-else class="muted">选择左侧标的查看日 K</p>
+          <p v-else class="muted">选择左侧标的查看 K 线</p>
           <template v-if="selected">
-            <p v-if="barsLoading" class="muted">加载日 K…</p>
+            <p v-if="barsLoading" class="muted">{{ barInterval === '1m' ? '加载 1 分 K…' : '加载日 K…' }}</p>
             <template v-else-if="barsError">
               <p class="err">
                 {{ barsError }}
-                <RouterLink to="/ops" class="draft-link">去 Ops 补全日 K</RouterLink>
+                <RouterLink to="/ops" class="draft-link">{{ barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K' }}</RouterLink>
               </p>
             </template>
             <template v-else-if="!bars.length">
               <p class="muted">
-                暂无日 K
-                <RouterLink to="/ops" class="draft-link">去 Ops 补全日 K</RouterLink>
+                {{ barInterval === '1m' ? '暂无 1 分 K' : '暂无日 K' }}
+                <RouterLink to="/ops" class="draft-link">{{ barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K' }}</RouterLink>
               </p>
             </template>
             <template v-else>
               <div class="chart">
-                <CandleChart :bars="bars" />
+                <CandleChart :bars="bars" :interval="barInterval" />
                 <div class="bar-meta muted">
-                  {{ bars[0].datetime.slice(0, 10) }} → {{ bars[bars.length - 1].datetime.slice(0, 10) }}
-                  · {{ bars.length }} 根日 K
+                  {{ bars[0].datetime.slice(0, barInterval === '1m' ? 16 : 10) }} →
+                  {{ bars[bars.length - 1].datetime.slice(0, barInterval === '1m' ? 16 : 10) }}
+                  · {{ bars.length }} {{ barInterval === '1m' ? '根 1 分 K' : '根日 K' }}
                 </div>
               </div>
 
@@ -1078,7 +1101,7 @@ onUnmounted(() => {
                   </thead>
                   <tbody>
                     <tr v-for="b in bars.slice().reverse().slice(0, 20)" :key="b.datetime">
-                      <td class="mono">{{ b.datetime.slice(0, 10) }}</td>
+                      <td class="mono">{{ b.datetime.slice(0, 16) }}</td>
                       <td>{{ b.open.toFixed(2) }}</td>
                       <td>{{ b.high.toFixed(2) }}</td>
                       <td>{{ b.low.toFixed(2) }}</td>
@@ -1822,9 +1845,11 @@ select {
   font-weight: 500;
 }
 .limits {
-  margin-left: auto;
   display: flex;
   gap: 4px;
+}
+.chart-head > .limits:first-of-type {
+  margin-left: auto;
 }
 .link {
   background: none;
