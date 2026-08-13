@@ -1,9 +1,14 @@
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
+from fastapi import HTTPException
+
+from app.models.content import TradingPlan
 from app.schemas.content import PlanOut
 from app.services import feed as feed_svc
+from app.services import plan_manage as pm
 
 
 def test_plan_to_out_maps_symbols() -> None:
@@ -25,3 +30,57 @@ def test_plan_to_out_maps_symbols() -> None:
     assert out.id == "p1"
     assert out.status == "draft"
     assert out.symbols[0]["vt_symbol"] == "600519.SSE"
+
+
+def _plan(**kw):
+    p = MagicMock(spec=TradingPlan)
+    p.id = kw.get("id", "p1")
+    p.user_id = kw.get("user_id", "u1")
+    p.trade_date = kw.get("trade_date", "2026-08-14")
+    p.status = kw.get("status", "draft")
+    p.emotion_expected = ""
+    p.max_position_pct = 0.3
+    p.notes = ""
+    p.updated_at = "t0"
+    return p
+
+
+def test_activate_replaces_same_day_active() -> None:
+    draft = _plan(id="d1", status="draft")
+    old = _plan(id="a1", status="active")
+    db = MagicMock()
+    # get_user_plan → draft；再查同日 active → [old]
+    db.scalar.side_effect = [draft]
+    db.scalars.return_value = iter([old])
+    with (
+        patch("app.services.plan_manage._now", return_value="t1"),
+        patch("app.services.plan_manage.load_plan_out", return_value=MagicMock(status="active", id="d1")) as load,
+    ):
+        out = pm.activate_plan(db, "u1", "d1")
+    assert old.status == "abandoned"
+    assert draft.status == "active"
+    assert draft.updated_at == "t1"
+    db.commit.assert_called()
+    assert out.id == "d1"
+
+
+def test_abandon_idempotent() -> None:
+    abandoned = _plan(status="abandoned")
+    db = MagicMock()
+    db.scalar.return_value = abandoned
+    with patch(
+        "app.services.plan_manage.load_plan_out",
+        return_value=MagicMock(status="abandoned", id="p1"),
+    ):
+        out = pm.abandon_plan(db, "u1", "p1")
+    assert abandoned.status == "abandoned"
+    db.commit.assert_not_called()
+    assert out.status == "abandoned"
+
+
+def test_activate_missing_404() -> None:
+    db = MagicMock()
+    db.scalar.return_value = None
+    with pytest.raises(HTTPException) as ei:
+        pm.activate_plan(db, "u1", "missing")
+    assert ei.value.status_code == 404
