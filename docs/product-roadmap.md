@@ -46,6 +46,7 @@
 32. ~~笔记安全操作与研报 Tab 薄打磨~~（已完成 → [spec](./superpowers/specs/2026-08-13-notes-safety-reports-ux-design.md)）
 33. ~~回测历史过滤与空态~~（已完成 → [spec](./superpowers/specs/2026-08-13-backtest-history-filter-ux-design.md)）
 34. ~~回测画像填参与失败 Ops 引导~~（已完成 → [spec](./superpowers/specs/2026-08-13-backtest-profile-ops-ux-design.md)）
+35. ~~Feed 左侧订阅过滤~~（已完成 → [spec](./superpowers/specs/2026-08-13-feed-subscription-filter-ux-design.md)）
 
 ## 明确不做（直到本文件改口）
 
