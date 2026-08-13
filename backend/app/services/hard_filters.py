@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.schemas.screener import HardFilterPrefs, HardFilterTemplate
-from app.services.quotes import QuoteRow
+from app.services.quotes import QuoteRow, _to_vt_symbol
 
 TEMPLATES: list[HardFilterTemplate] = [
     HardFilterTemplate(
@@ -86,7 +86,12 @@ def _market_board(tf_symbol: str) -> str:
     return exch
 
 
-def apply_hard_filters(rows: list[QuoteRow], prefs: HardFilterPrefs) -> list[QuoteRow]:
+def apply_hard_filters(
+    rows: list[QuoteRow],
+    prefs: HardFilterPrefs,
+    *,
+    suspended_vts: set[str] | None = None,
+) -> list[QuoteRow]:
     out: list[QuoteRow] = []
     min_amount_yuan = max(0.0, prefs.min_amount_wan) * 10_000.0
     min_mv_wan = max(0.0, prefs.min_total_mv_yi) * 10_000.0  # 亿 → 万
@@ -114,6 +119,11 @@ def apply_hard_filters(rows: list[QuoteRow], prefs: HardFilterPrefs) -> list[Quo
             board = _market_board(row.symbol)
             if board and board not in allowed_boards:
                 continue
-        # exclude_suspended / exclude_new_listing：Redis 快照通常无停牌日与上市日，缺字段时跳过
+        # exclude_suspended：依赖 suspended_vts；空集/None 时不误杀
+        if prefs.exclude_suspended and suspended_vts:
+            vt = _to_vt_symbol(row.symbol)
+            if vt in suspended_vts:
+                continue
+        # exclude_new_listing：Redis 快照通常无上市日，缺字段时跳过
         out.append(row)
     return out
