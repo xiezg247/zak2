@@ -49,6 +49,7 @@
 35. ~~Feed 左侧订阅过滤~~（已完成 → [spec](./superpowers/specs/2026-08-13-feed-subscription-filter-ux-design.md)）
 36. ~~市场排行空态与日 K Ops 引导~~（已完成 → [spec](./superpowers/specs/2026-08-13-market-rank-bars-ops-ux-design.md)）
 37. ~~Feed「仅启用」订阅过滤~~（已完成 → [spec](./superpowers/specs/2026-08-13-feed-enabled-only-filter-ux-design.md)）
+38. ~~板块空态 Ops 与雷达共振过滤~~（已完成 → [spec](./superpowers/specs/2026-08-13-sector-ops-radar-resonance-filter-ux-design.md)）
 
 ## 明确不做（直到本文件改口）
 
