@@ -132,6 +132,10 @@ watch(displayedCards, (list) => {
   }
 })
 
+watch(activeId, () => {
+  detailMsg.value = ''
+})
+
 const subtitle = computed(() => {
   if (!cards.value.length) return ''
   const n = resonance.value.length
@@ -177,6 +181,7 @@ async function load() {
   loading.value = true
   error.value = ''
   sideMsg.value = ''
+  detailMsg.value = ''
   horizonErr.value = ''
   const weightsPromise = marketApi.resonanceWeights().catch((e) => {
     weightErr.value = e instanceof Error ? e.message : '权重加载失败'
@@ -551,14 +556,14 @@ onMounted(() => {
                       <template v-if="rowVt(row)">
                         <button
                           type="button"
-                          class="tiny"
+                          class="tiny-btn"
                           :disabled="actingVt === rowVt(row)"
                           @click="addWatchFromDetail(rowVt(row), String(row.name || ''))"
                         >
                           加自选
                         </button>
-                        <button type="button" class="tiny" @click="openInWatchlist(rowVt(row))">在自选打开</button>
-                        <button type="button" class="tiny" @click="openInNotes(rowVt(row))">去笔记</button>
+                        <button type="button" class="tiny-btn" @click="openInWatchlist(rowVt(row))">在自选打开</button>
+                        <button type="button" class="tiny-btn" @click="openInNotes(rowVt(row))">去笔记</button>
                       </template>
                       <template v-else>—</template>
                     </td>
