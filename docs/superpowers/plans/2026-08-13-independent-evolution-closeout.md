@@ -219,3 +219,11 @@ EOF
 | 不跑 Compose 手测 | Global |
 
 无 TBD。`load_daily_bars` 签名为 `(db, *, vt_symbol, start_date, end_date)`。
+
+---
+
+# Closeout SDD progress
+
+- Task 1: done @ e1e5b93 (approved)
+- Task 2: done @ bc924f0 (approved)
+- Final review: APPROVED
