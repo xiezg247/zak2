@@ -174,6 +174,33 @@ export type NotifyLogOut = {
   count: number
 }
 
+export type Fundamentals = {
+  vt_symbol: string
+  ts_code: string
+  snapshot: {
+    end_date: string
+    revenue: number | null
+    net_income: number | null
+    revenue_yoy: number | null
+    net_income_yoy: number | null
+    roe: number | null
+    debt_ratio: number | null
+  } | null
+  sync: {
+    last_sync_at: string
+    latest_end_date: string
+    periods_count: number
+    sync_status: string
+    error_message: string
+  } | null
+  disclosures: {
+    end_date: string
+    pre_date: string
+    ann_date: string
+    actual_date: string
+  }[]
+}
+
 export const watchlistApi = {
   list: (groupId?: string) => {
     const q = groupId ? `?group_id=${encodeURIComponent(groupId)}` : ''
@@ -273,5 +300,9 @@ export const watchlistApi = {
   bars: (vtSymbol: string, interval = 'd', limit = 120) =>
     api<BarsResponse>(
       `/api/v1/bars/${encodeURIComponent(vtSymbol)}?interval=${interval}&limit=${limit}`,
+    ),
+  fundamentals: (vtSymbol: string) =>
+    api<Fundamentals>(
+      `/api/v1/watchlist/items/${encodeURIComponent(vtSymbol)}/fundamentals`,
     ),
 }

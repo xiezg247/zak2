@@ -6,6 +6,7 @@ import CandleChart from '../components/CandleChart.vue'
 import {
   watchlistApi,
   type Bar,
+  type Fundamentals,
   type GroupMembersBatchResult,
   type NotifyLogItem,
   type PlanSymbolStatus,
@@ -30,6 +31,10 @@ const bars = ref<Bar[]>([])
 const barsError = ref('')
 const barsLoading = ref(false)
 const barLimit = ref(90)
+const fundOpen = ref(true)
+const fundLoading = ref(false)
+const fundError = ref('')
+const fund = ref<Fundamentals | null>(null)
 const lastRefresh = ref('')
 const board = ref<StrategyBoard | null>(null)
 const boardError = ref('')
@@ -527,6 +532,42 @@ async function loadBars() {
   }
 }
 
+function formatYmd(raw: string | null | undefined): string {
+  const s = (raw || '').trim()
+  if (!s) return '—'
+  if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
+  return s
+}
+
+function formatMoney(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—'
+  if (Math.abs(n) >= 1e8) return `${(n / 1e8).toFixed(2)} 亿`
+  if (Math.abs(n) >= 1e4) return `${(n / 1e4).toFixed(2)} 万`
+  return n.toFixed(2)
+}
+
+function formatRatioPct(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—'
+  return `${(n * 100).toFixed(1)}%`
+}
+
+async function loadFundamentals() {
+  fundError.value = ''
+  fund.value = null
+  if (!selected.value) {
+    fundLoading.value = false
+    return
+  }
+  fundLoading.value = true
+  try {
+    fund.value = await watchlistApi.fundamentals(selected.value.vt_symbol)
+  } catch (e) {
+    fundError.value = e instanceof Error ? e.message : '基本面加载失败'
+  } finally {
+    fundLoading.value = false
+  }
+}
+
 async function onAdd() {
   error.value = ''
   try {
@@ -741,6 +782,7 @@ function tickBoard() {
 
 watch(selected, () => {
   void loadBars()
+  void loadFundamentals()
 })
 
 watch(groupId, () => {
@@ -1044,6 +1086,69 @@ onUnmounted(() => {
               </div>
             </template>
           </template>
+
+          <div v-if="selected" class="fund-card">
+            <div class="fund-head">
+              <h3>基本面</h3>
+              <button type="button" class="ghost" @click="fundOpen = !fundOpen">
+                {{ fundOpen ? '收起' : '展开' }}
+              </button>
+            </div>
+            <template v-if="fundOpen">
+              <p v-if="fundLoading" class="muted">加载基本面…</p>
+              <p v-else-if="fundError" class="err">{{ fundError }}</p>
+              <template v-else-if="fund">
+                <div class="fund-block">
+                  <h4>财报</h4>
+                  <template v-if="fund.snapshot">
+                    <p class="muted">
+                      期末 {{ formatYmd(fund.snapshot.end_date) }}
+                      <span v-if="fund.sync?.last_sync_at"> · 同步 {{ fund.sync.last_sync_at }}</span>
+                    </p>
+                    <dl class="fund-grid">
+                      <div><dt>营收</dt><dd class="mono">{{ formatMoney(fund.snapshot.revenue) }}</dd></div>
+                      <div><dt>净利</dt><dd class="mono">{{ formatMoney(fund.snapshot.net_income) }}</dd></div>
+                      <div><dt>营收同比</dt><dd>{{ formatRatioPct(fund.snapshot.revenue_yoy) }}</dd></div>
+                      <div><dt>净利同比</dt><dd>{{ formatRatioPct(fund.snapshot.net_income_yoy) }}</dd></div>
+                      <div><dt>ROE</dt><dd>{{ formatRatioPct(fund.snapshot.roe) }}</dd></div>
+                      <div><dt>资产负债率</dt><dd>{{ formatRatioPct(fund.snapshot.debt_ratio) }}</dd></div>
+                    </dl>
+                  </template>
+                  <p v-else class="muted">
+                    暂无财报
+                    <RouterLink to="/ops" class="draft-link">去 Ops 同步自选财报</RouterLink>
+                  </p>
+                </div>
+                <div class="fund-block">
+                  <h4>披露</h4>
+                  <template v-if="fund.disclosures.length">
+                    <table class="fund-disc">
+                      <thead>
+                        <tr>
+                          <th>报告期</th>
+                          <th>预告</th>
+                          <th>公告</th>
+                          <th>实际</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="d in fund.disclosures" :key="d.end_date">
+                          <td class="mono">{{ formatYmd(d.end_date) }}</td>
+                          <td class="mono">{{ formatYmd(d.pre_date) }}</td>
+                          <td class="mono">{{ formatYmd(d.ann_date) }}</td>
+                          <td class="mono">{{ formatYmd(d.actual_date) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </template>
+                  <p v-else class="muted">
+                    暂无披露日历
+                    <RouterLink to="/ops" class="draft-link">去 Ops 同步披露计划</RouterLink>
+                  </p>
+                </div>
+              </template>
+            </template>
+          </div>
         </section>
       </div>
 
@@ -1819,6 +1924,59 @@ tbody tr.off-plan.on {
 }
 .mini {
   max-height: 220px;
+}
+.fund-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--bg-elevated);
+}
+.fund-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.fund-head h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.fund-block {
+  display: grid;
+  gap: 8px;
+}
+.fund-block h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.fund-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+}
+.fund-grid dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.fund-grid dd {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+}
+.fund-disc {
+  width: 100%;
+  border-collapse: collapse;
+}
+.fund-disc th,
+.fund-disc td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  text-align: left;
 }
 @media (max-width: 900px) {
   .workspace,
