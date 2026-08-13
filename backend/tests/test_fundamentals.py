@@ -1,11 +1,69 @@
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
+from app.api.deps import get_current_user
+from app.core.db import get_db
+from app.core.security import hash_password
+from app.main import create_app
+from app.models.user import User
 from app.services import fundamentals as fund
+
+
+def _client() -> TestClient:
+    app = create_app()
+    now = datetime.now(UTC)
+    u = User(
+        id=str(uuid4()),
+        username="demo",
+        display_name="Demo",
+        password_hash=hash_password("x"),
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    )
+
+    def override_db():
+        yield MagicMock()
+
+    def override_user():
+        return u
+
+    app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_current_user] = override_user
+    return TestClient(app)
+
+
+def test_api_fundamentals_ok() -> None:
+    client = _client()
+    fake = {
+        "vt_symbol": "600519.SSE",
+        "ts_code": "600519.SH",
+        "snapshot": None,
+        "sync": None,
+        "disclosures": [],
+    }
+    with patch("app.api.v1.watchlist.fundamentals_svc.get_fundamentals", return_value=fake) as g:
+        r = client.get("/api/v1/watchlist/items/600519.SSE/fundamentals")
+    assert r.status_code == 200
+    assert r.json()["ts_code"] == "600519.SH"
+    g.assert_called_once()
+
+
+def test_api_fundamentals_bad_symbol() -> None:
+    client = _client()
+    with patch(
+        "app.api.v1.watchlist.fundamentals_svc.get_fundamentals",
+        side_effect=HTTPException(status_code=400, detail="代码为空"),
+    ):
+        r = client.get("/api/v1/watchlist/items/%20/fundamentals")
+    assert r.status_code == 400
 
 
 def test_invalid_vt_400() -> None:

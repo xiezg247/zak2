@@ -8,6 +8,7 @@ from app.core.db import get_db
 from app.models.user import User
 from app.schemas.watchlist import (
     BarsResponse,
+    FundamentalsOut,
     GroupCreate,
     GroupMemberRequest,
     GroupMembersBatchOut,
@@ -29,6 +30,7 @@ from app.schemas.watchlist import (
     WatchlistItemOut,
     WatchlistReorderRequest,
 )
+from app.services import fundamentals as fundamentals_svc
 from app.services import notify_log, positions_repo, signal_panel_repo, strategy_board, trading_risk, watchlist_repo as repo
 from app.services.bars import load_bars
 from app.services.quotes import QuoteRow, get_quote_store
@@ -438,6 +440,16 @@ def get_quotes(
             )
         )
     return out
+
+
+@router.get("/watchlist/items/{vt_symbol}/fundamentals", response_model=FundamentalsOut)
+def get_item_fundamentals(
+    vt_symbol: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FundamentalsOut:
+    _ = user
+    return FundamentalsOut(**fundamentals_svc.get_fundamentals(db, vt_symbol))
 
 
 @router.get("/bars/{vt_symbol}", response_model=BarsResponse)

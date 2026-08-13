@@ -191,6 +191,39 @@ class SignalPanelMemberRequest(BaseModel):
     symbol: str = Field(description="支持 600519.SSE / SHSE.600519 / 600519")
 
 
+class FinancialSnapshotOut(BaseModel):
+    end_date: str
+    revenue: float | None = None
+    net_income: float | None = None
+    revenue_yoy: float | None = None
+    net_income_yoy: float | None = None
+    roe: float | None = None
+    debt_ratio: float | None = None
+
+
+class FinancialSyncOut(BaseModel):
+    last_sync_at: str
+    latest_end_date: str = ""
+    periods_count: int = 0
+    sync_status: str = "ok"
+    error_message: str = ""
+
+
+class DisclosureOut(BaseModel):
+    end_date: str
+    pre_date: str = ""
+    ann_date: str = ""
+    actual_date: str = ""
+
+
+class FundamentalsOut(BaseModel):
+    vt_symbol: str
+    ts_code: str
+    snapshot: FinancialSnapshotOut | None = None
+    sync: FinancialSyncOut | None = None
+    disclosures: list[DisclosureOut] = Field(default_factory=list)
+
+
 
 class PositionOut(BaseModel):
     symbol: str
