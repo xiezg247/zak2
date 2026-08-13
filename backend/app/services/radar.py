@@ -112,7 +112,7 @@ def _synth_change_top() -> RadarCardOut:
             card_id="discovery_change_top",
             title="发现·涨幅榜",
             source="synthesized",
-            empty_message="行情快照为空，请先 collect_quotes",
+            empty_message="行情快照为空，请启动 quote-collector",
         )
     quotes = {q.symbol: q for q in store.get_quotes([s for s, _ in ranked])}
     rows = []
