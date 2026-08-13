@@ -17,6 +17,7 @@ const autoRefresh = ref(true)
 const selected = ref<RankRow | null>(null)
 const bars = ref<Bar[]>([])
 const barsError = ref('')
+const barsLoading = ref(false)
 const addMsg = ref('')
 const thresholdsOpen = ref(false)
 const cycleInputsOpen = ref(false)
@@ -255,6 +256,8 @@ async function onField() {
   error.value = ''
   selected.value = null
   bars.value = []
+  barsError.value = ''
+  barsLoading.value = false
   try {
     ranks.value = await marketApi.ranks(field.value, 50)
   } catch (e) {
@@ -268,11 +271,14 @@ async function selectRank(r: RankRow) {
   barsError.value = ''
   bars.value = []
   addMsg.value = ''
+  barsLoading.value = true
   try {
     const resp = await watchlistApi.bars(r.vt_symbol, 'd', 90)
     bars.value = resp.bars
   } catch (e) {
     barsError.value = e instanceof Error ? e.message : '无 K 线'
+  } finally {
+    barsLoading.value = false
   }
 }
 
@@ -523,7 +529,10 @@ onUnmounted(() => {
                 <td>{{ scoreLabel(r) }}</td>
               </tr>
               <tr v-if="!ranks.length">
-                <td colspan="6" class="empty">暂无排行（需 Redis 行情快照）</td>
+                <td colspan="6" class="empty">
+                  暂无排行（需 Redis 行情快照）
+                  <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -551,11 +560,22 @@ onUnmounted(() => {
             <button type="button" class="ghost" @click="openInWatchlist">在自选打开</button>
           </div>
           <p v-if="addMsg" class="muted">{{ addMsg }}</p>
-          <p v-if="barsError" class="err">{{ barsError }}</p>
-          <div v-if="bars.length" class="chart">
+          <p v-if="barsLoading" class="muted">加载日 K…</p>
+          <template v-else-if="barsError">
+            <p class="err">
+              {{ barsError }}
+              <RouterLink to="/ops" class="draft-link">去 Ops 补全日 K</RouterLink>
+            </p>
+          </template>
+          <template v-else-if="!bars.length">
+            <p class="muted">
+              暂无日 K
+              <RouterLink to="/ops" class="draft-link">去 Ops 补全日 K</RouterLink>
+            </p>
+          </template>
+          <div v-else class="chart">
             <CandleChart :bars="bars" :height="240" />
           </div>
-          <p v-else-if="!barsError" class="muted">加载日 K…</p>
         </aside>
         <aside v-else class="detail empty-panel muted">点击排行行查看日 K 与操作</aside>
       </div>
