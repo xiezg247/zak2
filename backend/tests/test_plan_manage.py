@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
+from app.api.deps import get_current_user
+from app.core.db import get_db
+from app.core.security import hash_password
+from app.main import create_app
 from app.models.content import TradingPlan
+from app.models.user import User
 from app.schemas.content import PlanOut
 from app.services import feed as feed_svc
 from app.services import plan_manage as pm
@@ -218,3 +226,68 @@ def test_update_rejects_non_positive_max_pct(max_position_pct: float) -> None:
     with pytest.raises(HTTPException) as ei:
         pm.update_plan(db, "u1", "p1", max_position_pct=max_position_pct)
     assert ei.value.status_code == 400
+
+
+def _user() -> User:
+    now = datetime.now(UTC)
+    return User(
+        id=str(uuid4()),
+        username="demo",
+        display_name="Demo",
+        password_hash=hash_password("x"),
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+def _client() -> tuple[TestClient, User]:
+    app = create_app()
+    u = _user()
+
+    def override_db():
+        yield MagicMock()
+
+    def override_user():
+        return u
+
+    app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_current_user] = override_user
+    return TestClient(app), u
+
+
+def test_api_activate_ok() -> None:
+    client, u = _client()
+    fake = PlanOut(
+        id="p1",
+        trade_date="2026-08-14",
+        emotion_expected="",
+        max_position_pct=0.3,
+        notes="",
+        status="active",
+        symbols=[],
+    )
+    with patch("app.api.v1.content.plan_manage_svc.activate_plan", return_value=fake) as act:
+        r = client.post("/api/v1/playbook/plans/p1/activate")
+    assert r.status_code == 200
+    assert r.json()["status"] == "active"
+    act.assert_called_once()
+    assert act.call_args.args[1] == str(u.id)
+
+
+def test_api_patch_ok() -> None:
+    client, u = _client()
+    fake = PlanOut(
+        id="p1",
+        trade_date="2026-08-14",
+        emotion_expected="",
+        max_position_pct=0.25,
+        notes="x",
+        status="draft",
+        symbols=[],
+    )
+    with patch("app.api.v1.content.plan_manage_svc.update_plan", return_value=fake) as upd:
+        r = client.patch("/api/v1/playbook/plans/p1", json={"notes": "x", "max_position_pct": 0.25})
+    assert r.status_code == 200
+    assert r.json()["notes"] == "x"
+    upd.assert_called_once()

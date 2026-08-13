@@ -19,6 +19,7 @@ from app.schemas.content import (
     NoteMemoUpdate,
     NoteSymbolOut,
     PlanOut,
+    PlanUpdate,
     PlaybookSectionOut,
     PlaybookSectionUpdate,
     TeamReportListItem,
@@ -26,6 +27,7 @@ from app.schemas.content import (
 )
 from app.services import feed as feed_svc
 from app.services import notes as notes_svc
+from app.services import plan_manage as plan_manage_svc
 from app.services import playbook as playbook_svc
 from app.services import team_reports
 
@@ -72,6 +74,41 @@ def put_discipline(
 @router.get("/playbook/plans", response_model=list[PlanOut])
 def get_plans(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[PlanOut]:
     return feed_svc.list_plans(db, str(user.id))
+
+
+@router.patch("/playbook/plans/{plan_id}", response_model=PlanOut)
+def patch_plan(
+    plan_id: str,
+    body: PlanUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> PlanOut:
+    return plan_manage_svc.update_plan(
+        db,
+        str(user.id),
+        plan_id,
+        notes=body.notes,
+        max_position_pct=body.max_position_pct,
+        symbols=body.symbols,
+    )
+
+
+@router.post("/playbook/plans/{plan_id}/activate", response_model=PlanOut)
+def post_activate_plan(
+    plan_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> PlanOut:
+    return plan_manage_svc.activate_plan(db, str(user.id), plan_id)
+
+
+@router.post("/playbook/plans/{plan_id}/abandon", response_model=PlanOut)
+def post_abandon_plan(
+    plan_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> PlanOut:
+    return plan_manage_svc.abandon_plan(db, str(user.id), plan_id)
 
 
 @router.get("/notes/symbols", response_model=list[NoteSymbolOut])
