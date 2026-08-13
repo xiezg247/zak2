@@ -101,7 +101,13 @@ export type Plan = {
   max_position_pct: number
   notes: string
   status: string
-  symbols: { vt_symbol: string; allowed_modes: string; entry_conditions: string }[]
+  symbols: {
+    vt_symbol: string
+    allowed_modes: string
+    entry_conditions: string
+    symbol?: string
+    exchange?: string
+  }[]
 }
 
 export const contentApi = {
@@ -123,6 +129,15 @@ export const contentApi = {
     })
   },
   plans: () => api<Plan[]>('/api/v1/playbook/plans'),
+  patchPlan: (id: string, body: { notes?: string; max_position_pct?: number; symbols?: string[] }) =>
+    api<Plan>(`/api/v1/playbook/plans/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  activatePlan: (id: string) =>
+    api<Plan>(`/api/v1/playbook/plans/${encodeURIComponent(id)}/activate`, { method: 'POST' }),
+  abandonPlan: (id: string) =>
+    api<Plan>(`/api/v1/playbook/plans/${encodeURIComponent(id)}/abandon`, { method: 'POST' }),
   noteSymbols: () => api<NoteSymbol[]>('/api/v1/notes/symbols'),
   memo: (vt: string) => api<NoteMemo>(`/api/v1/notes/${encodeURIComponent(vt)}/memo`),
   saveMemo: (vt: string, body: string) =>
