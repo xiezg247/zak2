@@ -30,8 +30,29 @@ const running = ref(false)
 const statusText = ref('')
 const error = ref('')
 const mode = ref<'single' | 'batch'>('single')
+const listFilter = ref('')
+const loading = ref(false)
 
 const subtitle = computed(() => `${runs.value.length} 条历史 · 策略画像 ${profiles.value.length}`)
+
+const displayedRuns = computed(() => {
+  const q = listFilter.value.trim().toLowerCase()
+  let list = runs.value
+  if (q) {
+    list = list.filter((r) => {
+      const vt = (r.vt_symbol || '').toLowerCase()
+      const st = (r.strategy || '').toLowerCase()
+      return vt.includes(q) || st.includes(q)
+    })
+  }
+  return list.slice(0, 30)
+})
+
+const displayedBatches = computed(() => {
+  const q = listFilter.value.trim().toLowerCase()
+  if (!q) return batches.value
+  return batches.value.filter((b) => (b.strategy || '').toLowerCase().includes(q))
+})
 
 const spark = computed(() => {
   const curve = selected.value?.equity_curve || []
@@ -52,6 +73,7 @@ const spark = computed(() => {
 })
 
 async function refresh() {
+  error.value = ''
   const [s, p, r, b] = await Promise.all([
     backtestApi.strategies(),
     backtestApi.profiles(),
@@ -144,10 +166,13 @@ async function openBatch(batchId: string) {
 }
 
 onMounted(async () => {
+  loading.value = true
   try {
     await refresh()
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败'
+  } finally {
+    loading.value = false
   }
 })
 </script>
@@ -204,16 +229,46 @@ onMounted(async () => {
           <p v-if="error" class="err">{{ error }}</p>
 
           <h3>历史</h3>
-          <button v-for="r in runs.slice(0, 30)" :key="r.id" type="button" class="hist" @click="openRun(r.id)">
-            <span>{{ r.vt_symbol }} · {{ r.strategy }}</span>
-            <span class="muted">
-              收益 {{ r.total_return != null ? r.total_return.toFixed(2) + '%' : '—' }}
-              · {{ r.created_at }}
-            </span>
-          </button>
+          <input
+            v-if="runs.length"
+            v-model="listFilter"
+            class="filter"
+            placeholder="过滤标的/策略"
+          />
+          <p v-if="loading" class="empty muted">加载中…</p>
+          <template v-else>
+            <p v-if="!runs.length" class="empty muted">暂无回测历史</p>
+            <p v-else-if="!displayedRuns.length" class="empty muted">无匹配历史</p>
+            <button
+              v-for="r in displayedRuns"
+              :key="r.id"
+              type="button"
+              class="hist"
+              :class="{ on: selected?.id === r.id }"
+              @click="openRun(r.id)"
+            >
+              <span>{{ r.vt_symbol }} · {{ r.strategy }}</span>
+              <span class="muted">
+                收益 {{ r.total_return != null ? r.total_return.toFixed(2) + '%' : '—' }}
+                · {{ r.created_at }}
+              </span>
+            </button>
+          </template>
 
           <h3 v-if="batches.length">批次对比</h3>
-          <button v-for="b in batches" :key="b.batch_id" type="button" class="hist" @click="openBatch(b.batch_id)">
+          <p
+            v-if="batches.length && listFilter.trim() && !displayedBatches.length"
+            class="empty muted"
+          >
+            无匹配批次
+          </p>
+          <button
+            v-for="b in displayedBatches"
+            :key="b.batch_id"
+            type="button"
+            class="hist"
+            @click="openBatch(b.batch_id)"
+          >
             <span>{{ b.strategy }} · {{ b.count }} 只</span>
             <span class="muted">{{ b.created_at }}</span>
           </button>
@@ -299,7 +354,9 @@ onMounted(async () => {
             </div>
           </div>
 
-          <p v-if="!selected && !compare.length" class="empty muted">运行回测或从左侧打开历史记录</p>
+          <p v-if="!selected && !compare.length" class="empty muted">
+            {{ loading ? '加载中…' : '运行回测或从左侧打开历史记录' }}
+          </p>
         </section>
       </div>
     </div>
@@ -406,6 +463,14 @@ h3 {
   margin: 8px 0 0;
   font-size: 0.9rem;
 }
+.filter {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  padding: 8px 10px;
+  width: 100%;
+}
 .hist {
   text-align: left;
   background: var(--bg);
@@ -415,6 +480,9 @@ h3 {
   padding: 8px;
   display: grid;
   gap: 2px;
+}
+.hist.on {
+  border-color: var(--accent);
 }
 .stats {
   display: grid;
