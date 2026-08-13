@@ -561,3 +561,13 @@ EOF
 | 不写 position / 保留桥 | Global + Task 2 |
 
 无 TBD。日 K 加载必须不抛 404。
+
+---
+
+# Strategy MA signal heuristic SDD progress
+
+- Task 1: complete — `fe93908` — Spec ✅ · Approved
+- Task 2: complete — `27d209e` — Spec ✅ · Approved
+- Task 3: complete — `682c7fc` — Spec ✅ · Approved
+- Task 4: complete — `45eb29b` — Spec ✅ · Approved
+- Final: ready for finishing (local main)
