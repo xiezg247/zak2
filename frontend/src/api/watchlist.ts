@@ -14,6 +14,7 @@ export type WatchlistItem = {
   volume: number | null
   amount: number | null
   volume_ratio: number | null
+  suspended?: boolean
 }
 
 export type WatchlistGroup = {

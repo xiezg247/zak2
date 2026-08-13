@@ -20,6 +20,7 @@ class WatchlistItemOut(BaseModel):
     amount: float | None = None
     volume_ratio: float | None = None
     industry: str = ""
+    suspended: bool = False
 
 
 class WatchlistAddRequest(BaseModel):

@@ -35,12 +35,14 @@ from app.services import notify_log, positions_repo, signal_panel_repo, strategy
 from app.services.bars import load_bars
 from app.services.quotes import QuoteRow, get_quote_store
 from app.services.stock_industry import enrich_rows_from_db
+from app.services.suspend import load_suspended_vt_symbols
 from app.services.symbols import normalize_exchange, to_tf_symbol, to_vt_symbol
 
 router = APIRouter(tags=["watchlist"])
 
 
 def _enrich(items: list, *, with_quotes: bool, db: Session | None = None) -> list[WatchlistItemOut]:  # type: ignore[no-untyped-def]
+    suspended = load_suspended_vt_symbols(db) if db is not None else set()
     quote_map: dict[str, QuoteRow] = {}
     if with_quotes and items:
         store = get_quote_store()
@@ -73,6 +75,7 @@ def _enrich(items: list, *, with_quotes: bool, db: Session | None = None) -> lis
     out: list[WatchlistItemOut] = []
     for item in items:
         tf = to_tf_symbol(item.symbol, item.exchange)
+        vt = to_vt_symbol(item.symbol, item.exchange)
         q = quote_map.get(tf)
         name = item.name
         if q is not None and q.name:
@@ -83,7 +86,7 @@ def _enrich(items: list, *, with_quotes: bool, db: Session | None = None) -> lis
                 exchange=item.exchange,
                 name=name,
                 sort_order=item.sort_order,
-                vt_symbol=to_vt_symbol(item.symbol, item.exchange),
+                vt_symbol=vt,
                 tf_symbol=tf,
                 last_price=q.last_price if q else None,
                 change_pct=q.change_pct if q else None,
@@ -92,6 +95,7 @@ def _enrich(items: list, *, with_quotes: bool, db: Session | None = None) -> lis
                 amount=q.amount if q else None,
                 volume_ratio=q.volume_ratio if q else None,
                 industry=industry_by_tf.get(tf, "") if with_quotes else "",
+                suspended=vt in suspended,
             )
         )
     return out

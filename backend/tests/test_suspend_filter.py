@@ -71,3 +71,17 @@ def test_filter_respects_exclude_false() -> None:
     )
     rows = [_row("SZSE.000001")]
     assert len(apply_hard_filters(rows, prefs, suspended_vts={"000001.SZSE"})) == 1
+
+
+def test_watchlist_item_default_suspended() -> None:
+    from app.schemas.watchlist import WatchlistItemOut
+
+    item = WatchlistItemOut(
+        symbol="000001",
+        exchange="SZSE",
+        name="平安",
+        sort_order=0,
+        vt_symbol="000001.SZSE",
+        tf_symbol="SZSE.000001",
+    )
+    assert item.suspended is False

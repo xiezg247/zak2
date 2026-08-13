@@ -980,7 +980,10 @@ onUnmounted(() => {
                     />
                   </td>
                   <td class="mono">{{ item.vt_symbol }}</td>
-                  <td>{{ item.name || '—' }}</td>
+                  <td>
+                    {{ item.name || '—' }}
+                    <span v-if="item.suspended" class="suspend-tag" title="停牌">停</span>
+                  </td>
                   <td v-if="colVisible.industry">{{ item.industry?.trim() ? item.industry : '—' }}</td>
                   <td>{{ formatNum2(item.last_price) }}</td>
                   <td
@@ -1011,6 +1014,7 @@ onUnmounted(() => {
         <section class="right">
           <div v-if="selected" class="chart-head">
             <strong>{{ selected.name || selected.vt_symbol }}</strong>
+            <span v-if="selected.suspended" class="suspend-tag" title="停牌">停</span>
             <span v-if="selected.industry?.trim()" class="muted">{{ selected.industry }}</span>
             <span class="mono muted">{{ selected.vt_symbol }}</span>
             <span
@@ -1843,6 +1847,14 @@ select {
 .muted {
   color: var(--muted);
   font-size: 0.85rem;
+}
+.suspend-tag {
+  margin-left: 4px;
+  font-size: 0.7rem;
+  padding: 0 4px;
+  border-radius: 0.25rem;
+  border: 1px solid var(--border);
+  color: var(--danger, #b42318);
 }
 .table-wrap {
   border: 1px solid var(--line);
