@@ -243,6 +243,28 @@ def mark_feed_read(db: Session, user_id: str, item_id: str) -> dict:
     return {"ok": True}
 
 
+def plan_to_out(plan: TradingPlan, symbols: list[TradingPlanSymbol]) -> PlanOut:
+    return PlanOut(
+        id=plan.id,
+        trade_date=plan.trade_date,
+        emotion_expected=plan.emotion_expected or "",
+        max_position_pct=float(plan.max_position_pct or 0),
+        notes=plan.notes or "",
+        status=plan.status,
+        symbols=[
+            {
+                "symbol": s.symbol,
+                "exchange": s.exchange,
+                "vt_symbol": to_vt_symbol(s.symbol, s.exchange),
+                "allowed_modes": s.allowed_modes,
+                "entry_conditions": s.entry_conditions,
+                "exit_conditions": s.exit_conditions,
+            }
+            for s in symbols
+        ],
+    )
+
+
 def list_plans(db: Session, user_id: str, *, limit: int = 20) -> list[PlanOut]:
     plans = list(
         db.scalars(
@@ -261,25 +283,5 @@ def list_plans(db: Session, user_id: str, *, limit: int = 20) -> list[PlanOut]:
                 .order_by(TradingPlanSymbol.sort_order)
             )
         )
-        out.append(
-            PlanOut(
-                id=p.id,
-                trade_date=p.trade_date,
-                emotion_expected=p.emotion_expected,
-                max_position_pct=float(p.max_position_pct or 0),
-                notes=p.notes or "",
-                status=p.status,
-                symbols=[
-                    {
-                        "symbol": s.symbol,
-                        "exchange": s.exchange,
-                        "vt_symbol": to_vt_symbol(s.symbol, s.exchange),
-                        "allowed_modes": s.allowed_modes,
-                        "entry_conditions": s.entry_conditions,
-                        "exit_conditions": s.exit_conditions,
-                    }
-                    for s in syms
-                ],
-            )
-        )
+        out.append(plan_to_out(p, syms))
     return out

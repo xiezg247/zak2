@@ -134,3 +134,9 @@ class PlanOut(BaseModel):
     notes: str
     status: str
     symbols: list[dict] = Field(default_factory=list)
+
+
+class PlanUpdate(BaseModel):
+    notes: str | None = None
+    max_position_pct: float | None = None
+    symbols: list[str] | None = None
