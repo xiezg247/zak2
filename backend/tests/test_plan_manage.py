@@ -84,3 +84,42 @@ def test_activate_missing_404() -> None:
     with pytest.raises(HTTPException) as ei:
         pm.activate_plan(db, "u1", "missing")
     assert ei.value.status_code == 404
+
+
+def test_update_rejects_abandoned() -> None:
+    plan = _plan(status="abandoned")
+    db = MagicMock()
+    db.scalar.return_value = plan
+    with pytest.raises(HTTPException) as ei:
+        pm.update_plan(db, "u1", "p1", notes="x")
+    assert ei.value.status_code == 403
+
+
+def test_update_symbols_replace() -> None:
+    plan = _plan(status="draft")
+    db = MagicMock()
+    db.scalar.return_value = plan
+    with (
+        patch("app.services.plan_manage._now", return_value="t2"),
+        patch(
+            "app.services.plan_manage.load_plan_out",
+            return_value=MagicMock(id="p1", notes="hi"),
+        ),
+    ):
+        pm.update_plan(db, "u1", "p1", notes="hi", symbols=["600519.SSE", "000001.SZSE"])
+    assert plan.notes == "hi"
+    db.execute.assert_called()  # delete symbols
+    assert db.add.call_count == 2
+    db.commit.assert_called()
+
+
+def test_update_max_pct_percent_form() -> None:
+    plan = _plan(status="active")
+    db = MagicMock()
+    db.scalar.return_value = plan
+    with patch(
+        "app.services.plan_manage.load_plan_out",
+        return_value=MagicMock(id="p1"),
+    ):
+        pm.update_plan(db, "u1", "p1", max_position_pct=30)
+    assert abs(plan.max_position_pct - 0.3) < 1e-9
