@@ -104,7 +104,7 @@ cd frontend && npm run dev
 - [ ] Ops 手动跑 **`warm_watchlist_strategy_cache`** 非 skipped（Redis 桥 + 日 K 双均线启发式）；有日 K 的自选在 `/watchlist` 策略看盘可见信号；文案含「双均线启发式」
 - [ ] Ops 手动跑 **`scan_horizon_outlook`** 非 skipped（可写入启发式展望）；`/radar` 展望区可读行或空态引导（文案含启发式/共振，无「恒 skipped」）
 - [ ] Ops 手动跑 **`prefetch_concept_board`**（复用 sector sync；有 token 非 skipped；无 token 可 skipped）；文案含「概念预拉」或 sector
-- [ ] Ops 手动跑 **`fill_focus_pool_minute`** 非 skipped（盘点 pool/daily/1m）；文案含「1m 下载未接入」与「盘点」
+- [ ] Ops 手动跑 **`fill_focus_pool_minute`**（需 `TUSHARE_TOKEN` + 分钟权限；可下载自选 1m；无 token 可 skipped）；文案无「1m 下载未接入」；成功后 `bars?interval=1m` 或 overview 可见
 - [ ] （可选）配置 `SCHEDULER_SCREEN_USER_ID` 后，盘中/盘后选股定时可写入该用户 `screener_runs`（未配置则跳过选股定时）
 
 ## 7. 自动化冒烟
