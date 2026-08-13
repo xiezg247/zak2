@@ -245,3 +245,11 @@ EOF
 | smoke + #33 | 2 |
 
 无 TBD。loading 仅 `onMounted`，避免 poll 闪烁。
+
+---
+
+# BHF SDD progress
+
+- Task 1: done @ 59f69e3 (approved)
+- Task 2: done @ 47ec17c (approved)
+- Final review: APPROVED
