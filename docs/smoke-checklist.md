@@ -92,6 +92,7 @@ cd frontend && npm run dev
 - [ ] `/feed` 时间线可读；左侧输入 **mid** →「添加」可新增 UP 订阅（无 `BILIBILI_COOKIES` 时 400 提示明确）；**关键词搜索** → 结果点「添加」走现有添加路径（可勾选「并同步」）；勾选「并同步」可立即拉动态（失败仍保留订阅，页内提示 `sync_error`）；每行「删」confirm 后订阅及条目移除；配置 Cookie 后 Ops 跑 `sync_bilibili_feed` 可见新条目（无 Cookie / 无启用订阅时 skipped）；亦可 `pytest backend/tests/test_bilibili_user_search.py backend/tests/test_feed_search.py backend/tests/test_feed_subscriptions.py`
 - [ ] `/feed` 有动态时可按标题/作者过滤与「仅未读」；无匹配显示「无匹配动态」；无订阅/无动态空态可区分（无动态可见去 Ops）
 - [ ] `/feed` 有订阅时可按名/mid 过滤左侧列表；无匹配见「无匹配订阅」；「全部」始终可见；过滤隐藏当前选中时右侧仍按该订阅显示
+- [ ] `/feed` 可勾选「仅启用」隐藏已关订阅（默认关）；可与名/mid 过滤叠加；无匹配见「无匹配订阅」；滤掉当前选中时右侧仍按该订阅显示
 - [ ] `/backtest` 对有日 K 的票跑通双均线
 - [ ] `/backtest` 有历史时可按标的/策略过滤；无匹配见「无匹配历史」；无历史见「暂无回测历史」；加载中可见提示；打开某条历史该项高亮
 - [ ] `/backtest` 点画像 chip 可写入快/慢均线与资金并高亮；日 K 不足类错误旁可见「去 Ops 补全日 K」链到 `/ops`

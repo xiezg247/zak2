@@ -48,6 +48,7 @@
 34. ~~回测画像填参与失败 Ops 引导~~（已完成 → [spec](./superpowers/specs/2026-08-13-backtest-profile-ops-ux-design.md)）
 35. ~~Feed 左侧订阅过滤~~（已完成 → [spec](./superpowers/specs/2026-08-13-feed-subscription-filter-ux-design.md)）
 36. ~~市场排行空态与日 K Ops 引导~~（已完成 → [spec](./superpowers/specs/2026-08-13-market-rank-bars-ops-ux-design.md)）
+37. ~~Feed「仅启用」订阅过滤~~（已完成 → [spec](./superpowers/specs/2026-08-13-feed-enabled-only-filter-ux-design.md)）
 
 ## 明确不做（直到本文件改口）
 
