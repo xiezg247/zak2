@@ -58,6 +58,9 @@ class StrategyProfileOut(BaseModel):
     profile_id: str
     name: str
     description: str
+    fast_window: int
+    slow_window: int
+    capital: float
 
 
 class JobAccepted(BaseModel):

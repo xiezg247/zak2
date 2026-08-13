@@ -31,6 +31,9 @@ export type StrategyProfile = {
   profile_id: string
   name: string
   description: string
+  fast_window: number
+  slow_window: number
+  capital: number
 }
 
 export type BatchInfo = {

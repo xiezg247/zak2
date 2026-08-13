@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import { jobsApi } from '../api/screener'
 import {
@@ -32,8 +33,18 @@ const error = ref('')
 const mode = ref<'single' | 'batch'>('single')
 const listFilter = ref('')
 const loading = ref(false)
+const activeProfileId = ref('')
 
 const subtitle = computed(() => `${runs.value.length} 条历史 · 策略画像 ${profiles.value.length}`)
+
+const showOpsLink = computed(() => /日 K|Ops|补全/.test(error.value))
+
+function applyProfile(p: StrategyProfile) {
+  fast.value = p.fast_window
+  slow.value = p.slow_window
+  capital.value = p.capital
+  activeProfileId.value = p.profile_id
+}
 
 const displayedRuns = computed(() => {
   const q = listFilter.value.trim().toLowerCase()
@@ -181,7 +192,17 @@ onMounted(async () => {
   <AppShell title="回测" :subtitle="subtitle" active="backtest">
     <div class="page">
       <section class="profiles" v-if="profiles.length">
-        <span v-for="p in profiles" :key="p.profile_id" class="chip" :title="p.description">{{ p.name }}</span>
+        <button
+          v-for="p in profiles"
+          :key="p.profile_id"
+          type="button"
+          class="chip"
+          :class="{ on: activeProfileId === p.profile_id }"
+          :title="p.description"
+          @click="applyProfile(p)"
+        >
+          {{ p.name }}
+        </button>
       </section>
 
       <div class="workspace">
@@ -226,7 +247,10 @@ onMounted(async () => {
             {{ running ? '回测中…' : '开始回测' }}
           </button>
           <p v-if="statusText" class="muted">{{ statusText }}</p>
-          <p v-if="error" class="err">{{ error }}</p>
+          <p v-if="error" class="err">
+            {{ error }}
+            <RouterLink v-if="showOpsLink" to="/ops" class="draft-link">去 Ops 补全日 K</RouterLink>
+          </p>
 
           <h3>历史</h3>
           <input
@@ -382,6 +406,16 @@ onMounted(async () => {
   padding: 4px 10px;
   font-size: 0.8rem;
   color: var(--muted);
+  cursor: pointer;
+}
+.chip.on {
+  border-color: var(--accent);
+  color: var(--text);
+  font-weight: 500;
+}
+.draft-link {
+  color: var(--brand);
+  margin-left: 4px;
 }
 .workspace {
   display: grid;
