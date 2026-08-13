@@ -505,3 +505,13 @@ EOF
 | 不拖拽 / 不删自选 | Global + Task 2–3 |
 
 无 TBD。路由顺序：`groups/reorder` 与 `members/batch` 须避开 path 参数抢占。
+
+---
+
+# Watchlist groups sort-batch SDD progress
+
+- Task 1: complete — `5d1e03a` — Spec ✅ · Approved
+- Task 2: complete — `7bb12e5` — Spec ✅ · Approved
+- Task 3: complete — `6bc4abe` — Spec ✅ · Approved
+- Task 4: complete — `6dacae8` — Spec ✅ · Approved
+- Final: ready for finishing (local main)
