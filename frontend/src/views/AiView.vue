@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import { aiApi, type ChatMessage, type ConfirmProposal, type LlmStatus, type Session } from '../api/ai'
 
+const route = useRoute()
 const router = useRouter()
 const status = ref<LlmStatus | null>(null)
 const sessions = ref<Session[]>([])
@@ -291,6 +292,8 @@ async function runTeam() {
 }
 
 onMounted(async () => {
+  const s = String(route.query.symbol || '').trim()
+  if (s) teamSymbol.value = s
   try {
     status.value = await aiApi.status()
     await refreshSessions()

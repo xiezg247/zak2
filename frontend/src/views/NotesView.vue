@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import {
   contentApi,
@@ -26,6 +26,7 @@ const error = ref('')
 const saving = ref(false)
 const tab = ref<'memo' | 'reports'>('memo')
 const listFilter = ref('')
+const reportFilter = ref('')
 const loading = ref(false)
 
 const displayedSymbols = computed(() => {
@@ -35,6 +36,16 @@ const displayedSymbols = computed(() => {
     const vt = (s.vt_symbol || '').toLowerCase()
     const preview = (s.memo_preview || '').toLowerCase()
     return vt.includes(q) || preview.includes(q)
+  })
+})
+
+const displayedReports = computed(() => {
+  const q = reportFilter.value.trim().toLowerCase()
+  if (!q) return reports.value
+  return reports.value.filter((r) => {
+    const t = (r.title || '').toLowerCase()
+    const s = (r.summary || '').toLowerCase()
+    return t.includes(q) || s.includes(q)
   })
 })
 
@@ -107,6 +118,7 @@ async function addEntry() {
 }
 
 async function removeEntry(id: number) {
+  if (!window.confirm('确定删除这条流水？')) return
   await contentApi.deleteEntry(id)
   await loadDetail()
   await loadSymbols()
@@ -201,19 +213,26 @@ onMounted(async () => {
           </template>
 
           <template v-else>
-            <p v-if="!reports.length" class="muted">暂无研报。在 AI 页跑投研团队后会自动生成。</p>
-            <button
-              v-for="r in reports"
-              :key="r.id"
-              type="button"
-              class="report-item"
-              :class="{ on: activeReport?.id === r.id }"
-              @click="openReport(r.id)"
-            >
-              <div class="report-title">{{ r.title }}</div>
-              <div class="muted tiny">{{ r.created_at }} · {{ r.mode }}</div>
-              <div class="preview muted">{{ r.summary }}</div>
-            </button>
+            <p v-if="!reports.length" class="muted">
+              暂无研报。
+              <RouterLink :to="{ path: '/ai', query: { symbol: selected } }">去 AI 跑投研团队</RouterLink>
+            </p>
+            <template v-else>
+              <input v-model="reportFilter" class="filter" placeholder="过滤标题/摘要" />
+              <p v-if="!displayedReports.length" class="empty muted">无匹配研报</p>
+              <button
+                v-for="r in displayedReports"
+                :key="r.id"
+                type="button"
+                class="report-item"
+                :class="{ on: activeReport?.id === r.id }"
+                @click="openReport(r.id)"
+              >
+                <div class="report-title">{{ r.title }}</div>
+                <div class="muted tiny">{{ r.created_at }} · {{ r.mode }}</div>
+                <div class="preview muted">{{ r.summary }}</div>
+              </button>
+            </template>
             <article v-if="activeReport" class="report-body">
               <h3>{{ activeReport.title }}</h3>
               <pre>{{ activeReport.body }}</pre>
