@@ -158,7 +158,8 @@ def test_load_strategy_board_empty() -> None:
     assert out["panel_symbols"] == []
     assert out["note"]
     assert "桌面" not in out["note"]
-    assert "尚未接入策略引擎" in out["note"]
+    assert "warm_watchlist_strategy_cache" in out["note"] or "双均线" in out["note"]
+    assert "尚未接入策略引擎预热" not in out["note"]
     rs = out["risk_summary"]
     assert rs["total_capital"] is None
     assert rs["actual_position_pct"] is None
@@ -328,6 +329,8 @@ def test_load_strategy_board_note_panel_no_signals() -> None:
     assert out["signals"] == []
     assert "桌面" not in out["note"]
     assert "信号名单 1 只" in out["note"]
+    assert "warm_watchlist_strategy_cache" in out["note"]
+    assert "尚未接入策略引擎预热" not in out["note"]
 
 
 def test_load_strategy_board_note_positions_no_signals() -> None:
@@ -391,3 +394,53 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
     assert out["signals"] == []
     assert "桌面" not in out["note"]
     assert "持仓来自记账表" in out["note"]
+    assert "warm_watchlist_strategy_cache" in out["note"]
+    assert "尚未接入策略引擎预热" not in out["note"]
+
+
+def test_note_empty_mentions_heuristic_job() -> None:
+    from app.services import strategy_board
+
+    db = MagicMock()
+
+    def _execute(stmt, params=None):  # noqa: ANN001
+        _ = params
+        result = MagicMock()
+        sql = str(stmt)
+        if "user_preferences" in sql:
+            result.scalar.return_value = None
+        else:
+            result.mappings.return_value.all.return_value = []
+            result.mappings.return_value.first.return_value = None
+        return result
+
+    db.execute.side_effect = _execute
+    with (
+        patch.object(strategy_board.repo, "list_items", return_value=[]),
+        patch.object(strategy_board.signal_panel_repo, "load_symbols", return_value=[]),
+        patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
+        patch.object(strategy_board, "get_quote_store") as gs,
+        patch(
+            "app.services.strategy_board.load_trading_risk_prefs",
+            return_value={
+                "total_capital": None,
+                "stop_loss_pct": 0.05,
+                "caution_float_pct": -5.0,
+                "realized_pnl_today": None,
+            },
+        ),
+        patch(
+            "app.services.strategy_board.load_active_plan_snapshot",
+            return_value=None,
+        ),
+        patch(
+            "app.services.strategy_board.latest_open_yyyymmdd",
+            return_value="20260805",
+        ),
+    ):
+        gs.return_value.available.return_value = False
+        out = strategy_board.load_strategy_board(db, "u1")
+    note = out["note"]
+    assert "warm_watchlist_strategy_cache" in note or "双均线" in note
+    assert "尚未接入策略引擎预热" not in note
+    assert "桌面" not in note

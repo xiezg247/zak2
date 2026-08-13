@@ -494,15 +494,18 @@ def load_strategy_board(
     if panel_symbols and not signals:
         note = (
             f"信号名单 {len(panel_symbols)} 只，暂无策略 cache"
-            "（可编辑名单，或确认 Redis/PG 已有信号缓存）。"
+            "（可编辑名单，或 Ops 跑 warm_watchlist_strategy_cache / 确认 cache）。"
         )
     elif not signals and not positions:
         note = (
-            "暂无策略缓存。zak2 尚未接入策略引擎预热；"
-            "可先维护信号名单与持仓记账，或确认 Redis/PG cache 已写入。"
+            "暂无策略缓存。可 Ops 跑 warm_watchlist_strategy_cache（日 K 双均线启发式），"
+            "或确认 Redis/PG 已有信号缓存；亦可先维护信号名单与持仓记账。"
         )
     elif not signals:
-        note = "持仓来自记账表；信号 cache 为空（可编辑名单，或确认 cache 已写入）。"
+        note = (
+            "持仓来自记账表；信号 cache 为空"
+            "（可 Ops 跑 warm_watchlist_strategy_cache，或确认 cache 已写入）。"
+        )
 
     return {
         "config_key": ck,
