@@ -31,6 +31,7 @@ const error = ref('')
 const loading = ref(false)
 const sideOpen = ref(true)
 const sideMsg = ref('')
+const detailMsg = ref('')
 const actingVt = ref('')
 const weightOpen = ref(false)
 const weightItems = ref<ResonanceWeightItem[]>([])
@@ -268,6 +269,14 @@ function sealLabel(row: Record<string, unknown> | { seal_time_label?: string; fi
   return ''
 }
 
+function rowVt(row: Record<string, unknown>): string {
+  for (const k of ['vt_symbol', 'tf_symbol', 'symbol'] as const) {
+    const v = String(row[k] || '').trim()
+    if (v) return v
+  }
+  return ''
+}
+
 function rowVtKeys(row: Record<string, unknown>): string[] {
   const keys: string[] = []
   for (const k of ['vt_symbol', 'tf_symbol', 'symbol'] as const) {
@@ -275,6 +284,14 @@ function rowVtKeys(row: Record<string, unknown>): string[] {
     if (v) keys.push(v)
   }
   return keys
+}
+
+function openInWatchlist(vt: string) {
+  void router.push({ path: '/watchlist', query: { symbol: vt } })
+}
+
+function openInNotes(vt: string) {
+  void router.push({ path: '/notes', query: { symbol: vt } })
 }
 
 function rowResonanceCount(row: Record<string, unknown>): number {
@@ -307,18 +324,30 @@ async function createPlanDraft() {
   }
 }
 
-async function addWatch(vt: string, name?: string) {
+async function addWatchTo(
+  vt: string,
+  name: string | undefined,
+  msg: { value: string },
+) {
   if (!vt || actingVt.value) return
   actingVt.value = vt
-  sideMsg.value = ''
+  msg.value = ''
   try {
     await watchlistApi.add(vt, name || '')
-    sideMsg.value = `已加入自选 ${vt}`
+    msg.value = `已加入自选 ${vt}`
   } catch (e) {
-    sideMsg.value = e instanceof Error ? e.message : '加自选失败'
+    msg.value = e instanceof Error ? e.message : '加自选失败'
   } finally {
     actingVt.value = ''
   }
+}
+
+async function addWatch(vt: string, name?: string) {
+  await addWatchTo(vt, name, sideMsg)
+}
+
+async function addWatchFromDetail(vt: string, name?: string) {
+  await addWatchTo(vt, name, detailMsg)
 }
 
 onMounted(() => {
@@ -484,6 +513,7 @@ onMounted(() => {
             <p class="muted" v-if="active.subtitle || active.empty_message">
               {{ active.subtitle }} {{ active.empty_message }}
             </p>
+            <p v-if="detailMsg" class="detail-msg">{{ detailMsg }}</p>
             <div class="table-wrap">
               <table>
                 <thead>
@@ -491,6 +521,7 @@ onMounted(() => {
                     <th>#</th>
                     <th>标的</th>
                     <th>细节</th>
+                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -516,9 +547,24 @@ onMounted(() => {
                       <template v-else-if="sealLabel(row)">{{ sealLabel(row) }}</template>
                       <template v-else>—</template>
                     </td>
+                    <td class="row-actions">
+                      <template v-if="rowVt(row)">
+                        <button
+                          type="button"
+                          class="tiny"
+                          :disabled="actingVt === rowVt(row)"
+                          @click="addWatchFromDetail(rowVt(row), String(row.name || ''))"
+                        >
+                          加自选
+                        </button>
+                        <button type="button" class="tiny" @click="openInWatchlist(rowVt(row))">在自选打开</button>
+                        <button type="button" class="tiny" @click="openInNotes(rowVt(row))">去笔记</button>
+                      </template>
+                      <template v-else>—</template>
+                    </td>
                   </tr>
                   <tr v-if="!active.rows.length">
-                    <td colspan="3" class="empty">{{ active.empty_message || '暂无行' }}</td>
+                    <td colspan="4" class="empty">{{ active.empty_message || '暂无行' }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -790,6 +836,17 @@ onMounted(() => {
 .detail h2 {
   margin: 0 0 6px;
   font-size: 1.1rem;
+}
+.detail-msg {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  white-space: nowrap;
 }
 .table-wrap {
   border: 1px solid var(--line);
