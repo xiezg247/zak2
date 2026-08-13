@@ -52,6 +52,7 @@
 38. ~~板块空态 Ops 与雷达共振过滤~~（已完成 → [spec](./superpowers/specs/2026-08-13-sector-ops-radar-resonance-filter-ux-design.md)）
 39. ~~雷达卡片详情行操作~~（已完成 → [spec](./superpowers/specs/2026-08-13-radar-card-detail-actions-ux-design.md)）
 40. ~~雷达详情反馈清空与操作钮样式~~（已完成 → [spec](./superpowers/specs/2026-08-13-radar-detail-msg-btn-polish-ux-design.md)）
+41. ~~自选列表空态与日 K Ops 引导~~（已完成 → [spec](./superpowers/specs/2026-08-13-watchlist-empty-bars-ops-ux-design.md)）
 
 ## 明确不做（直到本文件改口）
 
