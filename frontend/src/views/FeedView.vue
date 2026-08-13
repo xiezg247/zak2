@@ -18,13 +18,18 @@ const searchTried = ref(false)
 const listFilter = ref('')
 const unreadOnly = ref(false)
 const subFilter = ref('')
+const enabledOnly = ref(false)
 
 const subtitle = computed(() => `${subs.value.length} 订阅 · ${items.value.length} 条`)
 
 const displayedSubs = computed(() => {
+  let list = subs.value
+  if (enabledOnly.value) {
+    list = list.filter((s) => s.enabled)
+  }
   const q = subFilter.value.trim().toLowerCase()
-  if (!q) return subs.value
-  return subs.value.filter((s) => {
+  if (!q) return list
+  return list.filter((s) => {
     const name = (s.display_name || '').toLowerCase()
     const mid = (s.source_id || '').toLowerCase()
     return name.includes(q) || mid.includes(q)
@@ -198,6 +203,10 @@ onMounted(() => {
             class="sub-filter"
             placeholder="过滤订阅名/mid"
           />
+          <label v-if="subs.length" class="enabled-label">
+            <input v-model="enabledOnly" type="checkbox" />
+            仅启用
+          </label>
           <button type="button" class="sub" :class="{ on: !subId }" @click="subId = ''">全部</button>
           <p v-if="subs.length && !displayedSubs.length" class="muted tiny-text">无匹配订阅</p>
           <div v-for="s in displayedSubs" :key="s.id" class="sub-row">
@@ -365,6 +374,14 @@ onMounted(() => {
   flex: 1;
 }
 .unread-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.enabled-label {
   display: flex;
   align-items: center;
   gap: 6px;
