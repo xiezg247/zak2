@@ -21,6 +21,7 @@ from app.services.pattern_rules import (
     is_known_pattern,
 )
 from app.services.quotes import QuoteRow, QuoteStore, get_quote_store
+from app.services.suspend import load_suspended_vt_symbols
 from app.services.symbols import normalize_exchange
 
 _PATTERN_LABELS = {m["pattern_id"]: m["name"] for m in PATTERN_META}
@@ -150,6 +151,7 @@ def _run_theme_hot(
     pool: list[QuoteRow],
     prefs: Any,
     previous_symbols: set[str] | None,
+    suspended_vts: set[str],
 ) -> dict[str, Any]:
     """涨幅≥2% 且换手≥3%，按 换手×涨幅 打分。"""
     hits: list[tuple[float, QuoteRow]] = []
@@ -168,7 +170,7 @@ def _run_theme_hot(
     hits.sort(key=lambda pair: pair[0], reverse=True)
     ranked = [r for _, r in hits]
     stock_industry.enrich_rows_from_db(db, ranked)
-    ranked = apply_hard_filters(ranked, prefs)
+    ranked = apply_hard_filters(ranked, prefs, suspended_vts=suspended_vts)
     ranked = ranked[: req.top_n]
     label = _PATTERN_LABELS.get("theme_hot", "主题投资")
     return _result(
@@ -204,6 +206,7 @@ def run_pattern_screen(
         )
 
     prefs = resolve_hard_filter(req.hard_filter, req.hard_filter_template)
+    suspended_vts = load_suspended_vt_symbols(db)
     pool = quote_store.load_ranked_quotes("change_pct", pool=max(req.max_scan, req.top_n * 5))
     pool = pool[: req.max_scan]
 
@@ -214,6 +217,7 @@ def run_pattern_screen(
             pool=pool,
             prefs=prefs,
             previous_symbols=previous_symbols,
+            suspended_vts=suspended_vts,
         )
 
     matcher = get_matcher(pid)
@@ -256,7 +260,7 @@ def run_pattern_screen(
     hits.sort(key=lambda pair: pair[0], reverse=True)
     ranked = [r for _, r in hits]
     stock_industry.enrich_rows_from_db(db, ranked)
-    ranked = apply_hard_filters(ranked, prefs)
+    ranked = apply_hard_filters(ranked, prefs, suspended_vts=suspended_vts)
     ranked = ranked[: req.top_n]
 
     label = _PATTERN_LABELS.get(pid, pid)

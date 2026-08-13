@@ -14,6 +14,7 @@ from app.services.presets import get_builtin_recipe, get_preset
 from app.services.quotes import QuoteRow, QuoteStore, get_quote_store
 from app.services import recipe_weights as recipe_weights_svc
 from app.services import stock_industry
+from app.services.suspend import load_suspended_vt_symbols
 from app.services import tushare_screener
 
 
@@ -133,6 +134,7 @@ def run_condition_screen(
         raise HTTPException(status_code=501, detail=f"preset「{req.preset}」尚未实现")
 
     prefs = resolve_hard_filter(req.hard_filter, req.hard_filter_template)
+    suspended_vts = load_suspended_vt_symbols(db) if db is not None else set()
     quote_store = store or get_quote_store()
 
     # —— Tushare 基本面 / 资金流 ——
@@ -140,7 +142,7 @@ def run_condition_screen(
         rows, trade_date, scanned = tushare_screener.fetch_low_pe_quote_rows(db, max_pe=15.0)
         _enrich_names_from_redis(rows, quote_store)
         _maybe_enrich_industry(db, rows)
-        rows = apply_hard_filters(rows, prefs)
+        rows = apply_hard_filters(rows, prefs, suspended_vts=suspended_vts)
         rows = rows[: req.top_n]
         return _pack_result(
             rows,
@@ -156,7 +158,7 @@ def run_condition_screen(
         rows, trade_date, scanned = tushare_screener.fetch_large_cap_quote_rows(db)
         _enrich_names_from_redis(rows, quote_store)
         _maybe_enrich_industry(db, rows)
-        rows = apply_hard_filters(rows, prefs)
+        rows = apply_hard_filters(rows, prefs, suspended_vts=suspended_vts)
         rows = rows[: req.top_n]
         return _pack_result(
             rows,
@@ -183,7 +185,7 @@ def run_condition_screen(
             for r in redis_rows:
                 r.__dict__["_net_mf_wan"] = round(r.net_mf_amount, 2)
             _maybe_enrich_industry(db, redis_rows)
-            rows = apply_hard_filters(redis_rows, prefs)
+            rows = apply_hard_filters(redis_rows, prefs, suspended_vts=suspended_vts)
             rows = rows[: req.top_n]
             return _pack_result(
                 rows,
@@ -197,7 +199,7 @@ def run_condition_screen(
         rows, trade_date, scanned = tushare_screener.fetch_moneyflow_in_quote_rows(db)
         _enrich_names_from_redis(rows, quote_store)
         _maybe_enrich_industry(db, rows)
-        rows = apply_hard_filters(rows, prefs)
+        rows = apply_hard_filters(rows, prefs, suspended_vts=suspended_vts)
         rows = rows[: req.top_n]
         return _pack_result(
             rows,
@@ -244,7 +246,7 @@ def run_condition_screen(
                 rows = [r for r in rows if r.turnover_rate <= req.max_turnover_rate]
 
     _maybe_enrich_industry(db, rows)
-    rows = apply_hard_filters(rows, prefs)
+    rows = apply_hard_filters(rows, prefs, suspended_vts=suspended_vts)
     rows = rows[: req.top_n]
     return _pack_result(
         rows,
@@ -325,6 +327,7 @@ def run_recipe_screen(
         raise HTTPException(status_code=501, detail=f"recipe「{req.recipe_id}」尚未实现")
 
     prefs = resolve_hard_filter(req.hard_filter, req.hard_filter_template)
+    suspended_vts = load_suspended_vt_symbols(db) if db is not None else set()
     top_n = req.top_n or recipe.top_n
 
     if recipe.recipe_id == "radar_leader":
@@ -366,7 +369,7 @@ def run_recipe_screen(
         pool = quote_store.load_ranked_quotes("change_pct", pool=400)
     total_scanned = len(pool)
     _maybe_enrich_industry(db, pool)
-    rows = apply_hard_filters(pool, prefs)
+    rows = apply_hard_filters(pool, prefs, suspended_vts=suspended_vts)
 
     weights: dict[str, float] | None = None
     if recipe.recipe_id in recipe_weights_svc.EDITABLE_RECIPES and db is not None and user_id:

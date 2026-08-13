@@ -13,6 +13,7 @@ from app.schemas.screener import HardFilterPrefs, ReferencePeerRequest
 from app.services import stock_industry
 from app.services.hard_filters import apply_hard_filters, resolve_hard_filter
 from app.services.quotes import QuoteRow, get_quote_store
+from app.services.suspend import load_suspended_vt_symbols
 from app.services.symbols import parse_flexible_symbol, to_vt_symbol
 from app.services import tushare_client as ts
 from app.services.tushare_screener import (
@@ -229,6 +230,7 @@ def run_reference_peer(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     prefs = resolve_hard_filter(req.hard_filter, req.hard_filter_template)
+    suspended_vts = load_suspended_vt_symbols(db) if db is not None else set()
     raw, trade_date = _fetch_with_lookback(
         db,
         fetch_daily_basic_rows,
@@ -345,7 +347,7 @@ def run_reference_peer(
     scored_rows.sort(key=lambda r: float(r.__dict__.get("_similarity_score") or 0), reverse=True)
     _enrich_from_redis(scored_rows)
     stock_industry.enrich_rows_from_db(db, scored_rows)
-    ranked = apply_hard_filters(scored_rows, prefs)
+    ranked = apply_hard_filters(scored_rows, prefs, suspended_vts=suspended_vts)
     ranked = ranked[: req.top_n]
 
     packed: list[dict[str, Any]] = []

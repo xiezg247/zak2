@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.schemas.screener import HardFilterPrefs
 from app.services.hard_filters import apply_hard_filters
 from app.services import stock_industry
+from app.services.suspend import load_suspended_vt_symbols
 from app.services.limit_list_store import load_first_time_map
 from app.services.quotes import QuoteRow, QuoteStore, get_quote_store
 from app.services.seal_time import format_seal_time_label, seal_time_score
@@ -317,7 +318,8 @@ def run_leader_screen(
 
     candidates, total_scanned = build_candidate_pool(quote_store, pool_size=max(top_n * 8, 80))
     stock_industry.enrich_rows_from_db(db, candidates)
-    filtered = apply_hard_filters(candidates, hard_filter)
+    suspended_vts = load_suspended_vt_symbols(db) if db is not None else set()
+    filtered = apply_hard_filters(candidates, hard_filter, suspended_vts=suspended_vts)
     if not filtered:
         raise HTTPException(status_code=400, detail="硬过滤后无龙头候选，可调低过滤条件或刷新行情")
 
@@ -380,7 +382,8 @@ def synth_leader_pick_rows(
     prefs = HardFilterPrefs(min_amount_wan=0, min_total_mv_yi=0, exclude_st=True)
     candidates, _ = build_candidate_pool(store, pool_size=100)
     stock_industry.enrich_rows_from_db(db, candidates)
-    filtered = apply_hard_filters(candidates, prefs)
+    suspended_vts = load_suspended_vt_symbols(db)
+    filtered = apply_hard_filters(candidates, prefs, suspended_vts=suspended_vts)
     first_time_map = load_first_time_map(db)
     ranked = rank_leader_pool(
         filtered,
