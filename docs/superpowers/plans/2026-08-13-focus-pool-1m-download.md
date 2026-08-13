@@ -497,3 +497,13 @@ EOF
 | 无「未接入」文案 | 2–3 |
 
 无 TBD。`get_overview_row` 须支持 `interval`（Task 1 或 Task 2）。
+
+---
+
+# Focus pool 1m download SDD progress
+
+- Task 1: done @ 28bafc0 (approved)
+- Task 2: done @ 84f08db (approved)
+- Task 3: done @ 36aa526 (approved)
+BASE before Task2: 28bafc06e52b4a04f6db8b74e9ac8adc8b72e328
+- Final review: APPROVED
