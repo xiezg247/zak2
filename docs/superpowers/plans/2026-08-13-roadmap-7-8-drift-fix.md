@@ -81,3 +81,10 @@ EOF
 | 不改 smoke/归档/代码 | Global Constraints |
 
 无 TBD。
+
+---
+
+# Roadmap drift SDD progress
+
+- Task 1: done @ 3f0a114 (approved)
+- Final review: APPROVED (docs-only, task review sufficient)
