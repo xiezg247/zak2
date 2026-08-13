@@ -92,6 +92,7 @@ cd frontend && npm run dev
 - [ ] `/feed` 有动态时可按标题/作者过滤与「仅未读」；无匹配显示「无匹配动态」；无订阅/无动态空态可区分（无动态可见去 Ops）
 - [ ] `/backtest` 对有日 K 的票跑通双均线
 - [ ] `/backtest` 有历史时可按标的/策略过滤；无匹配见「无匹配历史」；无历史见「暂无回测历史」；加载中可见提示；打开某条历史该项高亮
+- [ ] `/backtest` 点画像 chip 可写入快/慢均线与资金并高亮；日 K 不足类错误旁可见「去 Ops 补全日 K」链到 `/ops`
 - [ ] `/ai` 流式回复；写操作确认卡；可提议 `upsert_position` / `delete_position` / `add_signal_panel` / `remove_signal_panel`，确认卡后落库（缺自选时 upsert 应失败）；**团队分析**快速/深度；结束后可「研报已保存」并跳转笔记；Agent 可调用 `list_skills` / `read_skill` 加载内置 Skill 说明（亦可 `pytest backend/tests/test_ai_write_positions.py backend/tests/test_ai_tools_skills.py backend/tests/test_skills_catalog.py` 单测覆盖）
 - [ ] `/ai` 可按标题过滤会话；无会话/无匹配空态可区分；未配置 LLM 时见顶栏提示；确认卡可展开参数且确认中显示「处理中…」
 - [ ] Agent / 工具：`list_note_symbols` / `get_stock_notes` 只读可用；`get_positions` / `get_signal_panel` / `get_trading_risk` 只读可用；`run_skill` 对 watchlist / screener / radar / market-emotion / **notes** / **positions** 可用（只读；emotion 需情绪数据或可接受空结构；notes 无 vt_symbol 列符号、有则读备忘+流水；positions 默认聚合持仓/信号/风控，可 `section=positions|signals|risk`；亦可 `pytest backend/tests/test_ai_read_tools.py backend/tests/test_skills_catalog.py backend/tests/test_ai_tools_skills.py` 单测覆盖）
