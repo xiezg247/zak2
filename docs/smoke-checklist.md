@@ -87,6 +87,7 @@ cd frontend && npm run dev
 - [ ] `/playbook` 章节可读、纪律可勾
 - [ ] `/notes` 备忘/流水可写；**研报 Tab** 可看团队落库（`?symbol=&report=` 可直达）
 - [ ] `/notes` 有标的时可按代码/备忘过滤；无匹配见「无匹配标的」；无标的见「暂无笔记标的」与打开引导；加载中可见提示
+- [ ] `/notes` 删流水有 confirm；研报 Tab 可按标题/摘要过滤；无匹配见「无匹配研报」；无研报可「去 AI 跑投研团队」（带当前代码）；`/ai?symbol=` 打开后投研输入框预填该代码
 - [ ] `/feed` 时间线可读；左侧输入 **mid** →「添加」可新增 UP 订阅（无 `BILIBILI_COOKIES` 时 400 提示明确）；**关键词搜索** → 结果点「添加」走现有添加路径（可勾选「并同步」）；勾选「并同步」可立即拉动态（失败仍保留订阅，页内提示 `sync_error`）；每行「删」confirm 后订阅及条目移除；配置 Cookie 后 Ops 跑 `sync_bilibili_feed` 可见新条目（无 Cookie / 无启用订阅时 skipped）；亦可 `pytest backend/tests/test_bilibili_user_search.py backend/tests/test_feed_search.py backend/tests/test_feed_subscriptions.py`
 - [ ] `/feed` 有动态时可按标题/作者过滤与「仅未读」；无匹配显示「无匹配动态」；无订阅/无动态空态可区分（无动态可见去 Ops）
 - [ ] `/backtest` 对有日 K 的票跑通双均线

@@ -43,6 +43,7 @@
 29. ~~策略信号日 K 双均线启发式~~（已完成 → [spec](./superpowers/specs/2026-08-13-strategy-ma-signal-heuristic-design.md)）
 30. ~~关注池 1m K 真下载~~（已完成 → [spec](./superpowers/specs/2026-08-13-focus-pool-1m-download-design.md)）
 31. ~~笔记侧栏过滤与空态~~（已完成 → [spec](./superpowers/specs/2026-08-13-notes-sidebar-filter-ux-design.md)）
+32. ~~笔记安全操作与研报 Tab 薄打磨~~（已完成 → [spec](./superpowers/specs/2026-08-13-notes-safety-reports-ux-design.md)）
 
 ## 明确不做（直到本文件改口）
 
