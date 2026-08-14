@@ -45,7 +45,7 @@ cd frontend && npm run dev
 - [ ] `/watchlist`「列」可关行业/换手/量比/成交额并刷新后保留；代码名称现价涨幅始终可见；关闭正在排序的列回到默认序
 - [ ] `/watchlist` 选中分组：可上移/下移，刷新后下拉顺序保持；可改名、删组（confirm，标的仍在全部自选）；选中行可「加入此组」「移出此组」
 - [ ] `/watchlist` 列表可多选；可批量加入目标组；分组视图可批量移出此组（不删自选池标的）
-- [ ] `/watchlist` 策略看盘空态 / note 可读，文案不引导「桌面刷新」
+- [ ] `/watchlist` 策略看盘空态 / note 可读，文案不引导「桌面刷新」；可切换「启发式确认 / 回测双均线」；「同参回测」打开 `/backtest` 并预填参数（不自动开跑）
 - [ ] `/watchlist` 风控 tip 无「桌面」；持仓区可见现价/市值；计划外>0 时可展开芯片并点选标的
 
 ## 4. 选股 Hub
@@ -122,7 +122,7 @@ cd frontend && npm run dev
 - [ ] Ops 手动跑 **`sync_watchlist_financials`**（需 `TUSHARE_TOKEN` + 已有自选；写入 `financial_reports`/`financial_snapshots`/`financial_sync_meta`；无 token / 空自选有 skipped 文案）
 - [ ] Ops 手动跑 **`warm_radar_card_snapshots`**（写入 `cache.radar_card_snapshot`；无合成卡片时有 skipped 文案；成功后 `/radar` 首屏可命中缓存）
 - [ ] Ops 手动跑 **`enrich_market_quotes`**（需 `TUSHARE_TOKEN` + collector 已有行情键；无 token / 无 Redis 行情 / 无匹配键 / 当日 Tushare 因子未出时有明确 skipped 文案，可稍后重试；成功后可看换手/量比/净流入榜更新）
-- [ ] Ops 手动跑 **`warm_watchlist_strategy_cache`** 非 skipped（Redis 桥 + 日 K 双均线启发式 v2）；message 含 v2/确认 N=2；有日 K 的自选在 `/watchlist` 策略看盘可见信号；强度列可见「弱/中/强」档（或摘要含已确认/待确认）
+- [ ] Ops 手动跑 **`warm_watchlist_strategy_cache`** 非 skipped（Redis 桥 + 启发式 v2 + double_ma 双轨）；message 含双轨/double_ma；有日 K 的自选在 `/watchlist` 两模式均可见信号；强度列可见「弱/中/强」档
 - [ ] Ops 手动跑 **`scan_horizon_outlook`** 非 skipped（写入 horizon + predict）；`/radar` 共振展望与规则预测可读或空态引导（无「恒 skipped」）
 - [ ] Ops 手动跑 **`prefetch_concept_board`**（复用 sector sync；有 token 非 skipped；无 token 可 skipped）；文案含「概念预拉」或 sector
 - [ ] Ops 手动跑 **`fill_focus_pool_minute`**（需 `TUSHARE_TOKEN` + 分钟权限；可下载自选 1m；无 token 可 skipped）；文案无「1m 下载未接入」；成功后 `bars?interval=1m` 或 overview 可见
