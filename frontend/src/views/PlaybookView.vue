@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import AppShell from '../components/AppShell.vue'
+import { confirmDialog } from '../lib/dialog'
 import {
   contentApi,
   type DisciplineCheck,
@@ -152,7 +153,12 @@ async function activate(id: string) {
 }
 
 async function abandon(id: string) {
-  if (!confirm('确认废弃该计划？')) return
+  const ok = await confirmDialog({
+    title: '废弃计划',
+    message: '确认废弃该计划？',
+    danger: true,
+  })
+  if (!ok) return
   acting.value = true
   error.value = ''
   msg.value = ''

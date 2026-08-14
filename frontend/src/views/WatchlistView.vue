@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import CandleChart from '../components/CandleChart.vue'
+import { confirmDialog, promptDialog } from '../lib/dialog'
 import {
   watchlistApi,
   type Bar,
@@ -356,9 +357,10 @@ async function enqueueAlignedBacktest() {
     return
   }
   const body = buildEnqueueRunBody(signalMode.value, vt, board.value?.config_key || '')
-  const ok = window.confirm(
-    `对 ${vt} 入队 ${body.strategy} ${body.fast_window}/${body.slow_window}，区间 ${body.start_date}～${body.end_date}，资金 ${body.capital}？`,
-  )
+  const ok = await confirmDialog({
+    title: '入队回测',
+    message: `对 ${vt} 入队 ${body.strategy} ${body.fast_window}/${body.slow_window}，区间 ${body.start_date}～${body.end_date}，资金 ${body.capital}？`,
+  })
   if (!ok) return
   enqueueing.value = true
   boardError.value = ''
@@ -700,7 +702,11 @@ async function onCreateGroup() {
 async function onRenameGroup() {
   if (!groupId.value) return
   const cur = groups.value.find((g) => g.id === groupId.value)
-  const next = window.prompt('新分组名', cur?.name || '')
+  const next = await promptDialog({
+    title: '重命名分组',
+    initialValue: cur?.name || '',
+    placeholder: '新分组名',
+  })
   if (next == null) return
   const name = next.trim()
   if (!name) {
@@ -718,7 +724,12 @@ async function onRenameGroup() {
 
 async function onDeleteGroup() {
   if (!groupId.value) return
-  if (!window.confirm('确定删除该分组？自选标的不会被删除')) return
+  const ok = await confirmDialog({
+    title: '删除分组',
+    message: '确定删除该分组？自选标的不会被删除',
+    danger: true,
+  })
+  if (!ok) return
   try {
     error.value = ''
     await watchlistApi.deleteGroup(groupId.value)

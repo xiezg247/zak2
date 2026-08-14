@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import AppShell from '../components/AppShell.vue'
+import { confirmDialog } from '../lib/dialog'
 import { contentApi, type BilibiliUserHit, type FeedItem, type FeedSub } from '../api/content'
 
 const subs = ref<FeedSub[]>([])
@@ -127,7 +128,12 @@ async function addSub() {
 
 async function removeSub(s: FeedSub) {
   const name = s.display_name || s.source_id
-  if (!window.confirm(`确定删除订阅「${name}」？`)) return
+  const ok = await confirmDialog({
+    title: '删除订阅',
+    message: `确定删除订阅「${name}」？`,
+    danger: true,
+  })
+  if (!ok) return
   error.value = ''
   try {
     await contentApi.removeFeedSub(s.id)

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
+import { confirmDialog } from '../lib/dialog'
 import {
   contentApi,
   type NoteEntry,
@@ -118,7 +119,12 @@ async function addEntry() {
 }
 
 async function removeEntry(id: number) {
-  if (!window.confirm('确定删除这条流水？')) return
+  const ok = await confirmDialog({
+    title: '删除流水',
+    message: '确定删除这条流水？',
+    danger: true,
+  })
+  if (!ok) return
   await contentApi.deleteEntry(id)
   await loadDetail()
   await loadSymbols()
