@@ -419,7 +419,7 @@ onMounted(() => {
         <button class="ghost" type="button" @click="sideOpen = !sideOpen">
           {{ sideOpen ? '收起共振' : '展开共振' }}
         </button>
-        <span class="muted" v-if="active">来源 {{ active.source }} · {{ active.computed_at || active.subtitle || '—' }}</span>
+        <span class="muted source-hint" v-if="active">来源 {{ active.source }} · {{ active.computed_at || active.subtitle || '—' }}</span>
       </div>
       <p v-if="error" class="err">{{ error }}</p>
       <p v-if="draftMsg" class="draft-msg">
@@ -786,7 +786,7 @@ onMounted(() => {
           <div class="side-list">
             <div v-for="(e, i) in displayedResonance" :key="e.vt_symbol" class="side-row">
               <div class="side-top">
-                <span class="rank">{{ i + 1 }}</span>
+                <span class="rank" :class="'rank-' + (i + 1)">{{ i + 1 }}</span>
                 <div class="side-meta">
                   <div class="side-name">
                     <span v-if="e.card_count >= 2" class="star">★</span>
@@ -831,24 +831,54 @@ onMounted(() => {
 }
 .toolbar {
   display: flex;
-  gap: 12px;
+  gap: 8px 12px;
   align-items: center;
   flex-wrap: wrap;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.toolbar .source-hint {
+  margin-left: auto;
 }
 .ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-muted);
   border-radius: 0.5rem;
-  padding: 6px 10px;
+  padding: 7px 12px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.ghost:hover:not(:disabled) {
+  background: var(--brand-light);
+  color: var(--brand);
+  border-color: var(--brand-soft);
+}
+.ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .primary {
-  background: var(--accent);
+  background: var(--brand);
   border: none;
   color: var(--brand-foreground);
   border-radius: 0.5rem;
-  padding: 6px 12px;
+  padding: 7px 14px;
+  font-size: 0.8125rem;
   font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.primary:hover:not(:disabled) {
+  background: var(--brand-dark);
+}
+.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .primary.full {
   width: 100%;
@@ -875,7 +905,12 @@ onMounted(() => {
   font-size: 0.85rem;
 }
 .horizon-block {
-  margin: 0 0 12px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  padding: 12px 16px;
 }
 .horizon-head {
   display: flex;
@@ -883,9 +918,14 @@ onMounted(() => {
   gap: 10px;
   flex-wrap: wrap;
 }
+.horizon-head strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
 .horizon-panel {
-  margin-top: 8px;
-  padding: 10px 12px;
+  margin-top: 10px;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--line-soft);
   line-height: 1.6;
 }
 .horizon-panel p {
@@ -970,37 +1010,49 @@ onMounted(() => {
   gap: 10px;
 }
 .card {
+  position: relative;
   text-align: left;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 0.75rem;
   box-shadow: var(--shadow-card);
-  padding: 12px;
+  padding: 12px 14px;
   color: var(--ink);
   display: grid;
-  gap: 4px;
+  gap: 5px;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 .card:hover {
   border-color: var(--brand-soft);
+  box-shadow: 0 2px 8px rgba(230, 100, 50, 0.1);
 }
 .card.on {
   border-color: var(--brand);
   background: var(--brand-light);
 }
+.card.on::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--brand);
+}
 .title {
   font-weight: 600;
+  font-size: 0.9rem;
+}
+.meta {
+  font-size: 0.75rem;
 }
 .preview {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.detail h2 {
-  margin: 0 0 6px;
-  font-size: 1.1rem;
 }
 .detail-msg {
   margin: 0 0 8px;
@@ -1023,15 +1075,24 @@ onMounted(() => {
 th,
 td {
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   font-size: 0.85rem;
   text-align: left;
   white-space: nowrap;
 }
 th {
-  color: var(--muted);
+  color: var(--ink-muted);
   background: var(--surface-muted);
+  position: sticky;
+  top: 0;
   font-weight: 500;
+  z-index: 1;
+}
+tbody tr:hover td {
+  background: var(--surface-muted);
+}
+.detail .table-wrap tbody tr:hover td {
+  background: var(--brand-light);
 }
 .mono {
   font-family: var(--mono);
@@ -1041,11 +1102,24 @@ th {
   color: var(--muted);
   padding: 24px !important;
 }
-.side {
-  border: 1px solid var(--border);
+.detail {
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
-  background: var(--bg-elevated);
-  padding: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  padding: 14px 16px;
+}
+.detail h2 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.side {
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  padding: 14px;
   display: grid;
   gap: 10px;
   align-content: start;
@@ -1057,12 +1131,22 @@ th {
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.side-head strong {
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 .weight-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+}
+.weight-head strong {
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 .tiny-btn {
   padding: 4px 8px;
@@ -1122,15 +1206,20 @@ th {
 }
 .side-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 .side-row {
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 0.625rem;
+  padding: 10px;
   display: grid;
-  gap: 4px;
-  background: var(--bg);
+  gap: 6px;
+  background: var(--surface);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.side-row:hover {
+  border-color: var(--brand-soft);
+  background: var(--brand-light);
 }
 .side-top {
   display: grid;
@@ -1139,20 +1228,45 @@ th {
   align-items: start;
 }
 .rank {
-  color: var(--muted);
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 20px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  background: var(--surface-muted);
   font-variant-numeric: tabular-nums;
+}
+.rank.rank-1 {
+  background: #fde8d7;
+  color: #b45309;
+}
+.rank.rank-2 {
+  background: #eef0f3;
+  color: #52525b;
+}
+.rank.rank-3 {
+  background: #fbe3dc;
+  color: #9a5b3f;
 }
 .side-name {
   font-weight: 600;
   font-size: 0.9rem;
 }
 .star {
-  color: var(--accent);
+  color: var(--brand);
   margin-right: 2px;
 }
 .side-score {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--brand-light);
+  color: var(--brand);
+  font-size: 0.8rem;
 }
 .link {
   justify-self: start;

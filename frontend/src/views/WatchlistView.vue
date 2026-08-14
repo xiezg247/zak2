@@ -9,7 +9,6 @@ import {
   type Bar,
   type Fundamentals,
   type GroupMembersBatchResult,
-  type NotifyLogItem,
   type PlanSymbolStatus,
   type PositionItem,
   type StrategyBoard,
@@ -96,12 +95,6 @@ const riskError = ref('')
 const riskMsg = ref('')
 const riskSaving = ref(false)
 const showOffPlanChips = ref(false)
-const notifyOpen = ref(false)
-const notifyLoaded = ref(false)
-const notifyLoading = ref(false)
-const notifyError = ref('')
-const notifyItems = ref<NotifyLogItem[]>([])
-const notifyExpandedId = ref('')
 const form = ref({
   symbol: '',
   cost_price: '',
@@ -408,45 +401,6 @@ async function saveTradingRisk() {
   } finally {
     riskSaving.value = false
   }
-}
-
-function prettyPayload(payload: Record<string, unknown>): string {
-  try {
-    return JSON.stringify(payload, null, 2)
-  } catch {
-    return String(payload)
-  }
-}
-
-function notifyStatusClass(status: string): string {
-  const s = status.trim().toLowerCase()
-  if (s === 'ok' || s === 'success') return ''
-  return 'warn'
-}
-
-async function loadNotifyLog() {
-  notifyLoading.value = true
-  notifyError.value = ''
-  try {
-    const out = await watchlistApi.notifyLog()
-    notifyItems.value = out.items
-    notifyLoaded.value = true
-  } catch (e) {
-    notifyError.value = e instanceof Error ? e.message : '通知历史加载失败'
-  } finally {
-    notifyLoading.value = false
-  }
-}
-
-function toggleNotifyOpen() {
-  notifyOpen.value = !notifyOpen.value
-  if (notifyOpen.value && !notifyLoaded.value) {
-    void loadNotifyLog()
-  }
-}
-
-function toggleNotifyRow(id: string) {
-  notifyExpandedId.value = notifyExpandedId.value === id ? '' : id
 }
 
 function resetPosForm() {
@@ -1119,20 +1073,28 @@ onUnmounted(() => {
 
         <section class="right">
           <div v-if="selected" class="chart-head">
-            <strong>{{ selected.name || selected.vt_symbol }}</strong>
-            <span v-if="selected.suspended" class="suspend-tag" title="停牌">停</span>
-            <span v-if="selected.industry?.trim()" class="muted">{{ selected.industry }}</span>
-            <span class="mono muted">{{ selected.vt_symbol }}</span>
-            <span
+            <div class="quote-id">
+              <div class="quote-name">
+                <strong>{{ selected.name || selected.vt_symbol }}</strong>
+                <span v-if="selected.suspended" class="suspend-tag" title="停牌">停</span>
+              </div>
+              <div class="quote-meta">
+                <span class="mono muted">{{ selected.vt_symbol }}</span>
+                <span v-if="selected.industry?.trim()" class="muted">· {{ selected.industry }}</span>
+              </div>
+            </div>
+            <div
+              class="quote-price"
               :class="{
                 up: (selected.change_pct || 0) > 0,
                 down: (selected.change_pct || 0) < 0,
               }"
             >
-              {{ selected.last_price != null ? selected.last_price.toFixed(2) : '—' }}
-              ·
-              {{ selected.change_pct != null ? selected.change_pct.toFixed(2) + '%' : '—' }}
-            </span>
+              <span class="price mono">{{ selected.last_price != null ? selected.last_price.toFixed(2) : '—' }}</span>
+              <span class="change mono">
+                {{ selected.change_pct != null ? (selected.change_pct > 0 ? '+' : '') + selected.change_pct.toFixed(2) + '%' : '—' }}
+              </span>
+            </div>
             <div class="limits">
               <button type="button" class="chip" :class="{ on: barInterval === 'd' }" @click="barInterval = 'd'">日K</button>
               <button type="button" class="chip" :class="{ on: barInterval === '1m' }" @click="barInterval = '1m'">1分</button>
@@ -1268,6 +1230,7 @@ onUnmounted(() => {
       </div>
 
       <section class="strategy">
+        <div class="summary-grid">
         <div class="pos-form risk-card">
           <h3>仓位与风控</h3>
           <div class="risk-summary muted" v-if="riskSummary">
@@ -1361,64 +1324,6 @@ onUnmounted(() => {
             </li>
           </ul>
         </div>
-
-        <div class="pos-form notify-card">
-          <div class="notify-head">
-            <h3>通知历史</h3>
-            <div class="notify-actions">
-              <button
-                v-if="notifyOpen"
-                type="button"
-                class="ghost"
-                :disabled="notifyLoading"
-                @click="loadNotifyLog"
-              >
-                {{ notifyLoading ? '加载中…' : '刷新' }}
-              </button>
-              <button type="button" class="ghost" @click="toggleNotifyOpen">
-                {{ notifyOpen ? '收起' : '展开' }}
-              </button>
-            </div>
-          </div>
-          <div v-if="notifyOpen" class="notify-body">
-            <p v-if="notifyLoading && !notifyLoaded" class="muted">加载通知历史…</p>
-            <p v-else-if="notifyError" class="err">{{ notifyError }}</p>
-            <template v-else>
-              <div class="table-wrap notify-table" v-if="notifyItems.length">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>时间</th>
-                      <th>事件</th>
-                      <th>渠道</th>
-                      <th>状态</th>
-                      <th>错误</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <template v-for="row in notifyItems" :key="row.id">
-                      <tr
-                        :class="{ on: notifyExpandedId === row.id }"
-                        @click="toggleNotifyRow(row.id)"
-                      >
-                        <td class="mono">{{ row.created_at || '—' }}</td>
-                        <td>{{ row.event_type || '—' }}</td>
-                        <td>{{ row.channel || '—' }}</td>
-                        <td :class="notifyStatusClass(row.status)">{{ row.status || '—' }}</td>
-                        <td class="clip">{{ row.error || '—' }}</td>
-                      </tr>
-                      <tr v-if="notifyExpandedId === row.id" class="notify-payload-row">
-                        <td colspan="5">
-                          <pre class="notify-payload">{{ prettyPayload(row.payload) }}</pre>
-                        </td>
-                      </tr>
-                    </template>
-                  </tbody>
-                </table>
-              </div>
-              <p v-else class="muted tip">暂无通知投递记录</p>
-            </template>
-          </div>
         </div>
 
         <div class="strategy-head">
@@ -1706,6 +1611,8 @@ onUnmounted(() => {
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-soft);
 }
 .strategy-head h2 {
   margin: 0;
@@ -1734,6 +1641,12 @@ onUnmounted(() => {
   border-radius: 0.75rem;
   background: var(--surface-muted);
 }
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
 .risk-card {
   margin-bottom: 0;
 }
@@ -1752,8 +1665,10 @@ onUnmounted(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .plan-card {
-  margin-top: 10px;
   margin-bottom: 0;
+}
+.summary-grid .plan-card {
+  margin-top: 0;
 }
 .plan-card h3 {
   margin: 0;
@@ -1794,51 +1709,6 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: var(--muted);
   flex-shrink: 0;
-}
-.notify-card {
-  margin-top: 10px;
-  margin-bottom: 0;
-}
-.notify-card h3 {
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-.notify-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.notify-actions {
-  display: flex;
-  gap: 8px;
-}
-.notify-body {
-  display: grid;
-  gap: 8px;
-}
-.notify-table {
-  max-height: 240px;
-}
-.notify-payload-row {
-  cursor: default;
-}
-.notify-payload-row td {
-  white-space: normal;
-  background: var(--surface-muted);
-  padding: 8px 10px;
-}
-.notify-payload {
-  margin: 0;
-  max-height: 180px;
-  overflow: auto;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--muted);
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 .pos-grid {
   display: grid;
@@ -1984,9 +1854,6 @@ select {
   display: flex;
   gap: 4px;
 }
-.chart-head > .limits:first-of-type {
-  margin-left: auto;
-}
 .link {
   background: none;
   border: none;
@@ -2053,13 +1920,19 @@ th.sortable:hover {
 tbody tr {
   cursor: pointer;
 }
-tbody tr.on {
+tbody tr:hover td {
+  background: var(--surface-muted);
+}
+tbody tr.on td {
   background: var(--brand-light);
 }
-tbody tr.off-plan {
+tbody tr.on:hover td {
+  background: var(--brand-light);
+}
+tbody tr.off-plan td {
   background: #fee2e2;
 }
-tbody tr.off-plan.on {
+tbody tr.off-plan.on td {
   background: var(--brand-light);
 }
 .warn {
@@ -2081,9 +1954,53 @@ tbody tr.off-plan.on {
 }
 .chart-head {
   display: flex;
-  gap: 12px;
+  gap: 12px 16px;
   align-items: center;
   flex-wrap: wrap;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.quote-id {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.quote-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.quote-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+.quote-price {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-left: auto;
+}
+.quote-price .price {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.quote-price .change {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.quote-price.up {
+  color: var(--danger);
+}
+.quote-price.down {
+  color: var(--ok);
 }
 .chart {
   border: 1px solid var(--line);
@@ -2154,6 +2071,7 @@ tbody tr.off-plan.on {
 @media (max-width: 900px) {
   .workspace,
   .strategy-grid,
+  .summary-grid,
   .pos-grid,
   .risk-grid {
     grid-template-columns: 1fr;

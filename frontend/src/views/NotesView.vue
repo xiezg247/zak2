@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
+import MarkdownView from '../components/MarkdownView.vue'
 import { confirmDialog } from '../lib/dialog'
 import {
   contentApi,
@@ -241,7 +242,7 @@ onMounted(async () => {
             </template>
             <article v-if="activeReport" class="report-body">
               <h3>{{ activeReport.title }}</h3>
-              <pre>{{ activeReport.body }}</pre>
+              <MarkdownView :source="activeReport.body" />
             </article>
           </template>
         </section>
@@ -356,13 +357,6 @@ textarea {
   padding-top: 10px;
   display: grid;
   gap: 8px;
-}
-.report-body pre {
-  white-space: pre-wrap;
-  margin: 0;
-  font-family: inherit;
-  font-size: 0.9rem;
-  line-height: 1.5;
 }
 .primary {
   background: var(--accent);

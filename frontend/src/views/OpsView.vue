@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import AppShell from '../components/AppShell.vue'
 import { opsApi, type BarsOverview, type Health, type SchedulerJob } from '../api/ops'
+import { watchlistApi, type NotifyLogItem } from '../api/watchlist'
 import { filterJobs, groupJobs, KIND_TITLE, type JobFilter } from './opsJobGroups'
 
 const health = ref<Health | null>(null)
@@ -12,6 +13,13 @@ const jobGroups = computed(() => groupJobs(filterJobs(jobs.value, jobFilter.valu
 const error = ref('')
 const busy = ref('')
 const message = ref('')
+
+const notifyOpen = ref(false)
+const notifyLoaded = ref(false)
+const notifyLoading = ref(false)
+const notifyError = ref('')
+const notifyItems = ref<NotifyLogItem[]>([])
+const notifyExpandedId = ref('')
 
 async function refresh() {
   error.value = ''
@@ -109,6 +117,45 @@ function scheduleText(j: SchedulerJob) {
   }
   const h = j.cron_hour ?? '-'
   return `${d} ${h}:${m}`
+}
+
+function prettyPayload(payload: Record<string, unknown>): string {
+  try {
+    return JSON.stringify(payload, null, 2)
+  } catch {
+    return String(payload)
+  }
+}
+
+function notifyStatusClass(status: string): string {
+  const s = status.trim().toLowerCase()
+  if (s === 'ok' || s === 'success') return ''
+  return 'warn'
+}
+
+async function loadNotifyLog() {
+  notifyLoading.value = true
+  notifyError.value = ''
+  try {
+    const out = await watchlistApi.notifyLog()
+    notifyItems.value = out.items
+    notifyLoaded.value = true
+  } catch (e) {
+    notifyError.value = e instanceof Error ? e.message : '通知投递记录加载失败'
+  } finally {
+    notifyLoading.value = false
+  }
+}
+
+function toggleNotifyOpen() {
+  notifyOpen.value = !notifyOpen.value
+  if (notifyOpen.value && !notifyLoaded.value) {
+    void loadNotifyLog()
+  }
+}
+
+function toggleNotifyRow(id: string) {
+  notifyExpandedId.value = notifyExpandedId.value === id ? '' : id
 }
 
 onMounted(async () => {
@@ -379,6 +426,66 @@ onMounted(async () => {
           </tbody>
         </table>
       </section>
+
+      <section class="panel notify-panel">
+        <div class="toolbar">
+          <div>
+            <h2>通知投递记录</h2>
+            <p class="muted">风险预警等通知的渠道投递状态，只读排障用。</p>
+          </div>
+          <div class="actions">
+            <button
+              v-if="notifyOpen"
+              type="button"
+              class="ghost"
+              :disabled="notifyLoading"
+              @click="loadNotifyLog"
+            >
+              {{ notifyLoading ? '加载中…' : '刷新' }}
+            </button>
+            <button type="button" class="ghost" @click="toggleNotifyOpen">
+              {{ notifyOpen ? '收起' : '展开' }}
+            </button>
+          </div>
+        </div>
+        <div v-if="notifyOpen">
+          <p v-if="notifyLoading && !notifyLoaded" class="muted">加载通知投递记录…</p>
+          <p v-else-if="notifyError" class="err">{{ notifyError }}</p>
+          <template v-else>
+            <table v-if="notifyItems.length">
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>事件</th>
+                  <th>渠道</th>
+                  <th>状态</th>
+                  <th>错误</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="row in notifyItems" :key="row.id">
+                  <tr
+                    :class="{ on: notifyExpandedId === row.id }"
+                    @click="toggleNotifyRow(row.id)"
+                  >
+                    <td class="mono">{{ row.created_at || '—' }}</td>
+                    <td>{{ row.event_type || '—' }}</td>
+                    <td>{{ row.channel || '—' }}</td>
+                    <td :class="notifyStatusClass(row.status)">{{ row.status || '—' }}</td>
+                    <td class="clip">{{ row.error || '—' }}</td>
+                  </tr>
+                  <tr v-if="notifyExpandedId === row.id" class="notify-payload-row">
+                    <td colspan="5">
+                      <pre class="notify-payload">{{ prettyPayload(row.payload) }}</pre>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+            <p v-else class="muted tip">暂无通知投递记录</p>
+          </template>
+        </div>
+      </section>
     </div>
   </AppShell>
 </template>
@@ -538,6 +645,43 @@ th {
 }
 .tip {
   cursor: help;
+}
+.notify-panel tr:hover td {
+  background: var(--surface-muted);
+  cursor: pointer;
+}
+.notify-panel tr.on td {
+  background: var(--brand-light);
+}
+.notify-panel tr.on:hover td {
+  background: var(--brand-light);
+}
+.notify-payload-row {
+  cursor: default !important;
+}
+.notify-payload-row td {
+  white-space: normal;
+  background: var(--surface-muted);
+  padding: 8px 10px;
+}
+.notify-payload {
+  margin: 0;
+  max-height: 200px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.clip {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.warn {
+  color: var(--danger);
 }
 @media (max-width: 1100px) {
   .cards,

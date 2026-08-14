@@ -61,6 +61,19 @@ const displayedRows = computed(() => {
   return [...list].sort((a, b) => cmpNullable(a[key], b[key], dir))
 })
 
+const maxAbsFlow = computed(() => {
+  let m = 0
+  for (const r of rows.value) {
+    const a = Math.abs(r.net_flow_yi)
+    if (a > m) m = a
+  }
+  return m || 1
+})
+
+function flowBarWidth(v: number): string {
+  return `${Math.min(100, (Math.abs(v) / maxAbsFlow.value) * 100)}%`
+}
+
 const subtitle = computed(() => {
   if (!rows.value.length) return tradeDate.value || ''
   return `${tradeDate.value || rows.value[0].trade_date} · ${kind.value === 'concept' ? '概念' : '行业'}`
@@ -106,17 +119,26 @@ onMounted(async () => {
   <AppShell title="板块资金" :subtitle="subtitle" active="sectors">
     <div class="page">
       <div class="toolbar">
-        <div class="tabs">
-          <button type="button" :class="{ on: kind === 'concept' }" @click="kind = 'concept'">概念</button>
-          <button type="button" :class="{ on: kind === 'industry' }" @click="kind = 'industry'">行业</button>
+        <div class="control-group">
+          <span class="control-label">板块</span>
+          <div class="tabs">
+            <button type="button" :class="{ on: kind === 'concept' }" @click="kind = 'concept'">概念</button>
+            <button type="button" :class="{ on: kind === 'industry' }" @click="kind = 'industry'">行业</button>
+          </div>
         </div>
-        <div class="tabs">
-          <button type="button" :class="{ on: sort === 'net_flow_yi' }" @click="sort = 'net_flow_yi'">净流入</button>
-          <button type="button" :class="{ on: sort === 'change_pct' }" @click="sort = 'change_pct'">涨幅</button>
+        <div class="control-group">
+          <span class="control-label">排序</span>
+          <div class="tabs">
+            <button type="button" :class="{ on: sort === 'net_flow_yi' }" @click="sort = 'net_flow_yi'">净流入</button>
+            <button type="button" :class="{ on: sort === 'change_pct' }" @click="sort = 'change_pct'">涨幅</button>
+          </div>
         </div>
-        <select v-model="tradeDate">
-          <option v-for="d in dates" :key="d" :value="d">{{ d }}</option>
-        </select>
+        <div class="control-group">
+          <span class="control-label">日期</span>
+          <select v-model="tradeDate">
+            <option v-for="d in dates" :key="d" :value="d">{{ d }}</option>
+          </select>
+        </div>
         <RouterLink to="/market" class="cross-link toolbar-cross">← 市场</RouterLink>
       </div>
 
@@ -124,6 +146,7 @@ onMounted(async () => {
 
       <div v-if="rows.length" class="filter-row">
         <input v-model="listFilter" placeholder="过滤名称/ID" />
+        <span v-if="sortKey" class="muted tiny">已按 {{ sortKey === 'net_flow_yi' ? '净流入' : '涨幅' }} 排序</span>
         <button type="button" class="ghost" :class="{ on: !sortKey }" @click="clearSort">默认序</button>
       </div>
 
@@ -138,20 +161,35 @@ onMounted(async () => {
         <table>
           <thead>
             <tr>
-              <th>#</th>
+              <th class="col-rank">#</th>
               <th>名称</th>
               <th class="sortable" @click="toggleSort('change_pct')">涨幅%{{ sortMark('change_pct') }}</th>
-              <th class="sortable" @click="toggleSort('net_flow_yi')">净流入(亿){{ sortMark('net_flow_yi') }}</th>
-              <th>ID</th>
+              <th class="sortable col-flow" @click="toggleSort('net_flow_yi')">净流入(亿){{ sortMark('net_flow_yi') }}</th>
+              <th class="col-id">ID</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(r, i) in displayedRows" :key="r.sector_id">
-              <td>{{ i + 1 }}</td>
-              <td>{{ r.name }}</td>
-              <td :class="{ up: r.change_pct > 0, down: r.change_pct < 0 }">{{ r.change_pct.toFixed(2) }}</td>
-              <td :class="{ up: r.net_flow_yi > 0, down: r.net_flow_yi < 0 }">{{ r.net_flow_yi.toFixed(2) }}</td>
-              <td class="mono muted">{{ r.sector_id }}</td>
+              <td class="col-rank">
+                <span class="rank-badge" :class="'rank-' + (i + 1)">{{ i + 1 }}</span>
+              </td>
+              <td class="name">{{ r.name }}</td>
+              <td :class="{ up: r.change_pct > 0, down: r.change_pct < 0 }">
+                {{ r.change_pct > 0 ? '+' : '' }}{{ r.change_pct.toFixed(2) }}
+              </td>
+              <td class="col-flow">
+                <div class="flow-cell" :class="{ pos: r.net_flow_yi > 0, neg: r.net_flow_yi < 0 }">
+                  <span class="flow-track">
+                    <span
+                      class="flow-bar"
+                      :class="{ pos: r.net_flow_yi > 0, neg: r.net_flow_yi < 0 }"
+                      :style="{ width: flowBarWidth(r.net_flow_yi) }"
+                    ></span>
+                  </span>
+                  <span class="flow-value mono">{{ r.net_flow_yi > 0 ? '+' : '' }}{{ r.net_flow_yi.toFixed(2) }}</span>
+                </div>
+              </td>
+              <td class="mono muted col-id">{{ r.sector_id }}</td>
             </tr>
           </tbody>
         </table>
@@ -164,23 +202,45 @@ onMounted(async () => {
 .page {
   display: grid;
   gap: 14px;
+  padding: 16px 24px 24px;
 }
 .toolbar {
   display: flex;
-  gap: 12px;
+  gap: 8px 20px;
   flex-wrap: wrap;
   align-items: center;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.control-label {
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.02em;
 }
 .tabs {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 .tabs button {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-muted);
   border-radius: 0.5rem;
-  padding: 6px 10px;
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.tabs button:hover {
+  color: var(--ink);
+  border-color: var(--brand-soft);
 }
 .tabs button.on {
   background: var(--brand-light);
@@ -189,11 +249,12 @@ onMounted(async () => {
   font-weight: 500;
 }
 select {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 0.5rem;
-  color: var(--text);
+  color: var(--ink);
   padding: 6px 10px;
+  font-size: 0.8125rem;
 }
 .toolbar-cross {
   margin-left: auto;
@@ -215,24 +276,34 @@ select {
   align-items: center;
 }
 .filter-row input {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 0.5rem;
-  color: var(--text);
-  padding: 6px 10px;
-  min-width: 160px;
+  color: var(--ink);
+  padding: 7px 10px;
+  min-width: 180px;
+  font-size: 0.8125rem;
+}
+.filter-row input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(230, 100, 50, 0.15);
+  outline: none;
+}
+.tiny {
+  font-size: 0.75rem;
 }
 .ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-muted);
   border-radius: 0.5rem;
   padding: 6px 10px;
   cursor: pointer;
+  font-size: 0.8125rem;
 }
 .ghost.on {
-  border-color: var(--brand, #333);
-  color: var(--text);
+  border-color: var(--brand);
+  color: var(--ink);
   font-weight: 500;
 }
 .err {
@@ -253,17 +324,18 @@ select {
   overflow: auto;
   background: var(--surface);
   box-shadow: var(--shadow-card);
+  max-height: 72vh;
 }
 th,
 td {
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   font-size: 0.85rem;
   text-align: left;
   white-space: nowrap;
 }
 th {
-  color: var(--muted);
+  color: var(--ink-muted);
   background: var(--surface-muted);
   position: sticky;
   top: 0;
@@ -272,6 +344,83 @@ th {
 th.sortable {
   cursor: pointer;
   user-select: none;
+}
+th.sortable:hover {
+  color: var(--ink);
+}
+tbody tr:hover td {
+  background: var(--surface-muted);
+}
+.col-rank {
+  width: 40px;
+  text-align: center;
+}
+.col-flow {
+  width: 200px;
+}
+.col-id {
+  width: 120px;
+}
+.name {
+  font-weight: 500;
+}
+.rank-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 20px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.rank-badge.rank-1 {
+  background: #fde8d7;
+  color: #b45309;
+}
+.rank-badge.rank-2 {
+  background: #eef0f3;
+  color: #52525b;
+}
+.rank-badge.rank-3 {
+  background: #fbe3dc;
+  color: #9a5b3f;
+}
+.flow-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.flow-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line-soft);
+  overflow: hidden;
+}
+.flow-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+.flow-bar.pos {
+  background: linear-gradient(90deg, #f5936a, var(--danger));
+}
+.flow-bar.neg {
+  background: linear-gradient(90deg, #7fd6a4, var(--ok));
+}
+.flow-value {
+  min-width: 64px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.82rem;
+}
+.flow-value.pos {
+  color: var(--danger);
+}
+.flow-value.neg {
+  color: var(--ok);
 }
 .mono {
   font-family: var(--mono);

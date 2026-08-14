@@ -362,10 +362,13 @@ onUnmounted(() => {
       <section class="cards" v-if="overview">
         <div class="card">
           <div class="k">Redis</div>
-          <div class="v">{{ overview.redis_available ? '在线' : '离线' }} · {{ overview.quote_count }} 只</div>
+          <div class="v status-line">
+            <span class="dot" :class="overview.redis_available ? 'ok' : 'warn'"></span>
+            {{ overview.redis_available ? '在线' : '离线' }} · {{ overview.quote_count }} 只
+          </div>
           <div class="s muted">{{ overview.updated_at || '—' }}</div>
         </div>
-        <div class="card" v-if="overview.emotion_cycle">
+        <div class="card cycle-card" v-if="overview.emotion_cycle">
           <div class="k">情绪周期</div>
           <div class="cycle-head">
             <div class="v">{{ overview.emotion_cycle.stage_label }}</div>
@@ -550,7 +553,9 @@ onUnmounted(() => {
                 :class="{ on: selected?.vt_symbol === r.vt_symbol }"
                 @click="selectRank(r)"
               >
-                <td>{{ i + 1 }}</td>
+                <td>
+                  <span class="rank-badge" :class="'rank-' + (i + 1)">{{ i + 1 }}</span>
+                </td>
                 <td class="mono">{{ r.vt_symbol }}</td>
                 <td>{{ r.name || '—' }}</td>
                 <td>{{ r.last_price != null ? r.last_price.toFixed(2) : '—' }}</td>
@@ -571,19 +576,21 @@ onUnmounted(() => {
 
         <aside class="detail" v-if="selected">
           <div class="detail-head">
-            <div>
+            <div class="detail-id">
               <strong>{{ selected.name || selected.vt_symbol }}</strong>
               <div class="mono muted">{{ selected.vt_symbol }}</div>
             </div>
             <div
+              class="detail-price"
               :class="{
                 up: (selected.change_pct || 0) > 0,
                 down: (selected.change_pct || 0) < 0,
               }"
             >
-              {{ selected.last_price != null ? selected.last_price.toFixed(2) : '—' }}
-              ·
-              {{ selected.change_pct != null ? selected.change_pct.toFixed(2) + '%' : '—' }}
+              <span class="price mono">{{ selected.last_price != null ? selected.last_price.toFixed(2) : '—' }}</span>
+              <span class="change mono">
+                {{ selected.change_pct != null ? (selected.change_pct > 0 ? '+' : '') + selected.change_pct.toFixed(2) + '%' : '—' }}
+              </span>
             </div>
           </div>
           <div class="detail-actions">
@@ -647,16 +654,55 @@ onUnmounted(() => {
   border: 1px solid var(--line);
   border-radius: 0.75rem;
   box-shadow: var(--shadow-card);
-  padding: 12px 14px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+.card.cycle-card {
+  position: relative;
+  border-color: var(--brand-soft);
+  background: linear-gradient(180deg, #fffdfb 0%, var(--surface) 100%);
+}
+.card.cycle-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--brand), #f5936a);
 }
 .k {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 .v {
   margin-top: 4px;
   font-size: 1.1rem;
   font-weight: 600;
+}
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot.ok {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+.dot.warn {
+  background: var(--danger);
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
 }
 .s {
   margin-top: 4px;
@@ -673,18 +719,20 @@ onUnmounted(() => {
   margin-top: 0;
 }
 .cycle-gate {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 0.4rem;
+  padding: 3px 10px;
+  border-radius: 999px;
   border: 1px solid var(--border);
 }
 .cycle-gate.ok {
-  color: var(--ok);
+  color: #fff;
+  background: var(--ok);
   border-color: var(--ok);
 }
 .cycle-gate.warn {
-  color: var(--danger);
+  color: #fff;
+  background: var(--danger);
   border-color: var(--danger);
 }
 .cycle-actions {
@@ -727,11 +775,17 @@ onUnmounted(() => {
   align-items: center;
 }
 .tabs button {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-muted);
   border-radius: 0.5rem;
-  padding: 6px 10px;
+  padding: 7px 12px;
+  font-size: 0.8125rem;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.tabs button:hover {
+  color: var(--ink);
+  border-color: var(--brand-soft);
 }
 .tabs button.on {
   background: var(--brand-light);
@@ -827,6 +881,42 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 8px;
   align-items: flex-start;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.detail-id {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.detail-id strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.detail-id .mono {
+  font-size: 0.75rem;
+}
+.detail-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+.detail-price .price {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.detail-price .change {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.detail-price.up {
+  color: var(--danger);
+}
+.detail-price.down {
+  color: var(--ok);
 }
 .detail-actions {
   display: flex;
@@ -883,8 +973,37 @@ th.sortable {
 tbody tr {
   cursor: pointer;
 }
-tbody tr.on {
+tbody tr:hover td {
+  background: var(--surface-muted);
+}
+tbody tr.on td {
   background: var(--brand-light);
+}
+tbody tr.on:hover td {
+  background: var(--brand-light);
+}
+.rank-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 20px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.rank-badge.rank-1 {
+  background: #fde8d7;
+  color: #b45309;
+}
+.rank-badge.rank-2 {
+  background: #eef0f3;
+  color: #52525b;
+}
+.rank-badge.rank-3 {
+  background: #fbe3dc;
+  color: #9a5b3f;
 }
 .mono {
   font-family: var(--mono);
