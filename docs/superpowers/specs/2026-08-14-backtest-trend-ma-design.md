@@ -1,7 +1,7 @@
 # 回测第二策略 trend_ma 设计
 
 日期：2026-08-14  
-状态：已批准  
+状态：已批准（已实现）  
 范围：仅 zak2；不改 zak；**禁止** import `vnpy_ashare` / zak 策略包  
 前置：vnpy CTA 回测主路径已落地（`docs/superpowers/specs/2026-08-14-vnpy-backtest-deepen-design.md`）
 

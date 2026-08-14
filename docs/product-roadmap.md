@@ -6,8 +6,8 @@
 
 ## 当前基线
 
-- 登录、自选、选股 Hub、市场/板块/雷达、笔记/Feed、回测薄、AI、Ops
-- 进程：`api` + `arq-worker` + `quote-collector` + `web`
+- 登录、自选、选股 Hub、市场/板块/雷达、笔记/Feed、回测（vnpy CTA：`double_ma`/`trend_ma`）、AI、Ops
+- 进程：`api` + `arq-worker` + `backtest-worker` + `quote-collector` + `web`
 - 数据：Compose 默认自带 PG/Redis；可选 `scripts/import_from_zak.py` 一次性导入
 
 ## 近期待办
@@ -60,6 +60,8 @@
 46. ~~策略双均线信号加深（确认 N=2 + 强度档）~~（已完成 → [spec](./superpowers/specs/2026-08-14-strategy-ma-signal-v2-design.md)）
 47. ~~Ops 任务引入 ARQ~~（已完成 → [spec](./superpowers/specs/2026-08-14-arq-ops-jobs-design.md)）：定时/立即执行入队；`arq-worker`；`/jobs` 聚合
 48. ~~ARQ 二期~~（已完成 → [spec](./superpowers/specs/2026-08-14-arq-phase2-design.md)）：Ops `_job_id` 去重、bars worker 互斥、screener/backtest 入队、移除内存 JobStore
+49. ~~回测加深（vnpy CTA）~~（已完成 → [spec](./superpowers/specs/2026-08-14-vnpy-backtest-deepen-design.md)）
+50. ~~回测第二策略 trend_ma~~（已完成 → [spec](./superpowers/specs/2026-08-14-backtest-trend-ma-design.md)）：趋势双均线 + ADX + 追踪止损
 
 ## 明确不做（直到本文件改口）
 
