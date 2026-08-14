@@ -27,7 +27,8 @@ class DoubleMaStrategy(AShareCtaTemplate):
     def on_init(self) -> None:
         self.write_log("双均线策略初始化")
         self.bg = BarGenerator(self.on_bar)
-        self.am = ArrayManager()
+        size = max(int(self.fast_window), int(self.slow_window)) + 10
+        self.am = ArrayManager(size=size)
 
     def on_start(self) -> None:
         self.write_log("策略启动")
