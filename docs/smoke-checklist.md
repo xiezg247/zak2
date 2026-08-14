@@ -105,6 +105,7 @@ cd frontend && npm run dev
 - [ ] `/feed` 可勾选「仅启用」隐藏已关订阅（默认关）；可与名/mid 过滤叠加；无匹配见「无匹配订阅」；滤掉当前选中时右侧仍按该订阅显示
 - [ ] `/backtest` 对有日 K 的票跑通双均线
 - [ ] `/backtest` 策略下拉含「趋势双均线（ADX）」；日 K 足够时可跑通 `trend_ma`
+- [ ] `/backtest` 周期可选日 K / 1 分钟；1m 时可设最多交易日（默认 20）；有关注池 1m 时可跑通；不足见 Ops「补全关注池 1m」引导（`fill_focus_pool_minute`）
 - [ ] `/backtest` 有历史时可按标的/策略过滤；无匹配见「无匹配历史」；无历史见「暂无回测历史」；加载中可见提示；打开某条历史该项高亮
 - [ ] `/backtest` 点画像 chip 可写入快/慢均线与资金并高亮；日 K 不足类错误旁可见「去 Ops 补全日 K」链到 `/ops`
 - [ ] `/ai` 流式回复；写操作确认卡；可提议 `upsert_position` / `delete_position` / `add_signal_panel` / `remove_signal_panel`，确认卡后落库（缺自选时 upsert 应失败）；**团队分析**快速/深度；结束后可「研报已保存」并跳转笔记；Agent 可调用 `list_skills` / `read_skill` 加载内置 Skill 说明（亦可 `pytest backend/tests/test_ai_write_positions.py backend/tests/test_ai_tools_skills.py backend/tests/test_skills_catalog.py` 单测覆盖）

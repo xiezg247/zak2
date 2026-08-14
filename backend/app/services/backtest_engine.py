@@ -15,9 +15,9 @@ __all__ = [
 STRATEGIES = (
     {
         "id": "double_ma",
-        "name": "双均线（日 K）",
+        "name": "双均线",
         "interval": "d",
-        "description": "vnpy CTA：快线上穿慢线买入、下穿卖出；整手 100 股；仅做多",
+        "description": "vnpy CTA：快线上穿慢线买入、下穿卖出；整手 100 股；仅做多；支持 d/1m",
         "implemented": True,
         "engine": "vnpy",
     },
@@ -25,7 +25,7 @@ STRATEGIES = (
         "id": "trend_ma",
         "name": "趋势双均线（ADX）",
         "interval": "d",
-        "description": "金叉+ADX过滤买入；死叉/破慢线/追踪止损卖出；整手 T+1",
+        "description": "金叉+ADX过滤买入；死叉/破慢线/追踪止损卖出；整手 T+1；支持 d/1m",
         "implemented": True,
         "engine": "vnpy",
     },

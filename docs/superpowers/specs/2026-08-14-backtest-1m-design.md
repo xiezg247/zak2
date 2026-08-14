@@ -1,7 +1,7 @@
 # 回测分钟线（1m）设计
 
 日期：2026-08-14  
-状态：已批准  
+状态：已批准（已实现）  
 范围：仅 zak2；不改 zak；不 import `vnpy_ashare`  
 前置：vnpy CTA 回测 + `double_ma` / `trend_ma`；关注池 1m 已可写入 `dbbardata`
 
