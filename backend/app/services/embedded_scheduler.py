@@ -12,9 +12,9 @@ from apscheduler.triggers.cron import CronTrigger
 from app.core.db import SessionLocal
 from app.core.settings import get_settings
 from app.services import scheduler_lock
-from app.services import ops_sync_bilibili_feed
 from app.services.ops_catalog import RUNNABLE_JOB_IDS
-from app.services.ops_runners import RUNNERS, needs_user_id
+from app.services.ops_enqueue import enqueue_ops_job_sync
+from app.services.ops_runners import needs_user_id
 from app.services.ops_scheduler import load_scheduler_config
 from app.services.scheduler_defaults import resolve_cron
 
@@ -67,6 +67,7 @@ def _run_job(job_id: str) -> None:
         if not _job_enabled(config, job_id):
             return
 
+        user_id: str | None = None
         if needs_user_id(job_id):
             user_id = (settings.scheduler_screen_user_id or "").strip()
             if not user_id:
@@ -75,16 +76,10 @@ def _run_job(job_id: str) -> None:
                     job_id,
                 )
                 return
-            runner = RUNNERS[job_id]
-            result = runner(db, user_id=user_id)
-        elif job_id == ops_sync_bilibili_feed.JOB_ID:
-            # 定时遵守 08–20 窗口；Ops 手动走 RUNNERS（force=True）
-            result = ops_sync_bilibili_feed.sync_bilibili_feed(db, force=False)
-        else:
-            runner = RUNNERS[job_id]
-            result = runner(db)
 
-        _logger.info("embedded scheduler %s: %s", job_id, result.get("message"))
+        # 定时 bilibili 亦 force=False（worker 内尊重时段窗口）
+        arq_id = enqueue_ops_job_sync(job_id, user_id=user_id, force=False)
+        _logger.info("embedded scheduler enqueued %s -> %s", job_id, arq_id)
     except Exception:  # noqa: BLE001
         _logger.exception("embedded scheduler %s failed", job_id)
     finally:
