@@ -7,6 +7,7 @@ import {
   backtestApi,
   type BacktestRun,
   type BatchInfo,
+  type OptimizeSummary,
   type StrategyInfo,
   type StrategyProfile,
 } from '../api/backtest'
@@ -17,6 +18,7 @@ const runs = ref<BacktestRun[]>([])
 const batches = ref<BatchInfo[]>([])
 const selected = ref<BacktestRun | null>(null)
 const compare = ref<BacktestRun[]>([])
+const optimizeSummary = ref<OptimizeSummary | null>(null)
 
 const vtSymbol = ref('600519.SSE')
 const batchSymbols = ref('')
@@ -26,16 +28,43 @@ const fast = ref(5)
 const slow = ref(20)
 const capital = ref(100000)
 const strategy = ref('double_ma')
+const rate = ref(0.00045)
+const slippage = ref(0)
+const stampDuty = ref(0.0005)
+const showFees = ref(false)
+const showAllTrades = ref(false)
+const optFastSpace = ref('3,5,8,10')
+const optSlowSpace = ref('10,20,30,60')
 
 const running = ref(false)
 const statusText = ref('')
 const error = ref('')
-const mode = ref<'single' | 'batch'>('single')
+const mode = ref<'single' | 'batch' | 'optimize'>('single')
 const listFilter = ref('')
 const loading = ref(false)
 const activeProfileId = ref('')
 
-const subtitle = computed(() => `${runs.value.length} 条历史 · 策略画像 ${profiles.value.length}`)
+const subtitle = computed(
+  () => `vnpy CTA · ${runs.value.length} 条历史 · 策略画像 ${profiles.value.length}`,
+)
+
+function feePayload() {
+  return {
+    rate: rate.value,
+    slippage: slippage.value,
+    stamp_duty: stampDuty.value,
+  }
+}
+
+function numStat(key: string): number | null {
+  const v = selected.value?.statistics?.[key]
+  return typeof v === 'number' ? v : null
+}
+
+const displayedTrades = computed(() => {
+  const trades = selected.value?.trades || []
+  return showAllTrades.value ? trades : trades.slice(0, 40)
+})
 
 const showOpsLink = computed(() => /日 K|Ops|补全/.test(error.value))
 
@@ -130,6 +159,7 @@ async function runSingle() {
       fast_window: fast.value,
       slow_window: slow.value,
       capital: capital.value,
+      ...feePayload(),
     })
     await pollJob(job_id)
     statusText.value = '完成'
@@ -157,15 +187,59 @@ async function runBatch() {
       fast_window: fast.value,
       slow_window: slow.value,
       capital: capital.value,
+      ...feePayload(),
     })
     await pollJob(job_id)
     compare.value = await backtestApi.runs(batch_id)
+    optimizeSummary.value = null
     statusText.value = `批次 ${batch_id.slice(0, 8)}… 完成`
   } catch (e) {
     error.value = e instanceof Error ? e.message : '失败'
   } finally {
     running.value = false
   }
+}
+
+function parseIntList(raw: string): number[] {
+  return raw
+    .split(/[\s,，]+/)
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0)
+}
+
+async function runOptimize() {
+  error.value = ''
+  running.value = true
+  try {
+    const fastList = parseIntList(optFastSpace.value)
+    const slowList = parseIntList(optSlowSpace.value)
+    if (!fastList.length || !slowList.length) throw new Error('请填写优化参数空间')
+    const { job_id, batch_id } = await backtestApi.startOptimize({
+      vt_symbol: vtSymbol.value.trim(),
+      strategy: strategy.value,
+      start_date: startDate.value,
+      end_date: endDate.value,
+      capital: capital.value,
+      space: { fast_window: fastList, slow_window: slowList },
+      objective: 'sharpe_ratio',
+      ...feePayload(),
+    })
+    await pollJob(job_id)
+    optimizeSummary.value = await backtestApi.optimizeSummary(batch_id)
+    compare.value = optimizeSummary.value.runs
+    if (optimizeSummary.value.best) selected.value = optimizeSummary.value.best
+    statusText.value = `优化 ${batch_id.slice(0, 8)}… 完成`
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '失败'
+  } finally {
+    running.value = false
+  }
+}
+
+function startRun() {
+  if (mode.value === 'single') return runSingle()
+  if (mode.value === 'batch') return runBatch()
+  return runOptimize()
 }
 
 async function openRun(id: string) {
@@ -191,6 +265,7 @@ onMounted(async () => {
 <template>
   <AppShell title="回测" :subtitle="subtitle" active="backtest">
     <div class="page">
+      <p class="engine-tag muted">vnpy CTA 日 K 回测</p>
       <section class="profiles" v-if="profiles.length">
         <button
           v-for="p in profiles"
@@ -207,9 +282,10 @@ onMounted(async () => {
 
       <div class="workspace">
         <aside class="left">
-          <div class="tabs">
+          <div class="tabs tabs3">
             <button type="button" :class="{ on: mode === 'single' }" @click="mode = 'single'">单票</button>
             <button type="button" :class="{ on: mode === 'batch' }" @click="mode = 'batch'">批量</button>
+            <button type="button" :class="{ on: mode === 'optimize' }" @click="mode = 'optimize'">优化</button>
           </div>
 
           <label>
@@ -219,7 +295,7 @@ onMounted(async () => {
             </select>
           </label>
 
-          <label v-if="mode === 'single'">
+          <label v-if="mode !== 'batch'">
             标的
             <input v-model="vtSymbol" placeholder="600519.SSE" />
           </label>
@@ -232,19 +308,27 @@ onMounted(async () => {
             <label>开始<input v-model="startDate" type="date" /></label>
             <label>结束<input v-model="endDate" type="date" /></label>
           </div>
-          <div class="row2">
+          <div class="row2" v-if="mode !== 'optimize'">
             <label>快均线<input v-model.number="fast" type="number" min="2" /></label>
             <label>慢均线<input v-model.number="slow" type="number" min="3" /></label>
           </div>
+          <template v-else>
+            <label>快均线候选<input v-model="optFastSpace" placeholder="3,5,8,10" /></label>
+            <label>慢均线候选<input v-model="optSlowSpace" placeholder="10,20,30,60" /></label>
+          </template>
           <label>资金<input v-model.number="capital" type="number" step="1000" /></label>
 
-          <button
-            class="primary"
-            type="button"
-            :disabled="running"
-            @click="mode === 'single' ? runSingle() : runBatch()"
-          >
-            {{ running ? '回测中…' : '开始回测' }}
+          <button type="button" class="linkish" @click="showFees = !showFees">
+            {{ showFees ? '收起费用' : '费用参数' }}
+          </button>
+          <div v-if="showFees" class="fees">
+            <label>佣金 rate<input v-model.number="rate" type="number" step="0.0001" min="0" /></label>
+            <label>滑点<input v-model.number="slippage" type="number" step="0.01" min="0" /></label>
+            <label>印花税<input v-model.number="stampDuty" type="number" step="0.0001" min="0" /></label>
+          </div>
+
+          <button class="primary" type="button" :disabled="running" @click="startRun()">
+            {{ running ? '回测中…' : mode === 'optimize' ? '开始优化' : '开始回测' }}
           </button>
           <p v-if="statusText" class="muted">{{ statusText }}</p>
           <p v-if="error" class="err">
@@ -300,7 +384,12 @@ onMounted(async () => {
 
         <section class="right">
           <div v-if="selected" class="detail">
-            <h2>{{ selected.vt_symbol }} · {{ selected.strategy }}</h2>
+            <h2>
+              {{ selected.vt_symbol }} · {{ selected.strategy }}
+              <span class="muted" v-if="selected.engine"> · {{ selected.engine }}</span>
+              <span class="muted" v-if="selected.status === 'failed'"> · 失败</span>
+            </h2>
+            <p v-if="selected.error_message" class="err">{{ selected.error_message }}</p>
             <div class="stats">
               <div class="stat">
                 <div class="k">收益%</div>
@@ -320,6 +409,22 @@ onMounted(async () => {
                 <div class="k">成交</div>
                 <div class="v">{{ selected.trade_count ?? '—' }}</div>
               </div>
+              <div class="stat" v-if="numStat('annual_return') != null">
+                <div class="k">年化%</div>
+                <div class="v">{{ numStat('annual_return')!.toFixed(2) }}</div>
+              </div>
+              <div class="stat" v-if="numStat('return_std') != null">
+                <div class="k">波动%</div>
+                <div class="v">{{ numStat('return_std')!.toFixed(2) }}</div>
+              </div>
+              <div class="stat" v-if="numStat('win_rate') != null">
+                <div class="k">胜率</div>
+                <div class="v">{{ numStat('win_rate')!.toFixed(2) }}</div>
+              </div>
+              <div class="stat" v-if="numStat('profit_loss_ratio') != null">
+                <div class="k">盈亏比</div>
+                <div class="v">{{ numStat('profit_loss_ratio')!.toFixed(2) }}</div>
+              </div>
             </div>
             <div class="chart" v-if="spark">
               <svg viewBox="0 0 360 120" preserveAspectRatio="none">
@@ -327,6 +432,17 @@ onMounted(async () => {
               </svg>
             </div>
             <div class="table-wrap" v-if="selected.trades?.length">
+              <div class="table-head">
+                <span>成交明细</span>
+                <button
+                  v-if="selected.trades.length > 40"
+                  type="button"
+                  class="linkish"
+                  @click="showAllTrades = !showAllTrades"
+                >
+                  {{ showAllTrades ? '收起' : '显示全部' }}
+                </button>
+              </div>
               <table>
                 <thead>
                   <tr>
@@ -338,9 +454,9 @@ onMounted(async () => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(t, i) in selected.trades.slice(0, 40)" :key="i">
+                  <tr v-for="(t, i) in displayedTrades" :key="i">
                     <td class="mono">{{ t.datetime }}</td>
-                    <td>{{ t.side }}</td>
+                    <td>{{ t.side || t.direction }}</td>
                     <td>{{ Number(t.price).toFixed(2) }}</td>
                     <td>{{ t.volume }}</td>
                     <td>{{ t.pnl != null ? Number(t.pnl).toFixed(2) : '—' }}</td>
@@ -350,6 +466,13 @@ onMounted(async () => {
             </div>
           </div>
 
+          <div v-if="optimizeSummary?.best" class="compare">
+            <h2>
+              最优（{{ optimizeSummary.objective }}）
+              <span class="muted">夏普 {{ optimizeSummary.best.sharpe_ratio?.toFixed(2) ?? '—' }}</span>
+            </h2>
+          </div>
+
           <div v-if="compare.length" class="compare">
             <h2>对比（{{ compare.length }}）</h2>
             <div class="table-wrap">
@@ -357,21 +480,37 @@ onMounted(async () => {
                 <thead>
                   <tr>
                     <th>标的</th>
+                    <th>状态</th>
                     <th>收益%</th>
                     <th>回撤%</th>
                     <th>夏普</th>
                     <th>成交</th>
+                    <th>参数</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="r in compare" :key="r.id" @click="openRun(r.id)" class="click">
+                  <tr
+                    v-for="r in compare"
+                    :key="r.id"
+                    @click="openRun(r.id)"
+                    class="click"
+                    :class="{ on: optimizeSummary?.best?.id === r.id }"
+                  >
                     <td class="mono">{{ r.vt_symbol }}</td>
+                    <td>{{ r.status === 'failed' ? r.error_message || '失败' : '成功' }}</td>
                     <td :class="{ up: (r.total_return || 0) > 0, down: (r.total_return || 0) < 0 }">
                       {{ r.total_return != null ? r.total_return.toFixed(2) : '—' }}
                     </td>
                     <td>{{ r.max_drawdown != null ? r.max_drawdown.toFixed(2) : '—' }}</td>
                     <td>{{ r.sharpe_ratio != null ? r.sharpe_ratio.toFixed(2) : '—' }}</td>
                     <td>{{ r.trade_count ?? '—' }}</td>
+                    <td class="mono">
+                      {{
+                        r.params?.fast_window != null
+                          ? `${r.params.fast_window}/${r.params.slow_window}`
+                          : '—'
+                      }}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -439,6 +578,35 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
+}
+.tabs3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.engine-tag {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.linkish {
+  background: transparent;
+  border: none;
+  color: var(--brand);
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.fees {
+  display: grid;
+  gap: 8px;
+}
+.table-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 .tabs button {
   background: var(--bg);

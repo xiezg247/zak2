@@ -17,6 +17,10 @@ export type BacktestRun = {
   created_at: string
   equity_curve: { datetime: string; equity: number }[]
   trades: Record<string, unknown>[]
+  engine?: string | null
+  status?: string
+  error_message?: string | null
+  params?: Record<string, unknown>
 }
 
 export type StrategyInfo = {
@@ -25,6 +29,7 @@ export type StrategyInfo = {
   interval: string
   description: string
   implemented: boolean
+  engine?: string
 }
 
 export type StrategyProfile = {
@@ -43,6 +48,13 @@ export type BatchInfo = {
   end_date: string
   created_at: string
   count: number
+}
+
+export type OptimizeSummary = {
+  batch_id: string
+  objective: string
+  best: BacktestRun | null
+  runs: BacktestRun[]
 }
 
 export const backtestApi = {
@@ -64,4 +76,13 @@ export const backtestApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  startOptimize: (body: Record<string, unknown>) =>
+    api<{ job_id: string; batch_id: string }>('/api/v1/backtest/optimize', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  optimizeSummary: (batchId: string, objective = 'sharpe_ratio') =>
+    api<OptimizeSummary>(
+      `/api/v1/backtest/optimize/${encodeURIComponent(batchId)}?objective=${encodeURIComponent(objective)}`,
+    ),
 }
