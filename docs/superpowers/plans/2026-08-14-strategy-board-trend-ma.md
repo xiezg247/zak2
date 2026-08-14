@@ -1,6 +1,6 @@
 # 看盘 trend_ma + 模式偏好 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 看盘第三模式 `trend_ma`（固定 20:60）三轨 warm，UI 切换 + localStorage 记 mode，同参回测预填 trend_ma/ADX。
 
@@ -48,7 +48,7 @@
 - `def compute_trend_ma_signal(highs, lows, closes, *, volumes=None, fast=20, slow=60, adx_period=14, adx_threshold=25.0, vt_symbol, as_of) -> dict | None`
 - buy / sell / hold 规则见 spec §2；`signal_mode="trend_ma"`；`confirm_bars=0`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 在 `test_strategy_signal_ma.py` 追加：
 
@@ -99,7 +99,7 @@ def test_trend_ma_sell_on_structure_break(monkeypatch) -> None:
     assert out["signal"] == "sell"
 ```
 
-- [ ] **Step 2: Run 确认失败**
+- [x] **Step 2: Run 确认失败**
 
 ```bash
 cd backend && uv run pytest tests/test_strategy_signal_ma.py::test_trend_ma_buy_when_cross_and_adx -q
@@ -107,7 +107,7 @@ cd backend && uv run pytest tests/test_strategy_signal_ma.py::test_trend_ma_buy_
 
 Expected: FAIL（`wilder_adx` / `compute_trend_ma_signal` 未定义）
 
-- [ ] **Step 3: 实现**
+- [x] **Step 3: 实现**
 
 在 `strategy_signal_ma.py` 追加常量与函数（要点）：
 
@@ -197,7 +197,7 @@ def compute_trend_ma_signal(...):  # 签名见 Interfaces
     ...
 ```
 
-- [ ] **Step 4: 测试绿**
+- [x] **Step 4: 测试绿**
 
 ```bash
 cd backend && uv run pytest tests/test_strategy_signal_ma.py -q
@@ -205,7 +205,7 @@ cd backend && uv run pytest tests/test_strategy_signal_ma.py -q
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -231,7 +231,7 @@ EOF
 - `_compute_pool`：在现有 heuristic/double_ma 循环后（或同循环末），对池内每标的 upsert `trend_ma:20:60`；`limit = min(200, max(TREND_MA_SLOW * 3, TREND_ADX_PERIOD * 4, 80))`
 - `message` / catalog 含 `trend_ma` / 三轨
 
-- [ ] **Step 1: 扩展 warm 测试**
+- [x] **Step 1: 扩展 warm 测试**
 
 在 `test_ops_warm_watchlist_strategy.py` 的 `test_warm_computes_ma_when_bars`（或同名现有用例）中：
 
@@ -247,7 +247,7 @@ comp_tm.assert_called()
 同步改 `_load_daily_closes` mock：若函数改名为 `_load_daily_bars`，patch 新名，return  
 `([11]*30, [9]*30, [10]*30, [1e5]*30, "2026-08-13")`。
 
-- [ ] **Step 2: 实现 warm + catalog**
+- [x] **Step 2: 实现 warm + catalog**
 
 ```python
 from app.services.strategy_signal_ma import (
@@ -274,13 +274,13 @@ for symbol, exchange in pool:
 
 catalog 描述改为：`… + double_ma + trend_ma 三轨 → watchlist_signal_cache`。
 
-- [ ] **Step 3: 测试绿**
+- [x] **Step 3: 测试绿**
 
 ```bash
 cd backend && uv run pytest tests/test_ops_warm_watchlist_strategy.py -q
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -306,20 +306,20 @@ EOF
 - `resolve_board_config_key`：`mode == trend_ma` → 固定 key
 - `load_strategy_board`：合法 mode 集合含 trend_ma；note 含入场对齐 / 不含追踪止损 / 非 vnpy
 
-- [ ] **Step 1: 测试**
+- [x] **Step 1: 测试**
 
 ```python
 def test_resolve_trend_ma_fixed_key(db):
     assert resolve_board_config_key(db, "u1", signal_mode="trend_ma") == "trend_ma:20:60"
 ```
 
-- [ ] **Step 2: 实现 → 绿**
+- [x] **Step 2: 实现 → 绿**
 
 ```bash
 cd backend && uv run pytest tests/test_strategy_board.py -q
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -349,7 +349,7 @@ EOF
   `{ strategy:'trend_ma', vt_symbol, fast_window:20, slow_window:60, adx_period:14, adx_threshold:25, trailing_stop_pct:0.12 }`
 - BacktestView：`adxPeriod`/`adxThreshold`/`trailingStopPct` refs（默认 14/25/0.12）；`strategy==='trend_ma'` 时显示三输入；`runSingle`/`runBatch`/`runOptimize` body 带这三项；`onMounted` 读 query 预填；**不**调 `startRun`
 
-- [ ] **Step 1: WatchlistView**
+- [x] **Step 1: WatchlistView**
 
 ```ts
 const SIGNAL_MODE_KEY = 'zak2:watchlist:signal_mode'
@@ -400,7 +400,7 @@ function openAlignedBacktest() {
 
 模板加第三钮「趋势均线」。
 
-- [ ] **Step 2: BacktestView**
+- [x] **Step 2: BacktestView**
 
 ```ts
 const adxPeriod = ref(14)
@@ -424,7 +424,7 @@ if (typeof q.adx_period === 'string' && Number(q.adx_period) > 0) adxPeriod.valu
 
 模板：`v-if="strategy === 'trend_ma'"` 三 label。
 
-- [ ] **Step 3: build**
+- [x] **Step 3: build**
 
 ```bash
 cd frontend && npm run build
@@ -432,7 +432,7 @@ cd frontend && npm run build
 
 Expected: 成功
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -453,7 +453,7 @@ EOF
 - `docs/superpowers/specs/2026-08-14-strategy-board-trend-ma-design.md` — 状态 → 已批准（已实现）  
 - 本 plan checklist 勾选
 
-- [ ] **Step 1: 改文档**
+- [x] **Step 1: 改文档**
 
 路线图一行示例：
 
@@ -463,11 +463,11 @@ EOF
 
 smoke：看盘三模式可切；刷新保留；趋势模式「同参回测」预填；warm message 含 trend_ma。
 
-- [ ] **Step 2: `./scripts/check.sh`**
+- [x] **Step 2: `./scripts/check.sh`**
 
 Expected: pytest 全绿 + frontend build OK
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
