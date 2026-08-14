@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.db import SessionLocal, get_db
-from app.jobs.store import job_store
+from app.core.db import get_db
 from app.models.user import User
 from app.schemas.ops import (
     BarsOverviewOut,
@@ -34,10 +31,10 @@ from app.services import (
     ops_sync_sector,
 )
 from app.services.ops_catalog import JOBS_BY_ID
-from app.services.ops_runners import RUNNERS, needs_user_id
+from app.services.ops_enqueue import enqueue_ops_job, list_ops_job_outs
+from app.services.ops_runners import RUNNERS
 
 router = APIRouter(prefix="/ops", tags=["ops"])
-_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ops")
 
 @router.get("/health", response_model=HealthOut)
 def get_health(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> HealthOut:
@@ -165,43 +162,8 @@ def patch_scheduler_job(
     raise HTTPException(status_code=404, detail="未知任务")
 
 
-def _run_ops_job(async_job_id: str, catalog_job_id: str, user_id: str = "") -> None:
-    job_store.update(async_job_id, status="running", progress=0.1)
-    runner = RUNNERS[catalog_job_id]
-    db = SessionLocal()
-    try:
-        if needs_user_id(catalog_job_id):
-            result = runner(db, user_id=user_id)
-        else:
-            result = runner(db)
-        message = str(result.get("message") or "完成")
-        if result.get("skipped"):
-            job_store.update(async_job_id, status="success", progress=1.0, result_ref=message)
-        elif catalog_job_id == "purge_stale_cache" or bool(result.get("success", True)):
-            ok = True if catalog_job_id == "purge_stale_cache" else bool(result.get("success", True))
-            job_store.update(
-                async_job_id,
-                status="success" if ok else "failed",
-                progress=1.0,
-                result_ref=message if ok else None,
-                error=None if ok else message,
-            )
-        else:
-            job_store.update(async_job_id, status="failed", error=message)
-    except Exception as exc:  # noqa: BLE001
-        job_store.update(async_job_id, status="failed", error=str(exc))
-        try:
-            ops_scheduler.save_job_run_meta(
-                db, catalog_job_id, last_message=str(exc), last_success=False
-            )
-        except Exception:  # noqa: BLE001
-            pass
-    finally:
-        db.close()
-
-
 @router.post("/scheduler/jobs/{job_id}/run", response_model=JobAccepted)
-def run_scheduler_job(job_id: str, user: User = Depends(get_current_user)) -> JobAccepted:
+async def run_scheduler_job(job_id: str, user: User = Depends(get_current_user)) -> JobAccepted:
     kind = ops_scheduler.job_kind_for(job_id)
     if kind != "runnable":
         detail = (
@@ -215,9 +177,8 @@ def run_scheduler_job(job_id: str, user: User = Depends(get_current_user)) -> Jo
             status_code=501,
             detail=f"zak2 暂不支持执行该任务，请用 CLI：job run {job_id}",
         )
-    job = job_store.create(f"ops.{job_id}", meta={"user_id": str(user.id)})
-    _executor.submit(_run_ops_job, job.id, job_id, str(user.id))
-    return JobAccepted(job_id=job.id, kind=job.kind)
+    arq_id = await enqueue_ops_job(job_id, user_id=str(user.id), force=True)
+    return JobAccepted(job_id=arq_id, kind=f"ops.{job_id}")
 
 
 @router.post("/sync/screen-intraday", response_model=SyncResult)
@@ -288,19 +249,6 @@ def post_sync_sector(
 
 
 @router.get("/jobs/recent", response_model=list[JobOut])
-def list_ops_jobs(user: User = Depends(get_current_user)) -> list[JobOut]:
+async def list_ops_jobs(user: User = Depends(get_current_user)) -> list[JobOut]:
     _ = user
-    rows = [j for j in job_store.list_recent() if str(j.kind).startswith("ops.")]
-    return [
-        JobOut(
-            id=j.id,
-            kind=j.kind,
-            status=j.status,
-            progress=j.progress,
-            error=j.error,
-            result_ref=j.result_ref,
-            created_at=j.created_at,
-            updated_at=j.updated_at,
-        )
-        for j in rows
-    ]
+    return await list_ops_job_outs(limit=50)
