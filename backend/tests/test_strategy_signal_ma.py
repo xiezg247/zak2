@@ -124,3 +124,49 @@ def test_double_ma_same_day_cross_is_buy(monkeypatch) -> None:
     assert "对齐回测 double_ma" in d["reason_summary"]
     assert h["signal"] == "hold"
     assert h["signal_mode"] == "heuristic_v2"
+
+
+def test_trend_ma_buy_when_cross_and_adx(monkeypatch) -> None:
+    n = 70
+    highs = [10.0] * n
+    lows = [9.0] * n
+    closes = [9.5] * (n - 1) + [11.0]
+
+    def fake_sma(values: list[float], window: int) -> list[float | None]:
+        out: list[float | None] = [None] * len(values)
+        if window == 20:
+            out[-2], out[-1] = 9.0, 11.0
+        else:
+            out[-2], out[-1] = 10.0, 10.0
+        return out
+
+    monkeypatch.setattr(m, "sma", fake_sma)
+    monkeypatch.setattr(m, "wilder_adx", lambda *a, **k: [None] * (n - 1) + [30.0])
+    out = m.compute_trend_ma_signal(
+        highs, lows, closes, fast=20, slow=60, vt_symbol="600519.SSE", as_of="2026-08-14"
+    )
+    assert out is not None
+    assert out["signal"] == "buy"
+    assert out["signal_mode"] == "trend_ma"
+    assert out["adx_value"] == 30.0
+    assert "不含追踪" in out["reason_summary"]
+
+
+def test_trend_ma_sell_on_structure_break(monkeypatch) -> None:
+    n = 70
+    highs = [10.0] * n
+    lows = [9.0] * n
+    closes = [10.0] * (n - 1) + [9.0]
+
+    def fake_sma(values: list[float], window: int) -> list[float | None]:
+        out: list[float | None] = [None] * len(values)
+        out[-2] = out[-1] = 10.0 if window == 60 else 10.5
+        return out
+
+    monkeypatch.setattr(m, "sma", fake_sma)
+    monkeypatch.setattr(m, "wilder_adx", lambda *a, **k: [None] * (n - 1) + [10.0])
+    out = m.compute_trend_ma_signal(
+        highs, lows, closes, fast=20, slow=60, vt_symbol="600519.SSE", as_of="2026-08-14"
+    )
+    assert out is not None
+    assert out["signal"] == "sell"
