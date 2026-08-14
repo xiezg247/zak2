@@ -40,8 +40,8 @@ python scripts/import_from_zak.py --force
 ## 启动
 
 ```bash
-# 一键（推荐：API + 行情采集 + 前端）
-chmod +x scripts/dev.sh scripts/check.sh scripts/quote_collector.sh
+# 一键（推荐：API + 行情采集 + ARQ worker + 前端）
+chmod +x scripts/dev.sh scripts/check.sh scripts/quote_collector.sh scripts/arq_worker.sh
 ./scripts/dev.sh
 ```
 
@@ -57,6 +57,7 @@ uv run python -m app.quote_collector
 
 # 另开：Ops ARQ worker（否则 Ops 立即执行 / 定时入队会一直排队）
 uv run arq app.worker.settings.WorkerSettings
+# 或 ./scripts/arq_worker.sh
 
 cd frontend && npm install && npm run dev
 ```

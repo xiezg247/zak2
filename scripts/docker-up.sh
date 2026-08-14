@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 构建并启动 compose：自带 postgres + redis + api + quote-collector + web
+# 构建并启动 compose：自带 postgres + redis + api + arq-worker + quote-collector + web
 # api 入口会先 alembic upgrade head；宿主机端口见 docker-compose.yml（常为 5433/6380）
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
