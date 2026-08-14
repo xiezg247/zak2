@@ -193,6 +193,46 @@ def _row_seal_label(row: dict[str, Any], first_time_map: dict[str, str] | None) 
     return ""
 
 
+def _group_card_hits(
+    cards: list[RadarCardOut],
+    *,
+    weights: dict[str, float] | None = None,
+) -> dict[str, int]:
+    """vt → 出现在几张有效权重卡。"""
+    table = weights if weights is not None else CARD_WEIGHTS
+    counts: dict[str, int] = {}
+    for card in cards:
+        weight = float(table.get(card.card_id, CARD_WEIGHTS.get(card.card_id, 1.0)))
+        if weight <= 0:
+            continue
+        seen_in_card: set[str] = set()
+        for row in card.rows:
+            if not isinstance(row, dict):
+                continue
+            vt = _row_vt_symbol(row)
+            if not vt or vt in seen_in_card:
+                continue
+            if vt.upper() in {"STAT", "TOTAL", "—", "-"}:
+                continue
+            seen_in_card.add(vt)
+            counts[vt] = counts.get(vt, 0) + 1
+    return counts
+
+
+def resonance_scan_stats(
+    cards: list[RadarCardOut],
+    *,
+    min_cards: int = 2,
+    weights: dict[str, float] | None = None,
+) -> tuple[int, int]:
+    """返回 (scanned_total, excluded_count)。"""
+    min_cards = max(1, min(int(min_cards), 10))
+    counts = _group_card_hits(cards, weights=weights)
+    scanned = len(counts)
+    excluded = sum(1 for n in counts.values() if n < min_cards)
+    return scanned, excluded
+
+
 def compute_resonance(
     cards: list[RadarCardOut],
     *,
