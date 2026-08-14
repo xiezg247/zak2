@@ -28,6 +28,8 @@ const fast = ref(5)
 const slow = ref(20)
 const capital = ref(100000)
 const strategy = ref('double_ma')
+const interval = ref<'d' | '1m'>('d')
+const maxTradingDays = ref(20)
 const rate = ref(0.00045)
 const slippage = ref(0)
 const stampDuty = ref(0.0005)
@@ -56,6 +58,12 @@ function feePayload() {
   }
 }
 
+function intervalPayload() {
+  const body: Record<string, unknown> = { interval: interval.value }
+  if (interval.value === '1m') body.max_trading_days = maxTradingDays.value
+  return body
+}
+
 function numStat(key: string): number | null {
   const v = selected.value?.statistics?.[key]
   return typeof v === 'number' ? v : null
@@ -66,7 +74,11 @@ const displayedTrades = computed(() => {
   return showAllTrades.value ? trades : trades.slice(0, 40)
 })
 
-const showOpsLink = computed(() => /日 K|Ops|补全/.test(error.value))
+const showOpsLink = computed(() => /日 K|分钟 K|fill_focus_pool|关注池|Ops|补全/.test(error.value))
+
+const opsLinkLabel = computed(() =>
+  /分钟 K|fill_focus_pool|关注池/.test(error.value) ? '去 Ops 补全关注池 1m' : '去 Ops 补全日 K',
+)
 
 function applyProfile(p: StrategyProfile) {
   fast.value = p.fast_window
@@ -159,6 +171,7 @@ async function runSingle() {
       fast_window: fast.value,
       slow_window: slow.value,
       capital: capital.value,
+      ...intervalPayload(),
       ...feePayload(),
     })
     await pollJob(job_id)
@@ -187,6 +200,7 @@ async function runBatch() {
       fast_window: fast.value,
       slow_window: slow.value,
       capital: capital.value,
+      ...intervalPayload(),
       ...feePayload(),
     })
     await pollJob(job_id)
@@ -222,6 +236,7 @@ async function runOptimize() {
       capital: capital.value,
       space: { fast_window: fastList, slow_window: slowList },
       objective: 'sharpe_ratio',
+      ...intervalPayload(),
       ...feePayload(),
     })
     await pollJob(job_id)
@@ -265,7 +280,7 @@ onMounted(async () => {
 <template>
   <AppShell title="回测" :subtitle="subtitle" active="backtest">
     <div class="page">
-      <p class="engine-tag muted">vnpy CTA 日 K 回测</p>
+      <p class="engine-tag muted">vnpy CTA · 日 K / 1 分钟</p>
       <section class="profiles" v-if="profiles.length">
         <button
           v-for="p in profiles"
@@ -293,6 +308,21 @@ onMounted(async () => {
             <select v-model="strategy">
               <option v-for="s in strategies" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
+          </label>
+
+          <label>
+            周期
+            <select v-model="interval">
+              <option value="d">日 K</option>
+              <option value="1m">1 分钟</option>
+            </select>
+          </label>
+          <p v-if="interval === '1m'" class="hint muted">
+            均线窗口按分钟根计数；单次交易日默认最多 20（硬顶 60）。缺数据请先 Ops 跑 fill_focus_pool_minute。
+          </p>
+          <label v-if="interval === '1m'">
+            最多交易日
+            <input v-model.number="maxTradingDays" type="number" min="1" max="60" />
           </label>
 
           <label v-if="mode !== 'batch'">
@@ -333,7 +363,7 @@ onMounted(async () => {
           <p v-if="statusText" class="muted">{{ statusText }}</p>
           <p v-if="error" class="err">
             {{ error }}
-            <RouterLink v-if="showOpsLink" to="/ops" class="draft-link">去 Ops 补全日 K</RouterLink>
+            <RouterLink v-if="showOpsLink" to="/ops" class="draft-link">{{ opsLinkLabel }}</RouterLink>
           </p>
 
           <h3>历史</h3>
@@ -386,9 +416,13 @@ onMounted(async () => {
           <div v-if="selected" class="detail">
             <h2>
               {{ selected.vt_symbol }} · {{ selected.strategy }}
+              <span class="muted"> · {{ selected.interval === '1m' ? '1m' : '日 K' }}</span>
               <span class="muted" v-if="selected.engine"> · {{ selected.engine }}</span>
               <span class="muted" v-if="selected.status === 'failed'"> · 失败</span>
             </h2>
+            <p v-if="selected.interval === '1m'" class="hint muted">
+              分钟回测：夏普/年化等仍按引擎日度统计口径，解读时注意样本跨度。
+            </p>
             <p v-if="selected.error_message" class="err">{{ selected.error_message }}</p>
             <div class="stats">
               <div class="stat">
@@ -660,6 +694,10 @@ textarea {
 .muted {
   color: var(--muted);
   font-size: 0.85rem;
+}
+.hint {
+  margin: 0;
+  line-height: 1.4;
 }
 h3 {
   margin: 8px 0 0;
