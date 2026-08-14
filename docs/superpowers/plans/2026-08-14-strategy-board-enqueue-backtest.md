@@ -1,6 +1,6 @@
 # 看盘入队回测 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 策略看盘「入队回测」：confirm 后调用现有回测 API 入队，跳转 `/backtest?job_id=` 轮询；「同参回测」仍只预填。
 
@@ -66,7 +66,7 @@ export function buildEnqueueRunBody(
 // 含 interval:'d', start/end/capital；trend 带 adx；费用字段不传
 ```
 
-- [ ] **Step 1: 写失败断言脚本**
+- [x] **Step 1: 写失败断言脚本**
 
 `frontend/scripts/check-board-backtest-params.mjs`：
 
@@ -104,7 +104,7 @@ console.log('boardBacktestParams ok')
 
 （若 Node 无法直接 import `.ts`，改用 `node --experimental-strip-types` 跑脚本，或把 lib 写成 `.mts` 纯 ESM；实现时选能一次跑通的方式，优先 strip-types。）
 
-- [ ] **Step 2: Run 确认失败**
+- [x] **Step 2: Run 确认失败**
 
 ```bash
 cd frontend && node --experimental-strip-types scripts/check-board-backtest-params.mjs
@@ -112,11 +112,11 @@ cd frontend && node --experimental-strip-types scripts/check-board-backtest-para
 
 Expected: FAIL（模块不存在）
 
-- [ ] **Step 3: 实现 `boardBacktestParams.ts`**
+- [x] **Step 3: 实现 `boardBacktestParams.ts`**
 
 按 Interfaces 实现；`buildAlignedBacktestQuery` 字段与现 `openAlignedBacktest` 一致。
 
-- [ ] **Step 4: 断言绿**
+- [x] **Step 4: 断言绿**
 
 ```bash
 cd frontend && node --experimental-strip-types scripts/check-board-backtest-params.mjs
@@ -124,7 +124,7 @@ cd frontend && node --experimental-strip-types scripts/check-board-backtest-para
 
 Expected: `boardBacktestParams ok`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -155,7 +155,7 @@ EOF
   6. catch → `boardError`；finally `enqueueing=false`
 - 模板：同参旁加按钮；`:disabled="enqueueing"`；文案「入队回测」/「入队中…」
 
-- [ ] **Step 1: 改 WatchlistView**
+- [x] **Step 1: 改 WatchlistView**
 
 ```ts
 import { backtestApi } from '../api/backtest'
@@ -228,7 +228,7 @@ async function enqueueAlignedBacktest() {
 
 删除 vue 内重复的 `parseFastSlowFromConfigKey` / 手写 query 分支（改走 helper）。
 
-- [ ] **Step 2: build**
+- [x] **Step 2: build**
 
 ```bash
 cd frontend && npm run build
@@ -236,7 +236,7 @@ cd frontend && npm run build
 
 Expected: 成功
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -259,7 +259,7 @@ EOF
   - `running = true`；`try { await pollJob(id) } catch { error = … } finally { running = false }`
 - **禁止**在该分支调用 `backtestApi.start` / `startRun`
 
-- [ ] **Step 1: 实现**
+- [x] **Step 1: 实现**
 
 ```ts
 onMounted(async () => {
@@ -288,13 +288,13 @@ onMounted(async () => {
 })
 ```
 
-- [ ] **Step 2: build**
+- [x] **Step 2: build**
 
 ```bash
 cd frontend && npm run build
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -315,7 +315,7 @@ EOF
 - `docs/superpowers/specs/2026-08-14-strategy-board-enqueue-backtest-design.md` — 已批准（已实现）  
 - 本 plan checklist
 
-- [ ] **Step 1: 改文档**
+- [x] **Step 1: 改文档**
 
 路线图：
 
@@ -325,13 +325,13 @@ EOF
 
 smoke：同参仍只预填；入队回测 confirm 后跳转并轮询；无标的提示。
 
-- [ ] **Step 2: `./scripts/check.sh`**
+- [x] **Step 2: `./scripts/check.sh`**
 
 另跑：`cd frontend && node --experimental-strip-types scripts/check-board-backtest-params.mjs`
 
 Expected: 全绿
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
