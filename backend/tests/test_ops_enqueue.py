@@ -10,7 +10,7 @@ from app.schemas.screener import JobOut
 from app.services import arq_jobs as m
 
 
-def test_index_job_writes_unified_and_ops() -> None:
+def test_index_job_writes_unified_zset() -> None:
     client = MagicMock()
     m.index_job(
         client,
@@ -21,8 +21,9 @@ def test_index_job_writes_unified_and_ops() -> None:
         score_ms=1_723_600_000_000,
         ops_job_id="sync_universe",
     )
-    assert client.zadd.call_count >= 2
-    assert client.hset.call_count >= 2
+    client.zadd.assert_called_once()
+    client.hset.assert_called_once()
+    client.zremrangebyrank.assert_called_once()
 
 
 @pytest.mark.asyncio

@@ -16,9 +16,6 @@ from app.core.redis_keys import (
     ARQ_JOBS_META_KEY_FMT,
     ARQ_JOBS_RECENT_MAX,
     ARQ_JOBS_RECENT_ZSET,
-    ARQ_OPS_META_KEY_FMT,
-    ARQ_OPS_RECENT_MAX,
-    ARQ_OPS_RECENT_ZSET,
 )
 from app.core.settings import get_settings
 from app.schemas.screener import JobOut
@@ -78,21 +75,6 @@ def index_job(
     client.zadd(ARQ_JOBS_RECENT_ZSET, {arq_id: score_ms})
     client.hset(jobs_meta, mapping=mapping)
     client.zremrangebyrank(ARQ_JOBS_RECENT_ZSET, 0, -(ARQ_JOBS_RECENT_MAX + 1))
-
-    if kind.startswith("ops."):
-        ops_job_id = str(extra.get("ops_job_id") or kind.removeprefix("ops."))
-        ops_meta = ARQ_OPS_META_KEY_FMT.format(job_id=arq_id)
-        client.zadd(ARQ_OPS_RECENT_ZSET, {arq_id: score_ms})
-        client.hset(
-            ops_meta,
-            mapping={
-                "kind": kind,
-                "ops_job_id": ops_job_id,
-                "created_at": created_at,
-                "user_id": user_id or "",
-            },
-        )
-        client.zremrangebyrank(ARQ_OPS_RECENT_ZSET, 0, -(ARQ_OPS_RECENT_MAX + 1))
 
 
 # 兼容旧名
@@ -294,8 +276,6 @@ def _job_out_from_arq(
 async def get_job_out(job_id: str) -> JobOut | None:
     client = _sync_redis()
     meta = client.hgetall(ARQ_JOBS_META_KEY_FMT.format(job_id=job_id)) or {}
-    if not meta:
-        meta = client.hgetall(ARQ_OPS_META_KEY_FMT.format(job_id=job_id)) or {}
     kind = str(meta.get("kind") or "")
     created_at = str(meta.get("created_at") or datetime.now(UTC).isoformat())
 
@@ -338,8 +318,6 @@ async def get_ops_job_out(job_id: str) -> JobOut | None:
 async def list_job_outs(*, limit: int = 50) -> list[JobOut]:
     client = _sync_redis()
     ids = client.zrevrange(ARQ_JOBS_RECENT_ZSET, 0, max(limit - 1, 0)) or []
-    if not ids:
-        ids = client.zrevrange(ARQ_OPS_RECENT_ZSET, 0, max(limit - 1, 0)) or []
     out: list[JobOut] = []
     for arq_id in ids:
         row = await get_job_out(str(arq_id))
