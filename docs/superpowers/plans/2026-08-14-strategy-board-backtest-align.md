@@ -1,6 +1,6 @@
 # 看盘 ↔ 回测信号对齐 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 看盘双模式（heuristic_v2 / double_ma）预热双轨 cache，UI 可切换，并支持同参预填跳转回测。
 
@@ -48,7 +48,7 @@
 - 最低 `len(closes) >= slow + 1`（昨今有效均线）
 - `compute_ma_signal` 返回值增加 `"signal_mode": "heuristic_v2"`
 
-- [ ] **Step 1: 写失败测试（合成收盘序列）**
+- [x] **Step 1: 写失败测试（合成收盘序列）**
 
 ```python
 def test_double_ma_same_day_cross_is_buy():
@@ -65,7 +65,7 @@ def test_double_ma_same_day_cross_is_buy():
 
 （closes 可用现有测试里的序列或手写：前段横盘，末段上穿。）
 
-- [ ] **Step 2: 实现 → 绿 → Commit**
+- [x] **Step 2: 实现 → 绿 → Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -92,9 +92,9 @@ EOF
 - `message` 含 `double_ma` / 双轨字样
 - catalog：`双均线启发式 v2 + double_ma 双轨 → watchlist_signal_cache`
 
-- [ ] **Step 1: mock `_load_daily_closes` + 断言 `_upsert_signal` 被以 `double_ma:` 前缀调用**
+- [x] **Step 1: mock `_load_daily_closes` + 断言 `_upsert_signal` 被以 `double_ma:` 前缀调用**
 
-- [ ] **Step 2: 实现 → 绿 → Commit**
+- [x] **Step 2: 实现 → 绿 → Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -129,9 +129,9 @@ EOF
 - Schema：`StrategyBoardOut.signal_mode: str = "heuristic_v2"`
 - API：`signal_mode: str = Query(default="heuristic_v2")` 传入 `load_strategy_board`
 
-- [ ] **Step 1: 单测 resolve 默认 5:20；用户偏好 5:10 → `double_ma:5:10`**
+- [x] **Step 1: 单测 resolve 默认 5:20；用户偏好 5:10 → `double_ma:5:10`**
 
-- [ ] **Step 2: 实现 → 绿 → Commit**
+- [x] **Step 2: 实现 → 绿 → Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -158,9 +158,9 @@ EOF
 - 「同参回测」：取当前信号表第一行或选中行 `vt_symbol`，以及从 `board.config_key` parse fast/slow（`double_ma:5:20` → 5,20；heuristic key 取末两段），`router.push({ path:'/backtest', query:{ strategy:'double_ma', vt_symbol, fast_window, slow_window }})`
 - BacktestView：`onMounted` 读 `useRoute().query`：若有 `vt_symbol`/`strategy`/`fast_window`/`slow_window` 则写入对应 ref；**不**调用 `startRun`
 
-- [ ] **Step 1: 实现 UI + query 预填**
+- [x] **Step 1: 实现 UI + query 预填**
 
-- [ ] **Step 2: `npm run build` → Commit**
+- [x] **Step 2: `npm run build` → Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -180,9 +180,9 @@ EOF
 - `docs/smoke-checklist.md`
 - spec 状态 → 已批准（已实现）
 
-- [ ] **Step 1: 更新文档**
+- [x] **Step 1: 更新文档**
 
-- [ ] **Step 2: `./scripts/check.sh` → Commit**
+- [x] **Step 2: `./scripts/check.sh` → Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
