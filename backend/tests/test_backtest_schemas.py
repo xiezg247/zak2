@@ -1,0 +1,16 @@
+from app.schemas.backtest import BacktestRunRequest, OptimizeBacktestRequest
+
+
+def test_run_request_fee_defaults():
+    r = BacktestRunRequest(vt_symbol="600519.SSE")
+    assert r.rate == 0.00045
+    assert r.slippage == 0.0
+    assert r.stamp_duty == 0.0005
+
+
+def test_optimize_request_accepts_space():
+    o = OptimizeBacktestRequest(
+        vt_symbol="600519.SSE",
+        space={"fast_window": [5, 10], "slow_window": [20, 30]},
+    )
+    assert o.objective == "sharpe_ratio"

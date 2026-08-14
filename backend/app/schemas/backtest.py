@@ -22,6 +22,10 @@ class BacktestRunOut(BaseModel):
     created_at: str
     equity_curve: list[dict[str, Any]] = Field(default_factory=list)
     trades: list[dict[str, Any]] = Field(default_factory=list)
+    engine: str | None = None
+    status: str = "success"
+    error_message: str | None = None
+    params: dict[str, Any] = Field(default_factory=dict)
 
 
 class BacktestRunRequest(BaseModel):
@@ -33,10 +37,13 @@ class BacktestRunRequest(BaseModel):
     fast_window: int = Field(default=5, ge=2, le=120)
     slow_window: int = Field(default=20, ge=3, le=250)
     capital: float = Field(default=100_000, gt=0)
+    rate: float = Field(default=0.00045, ge=0)
+    slippage: float = Field(default=0.0, ge=0)
+    stamp_duty: float = Field(default=0.0005, ge=0)
 
 
 class BatchBacktestRequest(BaseModel):
-    symbols: list[str] = Field(min_length=1, max_length=20)
+    symbols: list[str] = Field(min_length=1, max_length=50)
     strategy: str = "double_ma"
     interval: str = "d"
     start_date: str = "2020-01-01"
@@ -44,6 +51,30 @@ class BatchBacktestRequest(BaseModel):
     fast_window: int = 5
     slow_window: int = 20
     capital: float = 100_000
+    rate: float = Field(default=0.00045, ge=0)
+    slippage: float = Field(default=0.0, ge=0)
+    stamp_duty: float = Field(default=0.0005, ge=0)
+
+
+class OptimizeBacktestRequest(BaseModel):
+    vt_symbol: str = Field(description="如 600519.SSE")
+    strategy: str = "double_ma"
+    interval: str = "d"
+    start_date: str = "2020-01-01"
+    end_date: str = "2026-12-31"
+    capital: float = Field(default=100_000, gt=0)
+    rate: float = Field(default=0.00045, ge=0)
+    slippage: float = Field(default=0.0, ge=0)
+    stamp_duty: float = Field(default=0.0005, ge=0)
+    space: dict[str, list[int]] = Field(default_factory=dict)
+    objective: str = "sharpe_ratio"
+
+
+class OptimizeSummaryOut(BaseModel):
+    batch_id: str
+    objective: str
+    best: BacktestRunOut | None = None
+    runs: list[BacktestRunOut] = Field(default_factory=list)
 
 
 class StrategyInfo(BaseModel):
@@ -52,6 +83,7 @@ class StrategyInfo(BaseModel):
     interval: str
     description: str
     implemented: bool = True
+    engine: str = "vnpy"
 
 
 class StrategyProfileOut(BaseModel):

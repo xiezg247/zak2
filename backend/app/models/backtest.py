@@ -24,4 +24,8 @@ class BacktestRun(Base):
     source: Mapped[str] = mapped_column(Text, nullable=False, default="single")
     batch_id: Mapped[str | None] = mapped_column(Text)
     raw_statistics_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    engine: Mapped[str | None] = mapped_column(Text)
+    params_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="success")
+    error_message: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
