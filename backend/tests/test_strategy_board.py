@@ -103,6 +103,13 @@ def test_resolve_board_config_key_double_ma_from_pref() -> None:
     assert resolve_board_config_key(db, "u1", signal_mode="double_ma") == "double_ma:5:10"
 
 
+def test_resolve_board_config_key_trend_ma_fixed() -> None:
+    from app.services.strategy_board import resolve_board_config_key
+
+    db = MagicMock()
+    assert resolve_board_config_key(db, "u1", signal_mode="trend_ma") == "trend_ma:20:60"
+
+
 def test_enrich_position_risk_float_loss() -> None:
     out = enrich_position_risk(
         {"exit_signal": "hold", "unrealized_pnl_pct": -6.0},

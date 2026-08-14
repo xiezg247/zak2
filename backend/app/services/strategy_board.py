@@ -30,6 +30,7 @@ from app.services.tushare_screener import latest_open_yyyymmdd
 DEFAULT_CONFIG_KEY = "AshareShortBreakoutStrategy:5:10"
 SIGNAL_MODE_HEURISTIC = "heuristic_v2"
 SIGNAL_MODE_DOUBLE_MA = "double_ma"
+SIGNAL_MODE_TREND_MA = "trend_ma"
 DEFAULT_DOUBLE_MA_FAST = 5
 DEFAULT_DOUBLE_MA_SLOW = 20
 _CHINA_TZ = timezone(timedelta(hours=8))
@@ -98,6 +99,12 @@ def double_ma_config_key(fast: int, slow: int) -> str:
     return f"double_ma:{int(fast)}:{int(slow)}"
 
 
+def trend_ma_config_key() -> str:
+    from app.services.strategy_signal_ma import TREND_MA_FAST, TREND_MA_SLOW
+
+    return f"trend_ma:{TREND_MA_FAST}:{TREND_MA_SLOW}"
+
+
 def _pref_fast_slow(db: Session, user_id: str) -> tuple[int, int]:
     row = db.execute(
         text(
@@ -136,6 +143,8 @@ def resolve_board_config_key(
     if mode == SIGNAL_MODE_DOUBLE_MA:
         fast, slow = _pref_fast_slow(db, user_id)
         return double_ma_config_key(fast, slow)
+    if mode == SIGNAL_MODE_TREND_MA:
+        return trend_ma_config_key()
     return resolve_config_key(db, user_id, None)
 
 
@@ -339,7 +348,7 @@ def load_strategy_board(
     signal_mode: str = SIGNAL_MODE_HEURISTIC,
 ) -> dict[str, Any]:
     mode = (signal_mode or SIGNAL_MODE_HEURISTIC).strip() or SIGNAL_MODE_HEURISTIC
-    if mode not in {SIGNAL_MODE_HEURISTIC, SIGNAL_MODE_DOUBLE_MA}:
+    if mode not in {SIGNAL_MODE_HEURISTIC, SIGNAL_MODE_DOUBLE_MA, SIGNAL_MODE_TREND_MA}:
         mode = SIGNAL_MODE_HEURISTIC
     ck = resolve_board_config_key(db, user_id, signal_mode=mode, override=config_key)
     items = repo.list_items(db, user_id)
@@ -563,6 +572,10 @@ def load_strategy_board(
         )
     if mode == SIGNAL_MODE_DOUBLE_MA:
         mode_note = "模式：回测双均线（当日交叉，规则对齐 /backtest double_ma，非 vnpy 进程）。"
+    elif mode == SIGNAL_MODE_TREND_MA:
+        mode_note = (
+            "模式：趋势均线（入场对齐 CTA trend_ma；卖点不含追踪止损；非 vnpy 进程）。"
+        )
     else:
         mode_note = "模式：启发式确认（交叉次日确认 N=2）。"
     note = f"{mode_note} {note}".strip() if note else mode_note
