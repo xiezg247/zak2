@@ -16,7 +16,6 @@ from app.services.backtest_optimize import pick_best
 from app.services.backtest_settings import build_strategy_setting, min_bars_for_request
 from app.services.symbols import to_vt_symbol
 from app.services.watchlist_repo import resolve_symbol_pair
-from app.strategies.cta.registry import get_strategy_class
 
 
 def _now() -> str:
@@ -194,6 +193,8 @@ def execute_single(
     if req.fast_window >= req.slow_window:
         raise HTTPException(status_code=400, detail="fast_window 须小于 slow_window")
     try:
+        from app.strategies.cta.registry import get_strategy_class
+
         get_strategy_class(req.strategy)
     except KeyError as exc:
         raise HTTPException(status_code=501, detail=f"策略「{req.strategy}」尚未实现") from exc

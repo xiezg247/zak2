@@ -7,13 +7,6 @@ from app.schemas.backtest import BacktestRunRequest
 from app.services.backtest_settings import build_strategy_setting, min_bars_for_request
 from app.strategies.cta.registry import get_strategy_class
 
-pytest.importorskip("vnpy_ctastrategy")
-
-
-@pytest.mark.vnpy
-def test_registry_trend_ma():
-    assert get_strategy_class("trend_ma").__name__ == "TrendMaStrategy"
-
 
 def test_unknown_strategy_keyerror():
     with pytest.raises(KeyError):
@@ -37,8 +30,27 @@ def test_build_setting_and_min_bars():
     assert min_bars_for_request(ma) == 30
 
 
+def test_execute_unknown_strategy_501():
+    from app.services import backtest_repo as repo
+
+    class DummyDb:
+        pass
+
+    req = BacktestRunRequest(vt_symbol="600519.SSE", strategy="ghost")
+    with pytest.raises(HTTPException) as ei:
+        repo.execute_single(DummyDb(), "u1", req)  # type: ignore[arg-type]
+    assert ei.value.status_code == 501
+
+
+@pytest.mark.vnpy
+def test_registry_trend_ma():
+    pytest.importorskip("vnpy_ctastrategy")
+    assert get_strategy_class("trend_ma").__name__ == "TrendMaStrategy"
+
+
 @pytest.mark.vnpy
 def test_run_cta_trend_ma_synthetic():
+    pytest.importorskip("vnpy_ctastrategy")
     from app.services.backtest_vnpy import run_cta_backtest
 
     start = datetime(2020, 1, 2)
@@ -82,15 +94,3 @@ def test_run_cta_trend_ma_synthetic():
     )
     assert "statistics" in out
     assert out["statistics"].get("engine") == "vnpy"
-
-
-def test_execute_unknown_strategy_501(monkeypatch):
-    from app.services import backtest_repo as repo
-
-    class DummyDb:
-        pass
-
-    req = BacktestRunRequest(vt_symbol="600519.SSE", strategy="ghost")
-    with pytest.raises(HTTPException) as ei:
-        repo.execute_single(DummyDb(), "u1", req)  # type: ignore[arg-type]
-    assert ei.value.status_code == 501
