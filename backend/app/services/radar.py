@@ -134,6 +134,84 @@ def _synth_change_top() -> RadarCardOut:
     )
 
 
+def _synth_limit_break(db: Session) -> RadarCardOut | None:
+    from app.services.limit_list_store import list_limit_list
+
+    payload = list_limit_list(db, lazy_fetch=False)
+    rows_in = list(payload.get("rows") or [])
+    rows: list[dict[str, Any]] = []
+    for item in rows_in:
+        try:
+            open_times = float(item.get("open_times") or 0)
+        except (TypeError, ValueError):
+            open_times = 0.0
+        if open_times <= 0:
+            continue
+        vt = str(item.get("vt_symbol") or "").strip()
+        if not vt:
+            continue
+        rows.append(
+            {
+                "vt_symbol": vt,
+                "name": str(item.get("name") or ""),
+                "open_times": open_times,
+                "limit_times": item.get("limit_times"),
+                "seal_time_label": str(item.get("seal_time_label") or ""),
+            }
+        )
+    rows.sort(key=lambda r: (-float(r["open_times"]), str(r["vt_symbol"])))
+    rows = rows[:30]
+    if not rows:
+        return None
+    return RadarCardOut(
+        card_id="discovery_limit_break",
+        title="发现·炸板断板",
+        subtitle=str(payload.get("trade_date") or ""),
+        source="synthesized",
+        rows=rows,
+    )
+
+
+def _synth_volume_surge() -> RadarCardOut | None:
+    from app.services.quotes import _to_vt_symbol
+
+    store = get_quote_store()
+    if not store.available():
+        return None
+    ranked = store.list_rank("volume_ratio", top_n=80)
+    filtered = [(tf, score) for tf, score in ranked if float(score) >= 2.0]
+    if not filtered:
+        return None
+    filtered = filtered[:30]
+    quotes = {q.symbol: q for q in store.get_quotes([s for s, _ in filtered])}
+    rows: list[dict[str, Any]] = []
+    for tf, score in filtered:
+        q = quotes.get(tf)
+        vt = ""
+        try:
+            vt = _to_vt_symbol(tf) if "." in tf and tf.split(".", 1)[0] in {"SHSE", "SZSE", "BJSE"} else ""
+        except Exception:  # noqa: BLE001
+            vt = ""
+        if not vt:
+            vt = str(tf)
+        rows.append(
+            {
+                "tf_symbol": tf,
+                "vt_symbol": vt,
+                "name": q.name if q else "",
+                "volume_ratio": float(score),
+                "change_pct": q.change_pct if q else None,
+                "last_price": q.last_price if q else None,
+            }
+        )
+    return RadarCardOut(
+        card_id="discovery_volume_surge",
+        title="发现·放量异动",
+        source="synthesized",
+        rows=rows,
+    )
+
+
 def _synth_leader_pick(db: Session) -> RadarCardOut:
     from app.services import leader_screen
 
@@ -149,12 +227,19 @@ def _synth_leader_pick(db: Session) -> RadarCardOut:
 
 
 def build_synthesized_cards(db: Session) -> list[RadarCardOut]:
-    return [
+    cards = [
         _synth_leader_pick(db),
         _synth_limit_ladder(db),
         _synth_sector_hot(db),
         _synth_change_top(),
     ]
+    limit_break = _synth_limit_break(db)
+    if limit_break is not None:
+        cards.append(limit_break)
+    volume_surge = _synth_volume_surge()
+    if volume_surge is not None:
+        cards.append(volume_surge)
+    return cards
 
 
 def list_radar_cards(db: Session) -> list[RadarCardOut]:
@@ -172,9 +257,11 @@ def list_radar_cards(db: Session) -> list[RadarCardOut]:
     priority = {
         "leader_pick": 0,
         "discovery_limit_ladder": 1,
-        "discovery_change_top": 2,
-        "sector_flow_hot": 3,
-        "watchlist_short_term": 4,
+        "discovery_limit_break": 2,
+        "discovery_volume_surge": 3,
+        "discovery_change_top": 4,
+        "sector_flow_hot": 5,
+        "watchlist_short_term": 6,
     }
     out.sort(key=lambda c: priority.get(c.card_id, 50))
     return out
