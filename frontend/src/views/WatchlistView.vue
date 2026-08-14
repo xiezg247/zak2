@@ -53,7 +53,25 @@ const fund = ref<Fundamentals | null>(null)
 const lastRefresh = ref('')
 const board = ref<StrategyBoard | null>(null)
 const boardError = ref('')
-const signalMode = ref<'heuristic_v2' | 'double_ma'>('heuristic_v2')
+const SIGNAL_MODE_KEY = 'zak2:watchlist:signal_mode'
+type SignalMode = 'heuristic_v2' | 'double_ma' | 'trend_ma'
+const VALID_SIGNAL_MODES: SignalMode[] = ['heuristic_v2', 'double_ma', 'trend_ma']
+
+function loadSignalMode(): SignalMode {
+  try {
+    const v = localStorage.getItem(SIGNAL_MODE_KEY)
+    if (v && (VALID_SIGNAL_MODES as string[]).includes(v)) return v as SignalMode
+  } catch {
+    /* ignore */
+  }
+  return 'heuristic_v2'
+}
+
+function saveSignalMode(mode: SignalMode) {
+  localStorage.setItem(SIGNAL_MODE_KEY, mode)
+}
+
+const signalMode = ref<SignalMode>(loadSignalMode())
 const positions = ref<PositionItem[]>([])
 const posError = ref('')
 const posMsg = ref('')
@@ -297,9 +315,10 @@ async function refreshBoard(quiet = false) {
   }
 }
 
-function setSignalMode(mode: 'heuristic_v2' | 'double_ma') {
+function setSignalMode(mode: SignalMode) {
   if (signalMode.value === mode) return
   signalMode.value = mode
+  saveSignalMode(mode)
   void refreshBoard()
 }
 
@@ -323,6 +342,21 @@ function openAlignedBacktest() {
     ''
   if (!vt) {
     boardError.value = '无可用标的，请先选中自选或等待信号'
+    return
+  }
+  if (signalMode.value === 'trend_ma') {
+    void router.push({
+      path: '/backtest',
+      query: {
+        strategy: 'trend_ma',
+        vt_symbol: vt,
+        fast_window: '20',
+        slow_window: '60',
+        adx_period: '14',
+        adx_threshold: '25',
+        trailing_stop_pct: '0.12',
+      },
+    })
     return
   }
   const { fast, slow } = parseFastSlowFromConfigKey(board.value?.config_key || '')
@@ -1397,6 +1431,14 @@ onUnmounted(() => {
               @click="setSignalMode('double_ma')"
             >
               回测双均线
+            </button>
+            <button
+              type="button"
+              class="ghost"
+              :class="{ on: signalMode === 'trend_ma' }"
+              @click="setSignalMode('trend_ma')"
+            >
+              趋势均线
             </button>
           </div>
           <button type="button" class="ghost" @click="openAlignedBacktest()">同参回测</button>

@@ -562,7 +562,7 @@ def load_strategy_board(
         )
     elif not signals and not positions:
         note = (
-            "暂无策略缓存。可 Ops 跑 warm_watchlist_strategy_cache（启发式 + double_ma 双轨），"
+            "暂无策略缓存。可 Ops 跑 warm_watchlist_strategy_cache（启发式 + double_ma + trend_ma 三轨），"
             "或确认 Redis/PG 已有信号缓存；亦可先维护信号名单与持仓记账。"
         )
     elif not signals:

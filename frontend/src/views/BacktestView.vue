@@ -32,6 +32,9 @@ const capital = ref(100000)
 const strategy = ref('double_ma')
 const interval = ref<'d' | '1m'>('d')
 const maxTradingDays = ref(20)
+const adxPeriod = ref(14)
+const adxThreshold = ref(25)
+const trailingStopPct = ref(0.12)
 const rate = ref(0.00045)
 const slippage = ref(0)
 const stampDuty = ref(0.0005)
@@ -57,6 +60,15 @@ function feePayload() {
     rate: rate.value,
     slippage: slippage.value,
     stamp_duty: stampDuty.value,
+  }
+}
+
+function trendPayload() {
+  if (strategy.value !== 'trend_ma') return {}
+  return {
+    adx_period: adxPeriod.value,
+    adx_threshold: adxThreshold.value,
+    trailing_stop_pct: trailingStopPct.value,
   }
 }
 
@@ -175,6 +187,7 @@ async function runSingle() {
       capital: capital.value,
       ...intervalPayload(),
       ...feePayload(),
+      ...trendPayload(),
     })
     await pollJob(job_id)
     statusText.value = '完成'
@@ -204,6 +217,7 @@ async function runBatch() {
       capital: capital.value,
       ...intervalPayload(),
       ...feePayload(),
+      ...trendPayload(),
     })
     await pollJob(job_id)
     compare.value = await backtestApi.runs(batch_id)
@@ -240,6 +254,7 @@ async function runOptimize() {
       objective: 'sharpe_ratio',
       ...intervalPayload(),
       ...feePayload(),
+      ...trendPayload(),
     })
     await pollJob(job_id)
     optimizeSummary.value = await backtestApi.optimizeSummary(batch_id)
@@ -273,6 +288,11 @@ onMounted(async () => {
   if (typeof q.strategy === 'string' && q.strategy.trim()) strategy.value = q.strategy.trim()
   if (typeof q.fast_window === 'string' && Number(q.fast_window) > 0) fast.value = Number(q.fast_window)
   if (typeof q.slow_window === 'string' && Number(q.slow_window) > 0) slow.value = Number(q.slow_window)
+  if (typeof q.adx_period === 'string' && Number(q.adx_period) > 0) adxPeriod.value = Number(q.adx_period)
+  if (typeof q.adx_threshold === 'string' && Number(q.adx_threshold) > 0)
+    adxThreshold.value = Number(q.adx_threshold)
+  if (typeof q.trailing_stop_pct === 'string' && Number(q.trailing_stop_pct) > 0)
+    trailingStopPct.value = Number(q.trailing_stop_pct)
 
   loading.value = true
   try {
@@ -354,6 +374,14 @@ onMounted(async () => {
             <label>快均线候选<input v-model="optFastSpace" placeholder="3,5,8,10" /></label>
             <label>慢均线候选<input v-model="optSlowSpace" placeholder="10,20,30,60" /></label>
           </template>
+          <div class="row2" v-if="strategy === 'trend_ma' && mode !== 'optimize'">
+            <label>ADX 周期<input v-model.number="adxPeriod" type="number" min="2" /></label>
+            <label>ADX 阈值<input v-model.number="adxThreshold" type="number" min="0" step="0.1" /></label>
+          </div>
+          <label v-if="strategy === 'trend_ma' && mode !== 'optimize'">
+            追踪止损
+            <input v-model.number="trailingStopPct" type="number" min="0.01" max="1" step="0.01" />
+          </label>
           <label>资金<input v-model.number="capital" type="number" step="1000" /></label>
 
           <button type="button" class="linkish" @click="showFees = !showFees">
