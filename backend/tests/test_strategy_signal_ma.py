@@ -97,3 +97,30 @@ def test_insufficient_slow_plus_two_returns_none() -> None:
         m.compute_ma_signal([1.0] * 11, fast=5, slow=10, vt_symbol="x", as_of="2026-01-01")
         is None
     )
+
+
+def test_double_ma_same_day_cross_is_buy(monkeypatch) -> None:
+    closes = [1.0] * 12
+
+    def fake_sma(values: list[float], window: int) -> list[float | None]:
+        n = len(values)
+        out: list[float | None] = [None] * n
+        if window == 5:
+            out[-3], out[-2], out[-1] = 1.0, 1.0, 3.0
+        else:
+            out[-3], out[-2], out[-1] = 2.0, 2.0, 2.0
+        return out
+
+    monkeypatch.setattr(m, "sma", fake_sma)
+    d = m.compute_double_ma_signal(
+        closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13"
+    )
+    h = m.compute_ma_signal(
+        closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13"
+    )
+    assert d is not None and h is not None
+    assert d["signal"] == "buy"
+    assert d["signal_mode"] == "double_ma"
+    assert "对齐回测 double_ma" in d["reason_summary"]
+    assert h["signal"] == "hold"
+    assert h["signal_mode"] == "heuristic_v2"

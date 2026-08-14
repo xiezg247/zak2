@@ -132,6 +132,67 @@ def compute_ma_signal(
         "confirm_bars": CONFIRM_BARS,
         "strength_tier": tier,
         "strength_tier_label": tier_label,
+        "signal_mode": "heuristic_v2",
+    }
+    if vol_ratio is not None:
+        out["volume_ratio_5d"] = round(vol_ratio, 4)
+    return out
+
+
+def compute_double_ma_signal(
+    closes: list[float],
+    *,
+    volumes: list[float] | None = None,
+    fast: int,
+    slow: int,
+    vt_symbol: str,
+    as_of: str,
+) -> dict[str, Any] | None:
+    """当日交叉买卖，对齐回测 double_ma（无确认棒）。"""
+    if fast >= slow or len(closes) < slow + 1:
+        return None
+    fast_ma = sma(closes, fast)
+    slow_ma = sma(closes, slow)
+    i = len(closes) - 1
+    j = i - 1
+    f, s = fast_ma[i], slow_ma[i]
+    pf, ps = fast_ma[j], slow_ma[j]
+    if None in (f, s, pf, ps):
+        return None
+
+    kind = cross_kind(pf, ps, f, s)
+    gap = (f - s) / s * 100.0 if s else 0.0
+    gap_abs = abs(gap)
+    tier, tier_label = strength_tier_for(gap_abs)
+
+    vol_ratio = None
+    if volumes and len(volumes) == len(closes) and len(volumes) >= 5:
+        last = volumes[-1]
+        avg5 = sum(volumes[-5:]) / 5.0
+        if avg5 > 0:
+            vol_ratio = last / avg5
+
+    if kind == "buy":
+        reason = f"{fast}/{slow} 日均线金叉（双均线当日交叉（对齐回测 double_ma）·{tier_label}）"
+    elif kind == "sell":
+        reason = f"{fast}/{slow} 日均线死叉（双均线当日交叉（对齐回测 double_ma）·{tier_label}）"
+    else:
+        reason = f"{fast}/{slow} 日均线观望（双均线当日交叉（对齐回测 double_ma）·{tier_label}）"
+
+    out: dict[str, Any] = {
+        "signal": kind,
+        "signal_label": _LABEL[kind],
+        "vt_symbol": vt_symbol,
+        "as_of": as_of[:10],
+        "signal_date": as_of[:10],
+        "last_close": closes[-1],
+        "ma_gap_pct": round(gap, 4),
+        "reason_summary": reason,
+        "strength": round(gap_abs, 4),
+        "confirm_bars": 0,
+        "strength_tier": tier,
+        "strength_tier_label": tier_label,
+        "signal_mode": "double_ma",
     }
     if vol_ratio is not None:
         out["volume_ratio_5d"] = round(vol_ratio, 4)
