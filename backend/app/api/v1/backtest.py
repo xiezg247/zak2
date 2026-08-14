@@ -13,14 +13,22 @@ from app.schemas.backtest import (
     BacktestRunOut,
     BacktestRunRequest,
     JobAccepted,
+    OptimizeBacktestRequest,
+    OptimizeSummaryOut,
     StrategyInfo,
     StrategyProfileOut,
 )
 from app.services import backtest_repo as repo
 from app.services.arq_jobs import BACKTEST_FUNCS, enqueue_app_job
 from app.services.backtest_engine import PROFILES, STRATEGIES
+from app.services.backtest_optimize import expand_ma_grid
 
 router = APIRouter(prefix="/backtest", tags=["backtest"])
+
+
+def _validate_ma_windows(fast: int, slow: int) -> None:
+    if fast >= slow:
+        raise HTTPException(status_code=400, detail="fast_window 须小于 slow_window")
 
 
 @router.get("/strategies", response_model=list[StrategyInfo])
@@ -64,6 +72,7 @@ def get_batches(user: User = Depends(get_current_user), db: Session = Depends(ge
 
 @router.post("/runs", response_model=JobAccepted)
 async def post_run(body: BacktestRunRequest, user: User = Depends(get_current_user)) -> JobAccepted:
+    _validate_ma_windows(body.fast_window, body.slow_window)
     kind = "backtest.single"
     job_id = await enqueue_app_job(
         function=BACKTEST_FUNCS[kind],
@@ -76,6 +85,7 @@ async def post_run(body: BacktestRunRequest, user: User = Depends(get_current_us
 
 @router.post("/runs/batch", response_model=JobAccepted)
 async def post_batch(body: BatchBacktestRequest, user: User = Depends(get_current_user)) -> JobAccepted:
+    _validate_ma_windows(body.fast_window, body.slow_window)
     batch_id = uuid4().hex
     kind = "backtest.batch"
     job_id = await enqueue_app_job(
@@ -86,3 +96,31 @@ async def post_batch(body: BatchBacktestRequest, user: User = Depends(get_curren
         batch_id=batch_id,
     )
     return JobAccepted(job_id=job_id, batch_id=batch_id)
+
+
+@router.post("/optimize", response_model=JobAccepted)
+async def post_optimize(body: OptimizeBacktestRequest, user: User = Depends(get_current_user)) -> JobAccepted:
+    try:
+        expand_ma_grid(body.space)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    batch_id = uuid4().hex
+    kind = "backtest.optimize"
+    job_id = await enqueue_app_job(
+        function=BACKTEST_FUNCS[kind],
+        kind=kind,
+        user_id=str(user.id),
+        payload=body.model_dump(),
+        batch_id=batch_id,
+    )
+    return JobAccepted(job_id=job_id, batch_id=batch_id)
+
+
+@router.get("/optimize/{batch_id}", response_model=OptimizeSummaryOut)
+def get_optimize(
+    batch_id: str,
+    objective: str = Query(default="sharpe_ratio"),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OptimizeSummaryOut:
+    return repo.summarize_optimize(db, str(user.id), batch_id, objective=objective)

@@ -33,6 +33,7 @@ SCREENER_FUNCS = {
 BACKTEST_FUNCS = {
     "backtest.single": "run_backtest_single",
     "backtest.batch": "run_backtest_batch",
+    "backtest.optimize": "run_backtest_optimize",
 }
 
 
@@ -184,14 +185,19 @@ async def enqueue_app_job(
 ) -> str:
     pool = await _arq_pool()
     settings = get_settings()
+    queue = (
+        settings.arq_backtest_queue_name
+        if kind.startswith("backtest.")
+        else settings.arq_queue_name
+    )
     kwargs: dict[str, Any] = {"user_id": user_id, "payload": payload}
     if batch_id is not None:
         kwargs["batch_id"] = batch_id
-    job = await pool.enqueue_job(function, _queue_name=settings.arq_queue_name, **kwargs)
+    job = await pool.enqueue_job(function, _queue_name=queue, **kwargs)
     if job is None:
         raise RuntimeError(f"enqueue 失败：{kind}")
     now = datetime.now(UTC)
-    extra: dict[str, str] = {}
+    extra: dict[str, str] = {"queue": queue}
     if batch_id:
         extra["batch_id"] = batch_id
     index_job(
@@ -280,7 +286,14 @@ async def get_job_out(job_id: str) -> JobOut | None:
     created_at = str(meta.get("created_at") or datetime.now(UTC).isoformat())
 
     pool = await _arq_pool()
-    job = Job(job_id, redis=pool, _queue_name=get_settings().arq_queue_name)
+    queue = str(meta.get("queue") or "")
+    if not queue:
+        queue = (
+            get_settings().arq_backtest_queue_name
+            if kind.startswith("backtest.")
+            else get_settings().arq_queue_name
+        )
+    job = Job(job_id, redis=pool, _queue_name=queue)
     st = await job.status()
     if st == JobStatus.not_found and not meta:
         return None
