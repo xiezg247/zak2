@@ -119,7 +119,7 @@ cd frontend && npm run dev
 - [ ] Ops 手动跑 **`sync_watchlist_financials`**（需 `TUSHARE_TOKEN` + 已有自选；写入 `financial_reports`/`financial_snapshots`/`financial_sync_meta`；无 token / 空自选有 skipped 文案）
 - [ ] Ops 手动跑 **`warm_radar_card_snapshots`**（写入 `cache.radar_card_snapshot`；无合成卡片时有 skipped 文案；成功后 `/radar` 首屏可命中缓存）
 - [ ] Ops 手动跑 **`enrich_market_quotes`**（需 `TUSHARE_TOKEN` + collector 已有行情键；无 token / 无 Redis 行情 / 无匹配键 / 当日 Tushare 因子未出时有明确 skipped 文案，可稍后重试；成功后可看换手/量比/净流入榜更新）
-- [ ] Ops 手动跑 **`warm_watchlist_strategy_cache`** 非 skipped（Redis 桥 + 日 K 双均线启发式）；有日 K 的自选在 `/watchlist` 策略看盘可见信号；文案含「双均线启发式」
+- [ ] Ops 手动跑 **`warm_watchlist_strategy_cache`** 非 skipped（Redis 桥 + 日 K 双均线启发式 v2）；message 含 v2/确认 N=2；有日 K 的自选在 `/watchlist` 策略看盘可见信号；强度列可见「弱/中/强」档（或摘要含已确认/待确认）
 - [ ] Ops 手动跑 **`scan_horizon_outlook`** 非 skipped（可写入启发式展望）；`/radar` 展望区可读行或空态引导（文案含启发式/共振，无「恒 skipped」）
 - [ ] Ops 手动跑 **`prefetch_concept_board`**（复用 sector sync；有 token 非 skipped；无 token 可 skipped）；文案含「概念预拉」或 sector
 - [ ] Ops 手动跑 **`fill_focus_pool_minute`**（需 `TUSHARE_TOKEN` + 分钟权限；可下载自选 1m；无 token 可 skipped）；文案无「1m 下载未接入」；成功后 `bars?interval=1m` 或 overview 可见
