@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production-min-32-chars!!"
     jwt_expire_days: int = 7
     redis_url: str = "redis://127.0.0.1:6379/0"
+    arq_queue_name: str = "zak2:arq"
     tushare_token: str = ""
     bilibili_cookies: str = ""
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"

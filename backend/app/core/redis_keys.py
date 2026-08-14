@@ -10,3 +10,6 @@ META_UPDATED_AT_KEY = f"{KEY_PREFIX}:meta:updated_at"
 META_QUOTE_COUNT_KEY = f"{KEY_PREFIX}:meta:quote_count"
 META_SEQ_KEY = f"{KEY_PREFIX}:meta:seq"
 NOTIFY_CHANNEL = f"{KEY_PREFIX}:notify:quotes"
+ARQ_OPS_RECENT_ZSET = f"{KEY_PREFIX}:arq:ops:recent"
+ARQ_OPS_META_KEY_FMT = f"{KEY_PREFIX}:arq:ops:meta:{{job_id}}"
+ARQ_OPS_RECENT_MAX = 100
