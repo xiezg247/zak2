@@ -55,14 +55,17 @@ uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 uv run python -m app.quote_collector
 # 或 ./scripts/quote_collector.sh
 
+# 另开：Ops ARQ worker（否则 Ops 立即执行 / 定时入队会一直排队）
+uv run arq app.worker.settings.WorkerSettings
+
 cd frontend && npm install && npm run dev
 ```
 
 打开 http://127.0.0.1:5173 ，使用已有账号登录（或导入后登录）。
 
-## Docker Compose（postgres + redis + api + quote-collector + web）
+## Docker Compose（postgres + redis + api + arq-worker + quote-collector + web）
 
-自带 postgres / redis；API 容器启动前自动 `alembic upgrade head`。
+自带 postgres / redis；API 容器启动前自动 `alembic upgrade head`。Ops 任务由 `arq-worker` 消费（队列名默认 `zak2:arq`）。
 
 ```bash
 cp -n .env.example .env   # 填 JWT_SECRET 等

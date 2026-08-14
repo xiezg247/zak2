@@ -1,4 +1,4 @@
-# zak2：postgres + redis + api + quote-collector + web
+# zak2：postgres + redis + api + arq-worker + quote-collector + web
 # 用法：docker compose up --build
 # Web: http://127.0.0.1:8080  API: http://127.0.0.1:8000
 # 宿主机端口占用时映射：5433→PG、6380→Redis、8001→API；容器内仍为 postgres:5432 / redis:6379 / :8000
@@ -55,6 +55,23 @@ services:
       timeout: 3s
       retries: 8
       start_period: 40s
+
+  arq-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://zak2:zak2@postgres:5432/zak2
+      REDIS_URL: redis://redis:6379/0
+    entrypoint: ["arq", "app.worker.settings.WorkerSettings"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
   quote-collector:
     build:
