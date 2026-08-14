@@ -1,6 +1,6 @@
 # 雷达展望行动化 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 展望/预测表行级「自选」「草案」；`draft-append` 确保次日 draft 并追加标的。
 
@@ -42,7 +42,7 @@
 
 **返回 dict 字段：** `added: bool`, `plan_id: str`, `trade_date: str`, `symbol_count: int`, `message: str`, `status: "draft"`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 def test_append_creates_empty_draft_then_adds() -> None:
@@ -118,7 +118,7 @@ def test_append_ice_stage_still_ok() -> None:
 
 （实现时按真实 ORM 查询写法微调 mock：`db.scalars(select...).all()` 等。）
 
-- [ ] **Step 2: Run 确认失败**
+- [x] **Step 2: Run 确认失败**
 
 ```bash
 cd backend && uv run pytest tests/test_plan_draft.py::test_append_creates_empty_draft_then_adds -q
@@ -126,7 +126,7 @@ cd backend && uv run pytest tests/test_plan_draft.py::test_append_creates_empty_
 
 Expected: FAIL（函数未定义）
 
-- [ ] **Step 3: 实现**
+- [x] **Step 3: 实现**
 
 ```python
 def append_symbol_to_draft(
@@ -222,13 +222,13 @@ def append_symbol_to_draft(
     }
 ```
 
-- [ ] **Step 4: 测试绿**
+- [x] **Step 4: 测试绿**
 
 ```bash
 cd backend && uv run pytest tests/test_plan_draft.py -q
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -271,7 +271,7 @@ def post_draft_append(body: PlanDraftAppendIn, user=..., db=...):
     return PlanDraftAppendOut(**plan_draft_svc.append_symbol_to_draft(...))
 ```
 
-- [ ] **Step 1: 实现 + API 测**
+- [x] **Step 1: 实现 + API 测**
 
 ```python
 def test_api_draft_append(monkeypatch) -> None:
@@ -297,7 +297,7 @@ def test_api_draft_append(monkeypatch) -> None:
 
 （确认 `content` 模块已 import `plan_draft as plan_draft_svc`。）
 
-- [ ] **Step 2: pytest 绿 → Commit**
+- [x] **Step 2: pytest 绿 → Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -326,9 +326,9 @@ draftAppend: (body: { vt_symbol: string; name?: string; source?: string }) =>
   })
 ```
 
-- [ ] **Step 1: content.ts 类型 + 方法**
+- [x] **Step 1: content.ts 类型 + 方法**
 
-- [ ] **Step 2: RadarView**
+- [x] **Step 2: RadarView**
 
 ```ts
 const rowActionMsg = ref('')
@@ -363,9 +363,9 @@ async function appendDraftFromRow(vt: string, name: string | undefined, source: 
 
 预测表 `source: 'predict'`。页顶或表旁展示 `rowActionMsg`；若 message 含「草案」可链 `/playbook`（对齐 draftMsg）。
 
-- [ ] **Step 3: `npm run build`**
+- [x] **Step 3: `npm run build`**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -386,7 +386,7 @@ EOF
 - spec 状态 → 已批准（已实现）  
 - 本 plan checklist
 
-- [ ] **Step 1: 文档**
+- [x] **Step 1: 文档**
 
 ```markdown
 56. ~~雷达展望行动化~~（已完成 → [spec](./superpowers/specs/2026-08-14-radar-horizon-actions-design.md)）：行级入自选 + draft-append
@@ -394,9 +394,9 @@ EOF
 
 smoke：`/radar` 展望/预测展开后行可「自选」「草案」；无草案可建；满员/已在有文案。
 
-- [ ] **Step 2: `./scripts/check.sh`**
+- [x] **Step 2: `./scripts/check.sh`**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'

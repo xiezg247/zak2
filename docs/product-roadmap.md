@@ -67,6 +67,7 @@
 53. ~~看盘 ↔ 回测信号对齐~~（已完成 → [spec](./superpowers/specs/2026-08-14-strategy-board-backtest-align-design.md)）：heuristic_v2 / double_ma 双模式 + 同参回测预填
 54. ~~看盘 trend_ma + 模式偏好~~（已完成 → [spec](./superpowers/specs/2026-08-14-strategy-board-trend-ma-design.md)）：第三轨 `trend_ma:20:60` + localStorage
 55. ~~看盘入队回测~~（已完成 → [spec](./superpowers/specs/2026-08-14-strategy-board-enqueue-backtest-design.md)）：双按钮 confirm 入队 + job_id 轮询
+56. ~~雷达展望行动化~~（已完成 → [spec](./superpowers/specs/2026-08-14-radar-horizon-actions-design.md)）：行级入自选 + draft-append
 
 ## 明确不做（直到本文件改口）
 
