@@ -1,7 +1,7 @@
 # 回测加深（Worker 内嵌 vnpy CTA）设计
 
 日期：2026-08-14  
-状态：待用户审阅  
+状态：已批准  
 范围：zak2 回测路径；**backtest-worker 允许 import `vnpy` / `vnpy_ctastrategy`（PyPI）**；不改 zak 仓库；**禁止** import `vnpy_ashare` / 其它 zak 包
 
 ## 背景
