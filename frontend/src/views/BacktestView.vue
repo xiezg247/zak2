@@ -302,6 +302,18 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  const jobId = typeof q.job_id === 'string' ? q.job_id.trim() : ''
+  if (!jobId) return
+  running.value = true
+  error.value = ''
+  try {
+    await pollJob(jobId)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '回测失败'
+  } finally {
+    running.value = false
+  }
 })
 </script>
 

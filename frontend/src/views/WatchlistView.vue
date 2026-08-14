@@ -15,6 +15,11 @@ import {
   type WatchlistGroup,
   type WatchlistItem,
 } from '../api/watchlist'
+import { backtestApi } from '../api/backtest'
+import {
+  buildAlignedBacktestQuery,
+  buildEnqueueRunBody,
+} from '../lib/boardBacktestParams'
 import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
 
 const route = useRoute()
@@ -72,6 +77,7 @@ function saveSignalMode(mode: SignalMode) {
 }
 
 const signalMode = ref<SignalMode>(loadSignalMode())
+const enqueueing = ref(false)
 const positions = ref<PositionItem[]>([])
 const posError = ref('')
 const posMsg = ref('')
@@ -322,53 +328,48 @@ function setSignalMode(mode: SignalMode) {
   void refreshBoard()
 }
 
-function parseFastSlowFromConfigKey(ck: string): { fast: number; slow: number } {
-  const parts = (ck || '').split(':')
-  if (parts.length >= 3) {
-    const fast = Number(parts[parts.length - 2])
-    const slow = Number(parts[parts.length - 1])
-    if (Number.isFinite(fast) && Number.isFinite(slow) && fast >= 2 && slow > fast) {
-      return { fast, slow }
-    }
-  }
-  return { fast: 5, slow: 20 }
-}
-
-function openAlignedBacktest() {
-  const vt =
+function resolveBoardVtSymbol(): string {
+  return (
     selected.value?.vt_symbol ||
     board.value?.signals[0]?.vt_symbol ||
     items.value[0]?.vt_symbol ||
     ''
+  )
+}
+
+function openAlignedBacktest() {
+  const vt = resolveBoardVtSymbol()
   if (!vt) {
     boardError.value = '无可用标的，请先选中自选或等待信号'
     return
   }
-  if (signalMode.value === 'trend_ma') {
-    void router.push({
-      path: '/backtest',
-      query: {
-        strategy: 'trend_ma',
-        vt_symbol: vt,
-        fast_window: '20',
-        slow_window: '60',
-        adx_period: '14',
-        adx_threshold: '25',
-        trailing_stop_pct: '0.12',
-      },
-    })
-    return
-  }
-  const { fast, slow } = parseFastSlowFromConfigKey(board.value?.config_key || '')
   void router.push({
     path: '/backtest',
-    query: {
-      strategy: 'double_ma',
-      vt_symbol: vt,
-      fast_window: String(fast),
-      slow_window: String(slow),
-    },
+    query: buildAlignedBacktestQuery(signalMode.value, vt, board.value?.config_key || ''),
   })
+}
+
+async function enqueueAlignedBacktest() {
+  const vt = resolveBoardVtSymbol()
+  if (!vt) {
+    boardError.value = '无可用标的，请先选中自选或等待信号'
+    return
+  }
+  const body = buildEnqueueRunBody(signalMode.value, vt, board.value?.config_key || '')
+  const ok = window.confirm(
+    `对 ${vt} 入队 ${body.strategy} ${body.fast_window}/${body.slow_window}，区间 ${body.start_date}～${body.end_date}，资金 ${body.capital}？`,
+  )
+  if (!ok) return
+  enqueueing.value = true
+  boardError.value = ''
+  try {
+    const { job_id } = await backtestApi.start(body)
+    void router.push({ path: '/backtest', query: { job_id } })
+  } catch (e) {
+    boardError.value = e instanceof Error ? e.message : '入队回测失败'
+  } finally {
+    enqueueing.value = false
+  }
 }
 
 async function saveTradingRisk() {
@@ -1442,6 +1443,14 @@ onUnmounted(() => {
             </button>
           </div>
           <button type="button" class="ghost" @click="openAlignedBacktest()">同参回测</button>
+          <button
+            type="button"
+            class="ghost"
+            :disabled="enqueueing"
+            @click="enqueueAlignedBacktest()"
+          >
+            {{ enqueueing ? '入队中…' : '入队回测' }}
+          </button>
           <button type="button" class="ghost" @click="refreshBoard()">刷新看板</button>
         </div>
         <p v-if="boardError" class="err">{{ boardError }}</p>

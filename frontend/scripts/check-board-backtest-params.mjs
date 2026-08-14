@@ -6,7 +6,7 @@ import {
   BOARD_BT_START,
   BOARD_BT_END,
   BOARD_BT_CAPITAL,
-} from '../src/lib/boardBacktestParams.mjs'
+} from '../src/lib/boardBacktestParams.ts'
 
 assert.deepEqual(parseFastSlowFromConfigKey('double_ma:5:10'), { fast: 5, slow: 10 })
 assert.deepEqual(parseFastSlowFromConfigKey('bad'), { fast: 5, slow: 20 })
