@@ -83,6 +83,26 @@ def test_resolve_config_key_from_pref() -> None:
     assert resolve_config_key(db, "u1") == "AshareShortBreakoutStrategy:5:20"
 
 
+def test_resolve_board_config_key_double_ma_default() -> None:
+    from app.services.strategy_board import resolve_board_config_key
+
+    db = MagicMock()
+    db.execute.return_value.scalar.return_value = None
+    assert resolve_board_config_key(db, "u1", signal_mode="double_ma") == "double_ma:5:20"
+
+
+def test_resolve_board_config_key_double_ma_from_pref() -> None:
+    from app.services.strategy_board import resolve_board_config_key
+
+    db = MagicMock()
+    db.execute.return_value.scalar.return_value = {
+        "class_name": "AshareShortBreakoutStrategy",
+        "fast_window": 5,
+        "slow_window": 10,
+    }
+    assert resolve_board_config_key(db, "u1", signal_mode="double_ma") == "double_ma:5:10"
+
+
 def test_enrich_position_risk_float_loss() -> None:
     out = enrich_position_risk(
         {"exit_signal": "hold", "unrealized_pnl_pct": -6.0},

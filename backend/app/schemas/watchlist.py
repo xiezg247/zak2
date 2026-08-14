@@ -171,6 +171,7 @@ class RiskSummaryOut(BaseModel):
 
 class StrategyBoardOut(BaseModel):
     config_key: str
+    signal_mode: str = "heuristic_v2"
     as_of: str | None = None
     source: str = "none"
     note: str = ""

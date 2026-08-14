@@ -118,10 +118,18 @@ def get_watchlist(
 @router.get("/watchlist/strategy-board", response_model=StrategyBoardOut)
 def get_strategy_board(
     config_key: str | None = Query(default=None, description="缺省读用户偏好或默认短线突破 5/10"),
+    signal_mode: str = Query(
+        default="heuristic_v2",
+        description="heuristic_v2（确认）或 double_ma（当日交叉）",
+    ),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> StrategyBoardOut:
-    return StrategyBoardOut(**strategy_board.load_strategy_board(db, str(user.id), config_key=config_key))
+    return StrategyBoardOut(
+        **strategy_board.load_strategy_board(
+            db, str(user.id), config_key=config_key, signal_mode=signal_mode
+        )
+    )
 
 
 @router.get("/watchlist/trading-risk", response_model=TradingRiskPrefsOut)

@@ -28,6 +28,10 @@ from app.services.trading_risk import (
 from app.services.tushare_screener import latest_open_yyyymmdd
 
 DEFAULT_CONFIG_KEY = "AshareShortBreakoutStrategy:5:10"
+SIGNAL_MODE_HEURISTIC = "heuristic_v2"
+SIGNAL_MODE_DOUBLE_MA = "double_ma"
+DEFAULT_DOUBLE_MA_FAST = 5
+DEFAULT_DOUBLE_MA_SLOW = 20
 _CHINA_TZ = timezone(timedelta(hours=8))
 
 
@@ -88,6 +92,51 @@ def resolve_config_key(db: Session, user_id: str, override: str | None = None) -
             return DEFAULT_CONFIG_KEY
         return f"{cls}:{fast}:{slow}"
     return DEFAULT_CONFIG_KEY
+
+
+def double_ma_config_key(fast: int, slow: int) -> str:
+    return f"double_ma:{int(fast)}:{int(slow)}"
+
+
+def _pref_fast_slow(db: Session, user_id: str) -> tuple[int, int]:
+    row = db.execute(
+        text(
+            """
+            SELECT value_json FROM auth.user_preferences
+            WHERE user_id = CAST(:uid AS uuid)
+              AND namespace = 'watchlist' AND key = 'signal_config'
+            LIMIT 1
+            """
+        ),
+        {"uid": user_id},
+    ).scalar()
+    if isinstance(row, dict):
+        try:
+            fast = max(2, min(int(row.get("fast_window") or DEFAULT_DOUBLE_MA_FAST), 60))
+            slow = max(
+                fast + 1,
+                min(int(row.get("slow_window") or DEFAULT_DOUBLE_MA_SLOW), 120),
+            )
+            return fast, slow
+        except (TypeError, ValueError):
+            pass
+    return DEFAULT_DOUBLE_MA_FAST, DEFAULT_DOUBLE_MA_SLOW
+
+
+def resolve_board_config_key(
+    db: Session,
+    user_id: str,
+    *,
+    signal_mode: str = SIGNAL_MODE_HEURISTIC,
+    override: str | None = None,
+) -> str:
+    mode = (signal_mode or SIGNAL_MODE_HEURISTIC).strip() or SIGNAL_MODE_HEURISTIC
+    if override and override.strip():
+        return override.strip()
+    if mode == SIGNAL_MODE_DOUBLE_MA:
+        fast, slow = _pref_fast_slow(db, user_id)
+        return double_ma_config_key(fast, slow)
+    return resolve_config_key(db, user_id, None)
 
 
 def _redis_client():
@@ -287,8 +336,12 @@ def load_strategy_board(
     user_id: str,
     *,
     config_key: str | None = None,
+    signal_mode: str = SIGNAL_MODE_HEURISTIC,
 ) -> dict[str, Any]:
-    ck = resolve_config_key(db, user_id, config_key)
+    mode = (signal_mode or SIGNAL_MODE_HEURISTIC).strip() or SIGNAL_MODE_HEURISTIC
+    if mode not in {SIGNAL_MODE_HEURISTIC, SIGNAL_MODE_DOUBLE_MA}:
+        mode = SIGNAL_MODE_HEURISTIC
+    ck = resolve_board_config_key(db, user_id, signal_mode=mode, override=config_key)
     items = repo.list_items(db, user_id)
     name_by_vt = {
         to_vt_symbol(i.symbol, i.exchange): (i.name or "") for i in items
@@ -500,7 +553,7 @@ def load_strategy_board(
         )
     elif not signals and not positions:
         note = (
-            "暂无策略缓存。可 Ops 跑 warm_watchlist_strategy_cache（日 K 双均线启发式），"
+            "暂无策略缓存。可 Ops 跑 warm_watchlist_strategy_cache（启发式 + double_ma 双轨），"
             "或确认 Redis/PG 已有信号缓存；亦可先维护信号名单与持仓记账。"
         )
     elif not signals:
@@ -508,9 +561,15 @@ def load_strategy_board(
             "持仓来自记账表；信号 cache 为空"
             "（可 Ops 跑 warm_watchlist_strategy_cache，或确认 cache 已写入）。"
         )
+    if mode == SIGNAL_MODE_DOUBLE_MA:
+        mode_note = "模式：回测双均线（当日交叉，规则对齐 /backtest double_ma，非 vnpy 进程）。"
+    else:
+        mode_note = "模式：启发式确认（交叉次日确认 N=2）。"
+    note = f"{mode_note} {note}".strip() if note else mode_note
 
     return {
         "config_key": ck,
+        "signal_mode": mode,
         "as_of": as_of or None,
         "source": source,
         "note": note,
