@@ -110,6 +110,15 @@ export type Plan = {
   }[]
 }
 
+export type PlanDraftAppend = {
+  added: boolean
+  plan_id: string
+  trade_date: string
+  symbol_count: number
+  status: string
+  message: string
+}
+
 export const contentApi = {
   sections: () => api<PlaybookSection[]>('/api/v1/playbook/sections'),
   updateSection: (id: string, body: Partial<PlaybookSection>) =>
@@ -129,6 +138,11 @@ export const contentApi = {
     })
   },
   plans: () => api<Plan[]>('/api/v1/playbook/plans'),
+  draftAppend: (body: { vt_symbol: string; name?: string; source?: string }) =>
+    api<PlanDraftAppend>('/api/v1/playbook/plans/draft-append', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   patchPlan: (id: string, body: { notes?: string; max_position_pct?: number; symbols?: string[] }) =>
     api<Plan>(`/api/v1/playbook/plans/${encodeURIComponent(id)}`, {
       method: 'PATCH',

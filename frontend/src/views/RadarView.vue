@@ -11,6 +11,7 @@ import {
   type ResonanceWeightItem,
 } from '../api/market'
 import { watchlistApi } from '../api/watchlist'
+import { contentApi } from '../api/content'
 
 const router = useRouter()
 const cards = ref<RadarCard[]>([])
@@ -33,6 +34,7 @@ const loading = ref(false)
 const sideOpen = ref(true)
 const sideMsg = ref('')
 const detailMsg = ref('')
+const rowActionMsg = ref('')
 const actingVt = ref('')
 const weightOpen = ref(false)
 const weightItems = ref<ResonanceWeightItem[]>([])
@@ -376,6 +378,28 @@ async function addWatchFromDetail(vt: string, name?: string) {
   await addWatchTo(vt, name, detailMsg)
 }
 
+async function addWatchFromHorizonRow(vt: string, name?: string) {
+  await addWatchTo(vt, name, rowActionMsg)
+}
+
+async function appendDraftFromRow(
+  vt: string,
+  name: string | undefined,
+  source: 'horizon' | 'predict',
+) {
+  if (!vt || actingVt.value) return
+  actingVt.value = vt
+  rowActionMsg.value = ''
+  try {
+    const r = await contentApi.draftAppend({ vt_symbol: vt, name, source })
+    rowActionMsg.value = r.message || (r.added ? `已加入草案 ${vt}` : `已在草案 ${vt}`)
+  } catch (e) {
+    rowActionMsg.value = e instanceof Error ? e.message : '加入草案失败'
+  } finally {
+    actingVt.value = ''
+  }
+}
+
 onMounted(() => {
   void load()
 })
@@ -401,6 +425,16 @@ onMounted(() => {
       <p v-if="draftMsg" class="draft-msg">
         {{ draftMsg }}
         <RouterLink v-if="draftMsg.startsWith('已写入')" to="/playbook" class="draft-link">去守则看计划</RouterLink>
+      </p>
+      <p v-if="rowActionMsg" class="draft-msg">
+        {{ rowActionMsg }}
+        <RouterLink
+          v-if="rowActionMsg.includes('草案')"
+          to="/playbook"
+          class="draft-link"
+        >
+          去守则看计划
+        </RouterLink>
       </p>
 
       <div class="horizon-block">
@@ -429,6 +463,7 @@ onMounted(() => {
                     <th>共振</th>
                     <th>卡数</th>
                     <th>细节</th>
+                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -469,6 +504,24 @@ onMounted(() => {
                       >
                         —
                       </template>
+                    </td>
+                    <td class="ops">
+                      <button
+                        type="button"
+                        class="ghost tiny-btn"
+                        :disabled="!!actingVt"
+                        @click="addWatchFromHorizonRow(row.vt_symbol, row.name)"
+                      >
+                        自选
+                      </button>
+                      <button
+                        type="button"
+                        class="ghost tiny-btn"
+                        :disabled="!!actingVt"
+                        @click="appendDraftFromRow(row.vt_symbol, row.name, 'horizon')"
+                      >
+                        草案
+                      </button>
                     </td>
                   </tr>
                 </tbody>
@@ -514,6 +567,7 @@ onMounted(() => {
                     <th>涨跌%</th>
                     <th>封板</th>
                     <th>理由</th>
+                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -530,6 +584,24 @@ onMounted(() => {
                     </td>
                     <td class="muted tiny">{{ row.seal_time_label || '—' }}</td>
                     <td class="muted tiny">{{ (row.reasons || []).join(' · ') || '—' }}</td>
+                    <td class="ops">
+                      <button
+                        type="button"
+                        class="ghost tiny-btn"
+                        :disabled="!!actingVt"
+                        @click="addWatchFromHorizonRow(row.vt_symbol, row.name)"
+                      >
+                        自选
+                      </button>
+                      <button
+                        type="button"
+                        class="ghost tiny-btn"
+                        :disabled="!!actingVt"
+                        @click="appendDraftFromRow(row.vt_symbol, row.name, 'predict')"
+                      >
+                        草案
+                      </button>
+                    </td>
                   </tr>
                 </tbody>
               </table>
