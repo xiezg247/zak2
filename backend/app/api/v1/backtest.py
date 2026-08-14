@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.db import SessionLocal, get_db
-from app.jobs.store import job_store
+from app.core.db import get_db
 from app.models.user import User
 from app.schemas.backtest import (
     BatchBacktestRequest,
@@ -19,10 +17,10 @@ from app.schemas.backtest import (
     StrategyProfileOut,
 )
 from app.services import backtest_repo as repo
+from app.services.arq_jobs import BACKTEST_FUNCS, enqueue_app_job
 from app.services.backtest_engine import PROFILES, STRATEGIES
 
 router = APIRouter(prefix="/backtest", tags=["backtest"])
-_executor = ThreadPoolExecutor(max_workers=2)
 
 
 @router.get("/strategies", response_model=list[StrategyInfo])
@@ -64,63 +62,27 @@ def get_batches(user: User = Depends(get_current_user), db: Session = Depends(ge
     return repo.list_batches(db, str(user.id))
 
 
-def _run_single_job(job_id: str, user_id: str, payload: dict) -> None:
-    job_store.update(job_id, status="running", progress=0.1)
-    db = SessionLocal()
-    try:
-        req = BacktestRunRequest.model_validate(payload)
-        out = repo.execute_single(db, user_id, req)
-        job_store.update(job_id, status="success", progress=1.0, result_ref=out.id)
-    except HTTPException as exc:
-        job_store.update(job_id, status="failed", error=str(exc.detail))
-    except Exception as exc:  # noqa: BLE001
-        job_store.update(job_id, status="failed", error=str(exc))
-    finally:
-        db.close()
-
-
-def _run_batch_job(job_id: str, user_id: str, payload: dict, batch_id: str) -> None:
-    job_store.update(job_id, status="running", progress=0.05)
-    db = SessionLocal()
-    try:
-        req = BatchBacktestRequest.model_validate(payload)
-        total = len(req.symbols)
-        last_id = None
-        for index, symbol in enumerate(req.symbols):
-            single = BacktestRunRequest(
-                vt_symbol=symbol,
-                strategy=req.strategy,
-                interval=req.interval,
-                start_date=req.start_date,
-                end_date=req.end_date,
-                fast_window=req.fast_window,
-                slow_window=req.slow_window,
-                capital=req.capital,
-            )
-            try:
-                out = repo.execute_single(db, user_id, single, batch_id=batch_id, source="batch")
-                last_id = out.id
-            except Exception as exc:  # noqa: BLE001
-                # 单票失败不中断整批
-                job_store.update(job_id, error=f"{symbol}: {exc}")
-            job_store.update(job_id, progress=round((index + 1) / total, 4))
-        job_store.update(job_id, status="success", progress=1.0, result_ref=last_id or batch_id)
-    except Exception as exc:  # noqa: BLE001
-        job_store.update(job_id, status="failed", error=str(exc))
-    finally:
-        db.close()
-
-
 @router.post("/runs", response_model=JobAccepted)
-def post_run(body: BacktestRunRequest, user: User = Depends(get_current_user)) -> JobAccepted:
-    job = job_store.create("backtest.single", meta={"user_id": str(user.id)})
-    _executor.submit(_run_single_job, job.id, str(user.id), body.model_dump())
-    return JobAccepted(job_id=job.id)
+async def post_run(body: BacktestRunRequest, user: User = Depends(get_current_user)) -> JobAccepted:
+    kind = "backtest.single"
+    job_id = await enqueue_app_job(
+        function=BACKTEST_FUNCS[kind],
+        kind=kind,
+        user_id=str(user.id),
+        payload=body.model_dump(),
+    )
+    return JobAccepted(job_id=job_id)
 
 
 @router.post("/runs/batch", response_model=JobAccepted)
-def post_batch(body: BatchBacktestRequest, user: User = Depends(get_current_user)) -> JobAccepted:
+async def post_batch(body: BatchBacktestRequest, user: User = Depends(get_current_user)) -> JobAccepted:
     batch_id = uuid4().hex
-    job = job_store.create("backtest.batch", meta={"user_id": str(user.id), "batch_id": batch_id})
-    _executor.submit(_run_batch_job, job.id, str(user.id), body.model_dump(), batch_id)
-    return JobAccepted(job_id=job.id, batch_id=batch_id)
+    kind = "backtest.batch"
+    job_id = await enqueue_app_job(
+        function=BACKTEST_FUNCS[kind],
+        kind=kind,
+        user_id=str(user.id),
+        payload=body.model_dump(),
+        batch_id=batch_id,
+    )
+    return JobAccepted(job_id=job_id, batch_id=batch_id)

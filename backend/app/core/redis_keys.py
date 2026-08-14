@@ -13,3 +13,7 @@ NOTIFY_CHANNEL = f"{KEY_PREFIX}:notify:quotes"
 ARQ_OPS_RECENT_ZSET = f"{KEY_PREFIX}:arq:ops:recent"
 ARQ_OPS_META_KEY_FMT = f"{KEY_PREFIX}:arq:ops:meta:{{job_id}}"
 ARQ_OPS_RECENT_MAX = 100
+ARQ_JOBS_RECENT_ZSET = f"{KEY_PREFIX}:arq:jobs:recent"
+ARQ_JOBS_META_KEY_FMT = f"{KEY_PREFIX}:arq:jobs:meta:{{job_id}}"
+ARQ_JOBS_RECENT_MAX = 100
+ARQ_BARS_LOCK_KEY = f"{KEY_PREFIX}:arq:lock:bars"

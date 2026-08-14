@@ -1,3 +1,1 @@
-from app.jobs.store import JobStore, JobRecord, job_store
-
-__all__ = ["JobStore", "JobRecord", "job_store"]
+"""jobs 包：内存 JobStore 已移除，状态见 app.services.arq_jobs。"""

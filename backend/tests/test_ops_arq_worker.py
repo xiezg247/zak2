@@ -40,3 +40,17 @@ async def test_run_ops_job_bilibili_respects_force() -> None:
         sync_fn.return_value = {"success": True, "message": "feed"}
         await t.run_ops_job({}, "sync_bilibili_feed", force=False)
     sync_fn.assert_called_once_with(db, force=False)
+
+
+@pytest.mark.asyncio
+async def test_bars_job_skips_when_lock_held() -> None:
+    runner = MagicMock()
+    with (
+        patch("app.worker.tasks.try_acquire_bars", return_value=None),
+        patch.dict("app.worker.tasks.RUNNERS", {"fill_watchlist_bars": runner}, clear=False),
+        patch("app.worker.tasks.needs_user_id", return_value=False),
+    ):
+        out = await t.run_ops_job({}, "fill_watchlist_bars")
+    assert out["success"] is False
+    assert "互斥" in out["message"]
+    runner.assert_not_called()

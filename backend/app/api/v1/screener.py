@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import json
-from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.db import SessionLocal, get_db
-from app.jobs.store import job_store
+from app.core.db import get_db
 from app.models.user import User
 from app.schemas.screener import (
     BuiltinRecipeOut,
@@ -34,16 +32,14 @@ from app.schemas.screener import (
 )
 from app.services import recipe_weights as recipe_weights_svc
 from app.services import screener_repo as repo
-from app.services.engine import run_condition_screen, run_recipe_screen
+from app.services.arq_jobs import SCREENER_FUNCS, enqueue_app_job
 from app.services.hard_filters import TEMPLATES
-from app.services.pattern_screen import list_patterns, run_pattern_screen
+from app.services.pattern_screen import list_patterns
 from app.services.presets import list_builtin_recipes, list_presets
 from app.services.quotes import get_quote_store
-from app.services.reference_peer import run_reference_peer
 from app.services.stock_industry import list_industry_names
 
 router = APIRouter(prefix="/screener", tags=["screener"])
-_executor = ThreadPoolExecutor(max_workers=2)
 
 
 def _scheme_out(row) -> SchemeOut:  # type: ignore[no-untyped-def]
@@ -241,140 +237,64 @@ def put_recipe_weights(
     return RecipeWeightsOut(**recipe_weights_svc.weights_payload(recipe_id, merged))
 
 
-def _run_condition_job(job_id: str, user_id: str, payload: dict) -> None:
-    job_store.update(job_id, status="running", progress=0.1)
-    db = SessionLocal()
-    try:
-        req = ConditionRunRequest.model_validate(payload)
-        prev = repo.latest_run_symbols(db, user_id)
-        result = run_condition_screen(req, previous_symbols=prev, db=db)
-        job_store.update(job_id, progress=0.8)
-        run = repo.save_run(
-            db,
-            user_id=user_id,
-            condition=result["condition"],
-            source=result["source"],
-            result=result,
-        )
-        job_store.update(job_id, status="success", progress=1.0, result_ref=run.id)
-    except HTTPException as exc:
-        job_store.update(job_id, status="failed", error=str(exc.detail))
-    except Exception as exc:  # noqa: BLE001
-        job_store.update(job_id, status="failed", error=str(exc))
-    finally:
-        db.close()
-
-
-def _run_recipe_job(job_id: str, user_id: str, payload: dict) -> None:
-    job_store.update(job_id, status="running", progress=0.1)
-    db = SessionLocal()
-    try:
-        req = RecipeRunRequest.model_validate(payload)
-        prev = repo.latest_run_symbols(db, user_id)
-        result = run_recipe_screen(req, previous_symbols=prev, db=db, user_id=user_id)
-        job_store.update(job_id, progress=0.8)
-        run = repo.save_run(
-            db,
-            user_id=user_id,
-            condition=result["condition"],
-            source=result["source"],
-            result=result,
-        )
-        job_store.update(job_id, status="success", progress=1.0, result_ref=run.id)
-    except HTTPException as exc:
-        job_store.update(job_id, status="failed", error=str(exc.detail))
-    except Exception as exc:  # noqa: BLE001
-        job_store.update(job_id, status="failed", error=str(exc))
-    finally:
-        db.close()
-
-
-def _run_pattern_job(job_id: str, user_id: str, payload: dict) -> None:
-    job_store.update(job_id, status="running", progress=0.1)
-    db = SessionLocal()
-    try:
-        req = PatternRunRequest.model_validate(payload)
-        prev = repo.latest_run_symbols(db, user_id)
-        result = run_pattern_screen(req, db=db, previous_symbols=prev)
-        job_store.update(job_id, progress=0.8)
-        run = repo.save_run(
-            db,
-            user_id=user_id,
-            condition=result["condition"],
-            source=result["source"],
-            result=result,
-        )
-        job_store.update(job_id, status="success", progress=1.0, result_ref=run.id)
-    except HTTPException as exc:
-        job_store.update(job_id, status="failed", error=str(exc.detail))
-    except Exception as exc:  # noqa: BLE001
-        job_store.update(job_id, status="failed", error=str(exc))
-    finally:
-        db.close()
-
-
 @router.post("/runs/condition", response_model=JobAccepted)
-def post_condition_run(
+async def post_condition_run(
     body: ConditionRunRequest,
     user: User = Depends(get_current_user),
 ) -> JobAccepted:
-    job = job_store.create("screener.condition", meta={"user_id": str(user.id)})
-    _executor.submit(_run_condition_job, job.id, str(user.id), body.model_dump())
-    return JobAccepted(job_id=job.id)
+    kind = "screener.condition"
+    job_id = await enqueue_app_job(
+        function=SCREENER_FUNCS[kind],
+        kind=kind,
+        user_id=str(user.id),
+        payload=body.model_dump(),
+    )
+    return JobAccepted(job_id=job_id)
 
 
 @router.post("/runs/recipe", response_model=JobAccepted)
-def post_recipe_run(
+async def post_recipe_run(
     body: RecipeRunRequest,
     user: User = Depends(get_current_user),
 ) -> JobAccepted:
-    job = job_store.create("screener.recipe", meta={"user_id": str(user.id)})
-    _executor.submit(_run_recipe_job, job.id, str(user.id), body.model_dump())
-    return JobAccepted(job_id=job.id)
+    kind = "screener.recipe"
+    job_id = await enqueue_app_job(
+        function=SCREENER_FUNCS[kind],
+        kind=kind,
+        user_id=str(user.id),
+        payload=body.model_dump(),
+    )
+    return JobAccepted(job_id=job_id)
 
 
 @router.post("/runs/pattern", response_model=JobAccepted)
-def post_pattern_run(
+async def post_pattern_run(
     body: PatternRunRequest,
     user: User = Depends(get_current_user),
 ) -> JobAccepted:
-    job = job_store.create("screener.pattern", meta={"user_id": str(user.id)})
-    _executor.submit(_run_pattern_job, job.id, str(user.id), body.model_dump())
-    return JobAccepted(job_id=job.id)
-
-
-def _run_reference_peer_job(job_id: str, user_id: str, payload: dict) -> None:
-    job_store.update(job_id, status="running", progress=0.1)
-    db = SessionLocal()
-    try:
-        req = ReferencePeerRequest.model_validate(payload)
-        prev = repo.latest_run_symbols(db, user_id)
-        result = run_reference_peer(req, db=db, previous_symbols=prev)
-        job_store.update(job_id, progress=0.8)
-        run = repo.save_run(
-            db,
-            user_id=user_id,
-            condition=result["condition"],
-            source=result["source"],
-            result=result,
-        )
-        job_store.update(job_id, status="success", progress=1.0, result_ref=run.id)
-    except HTTPException as exc:
-        job_store.update(job_id, status="failed", error=str(exc.detail))
-    except Exception as exc:  # noqa: BLE001
-        job_store.update(job_id, status="failed", error=str(exc))
-    finally:
-        db.close()
+    kind = "screener.pattern"
+    job_id = await enqueue_app_job(
+        function=SCREENER_FUNCS[kind],
+        kind=kind,
+        user_id=str(user.id),
+        payload=body.model_dump(),
+    )
+    return JobAccepted(job_id=job_id)
 
 
 @router.post("/runs/reference-peer", response_model=JobAccepted)
-def post_reference_peer_run(
+async def post_reference_peer_run(
     body: ReferencePeerRequest,
     user: User = Depends(get_current_user),
 ) -> JobAccepted:
-    job = job_store.create("screener.reference_peer", meta={"user_id": str(user.id)})
-    _executor.submit(_run_reference_peer_job, job.id, str(user.id), body.model_dump())
-    return JobAccepted(job_id=job.id)
+    kind = "screener.reference_peer"
+    job_id = await enqueue_app_job(
+        function=SCREENER_FUNCS[kind],
+        kind=kind,
+        user_id=str(user.id),
+        payload=body.model_dump(),
+    )
+    return JobAccepted(job_id=job_id)
 
 
 @router.get("/runs", response_model=list[RunSummary])

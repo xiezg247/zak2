@@ -1,4 +1,4 @@
-"""ARQ worker：执行 Ops RUNNERS。"""
+"""ARQ worker：执行 Ops RUNNERS（含 bars 互斥）。"""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from typing import Any
 
 from app.core.db import SessionLocal
 from app.services import ops_sync_bilibili_feed
+from app.services.bars_lock import BARS_JOBS, release_bars, try_acquire_bars
 from app.services.ops_catalog import RUNNABLE_JOB_IDS
 from app.services.ops_runners import RUNNERS, needs_user_id
 
@@ -19,6 +20,17 @@ def _execute_sync(
 ) -> dict[str, Any]:
     if ops_job_id not in RUNNABLE_JOB_IDS or ops_job_id not in RUNNERS:
         raise ValueError(f"未知或不可执行任务: {ops_job_id}")
+
+    bars_token: str | None = None
+    if ops_job_id in BARS_JOBS:
+        bars_token = try_acquire_bars()
+        if bars_token is None:
+            return {
+                "success": False,
+                "skipped": False,
+                "message": "bars 任务互斥：已有同类任务在执行",
+            }
+
     db = SessionLocal()
     try:
         if ops_job_id == ops_sync_bilibili_feed.JOB_ID:
@@ -31,6 +43,8 @@ def _execute_sync(
         return runner(db)
     finally:
         db.close()
+        if bars_token is not None:
+            release_bars(bars_token)
 
 
 async def run_ops_job(
