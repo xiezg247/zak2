@@ -140,3 +140,18 @@ class PlanUpdate(BaseModel):
     notes: str | None = None
     max_position_pct: float | None = None
     symbols: list[str] | None = None
+
+
+class PlanDraftAppendIn(BaseModel):
+    vt_symbol: str
+    name: str | None = None
+    source: str | None = None
+
+
+class PlanDraftAppendOut(BaseModel):
+    added: bool
+    plan_id: str
+    trade_date: str
+    symbol_count: int
+    status: str = "draft"
+    message: str = ""

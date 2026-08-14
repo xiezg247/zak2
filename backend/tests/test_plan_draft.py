@@ -308,3 +308,103 @@ def test_api_plan_draft_bad_request() -> None:
         resp = client.post("/api/v1/radar/plan-draft", json={})
     assert resp.status_code == 400
     assert "不宜新开" in resp.json()["detail"]
+
+
+def test_append_creates_empty_draft_then_adds() -> None:
+    db = MagicMock()
+    db.scalar.return_value = None
+    db.scalars.return_value = []
+    with (
+        patch.object(pd, "resolve_next_trade_date", return_value=("2026-08-17", False)),
+        patch.object(pd, "uuid") as u,
+    ):
+        u.uuid4.return_value.hex = "newdraft"
+        out = pd.append_symbol_to_draft(db, "u1", vt_symbol="600519.SSE", source="horizon")
+    assert out["added"] is True
+    assert out["trade_date"] == "2026-08-17"
+    assert out["symbol_count"] == 1
+    assert out["plan_id"] == "newdraft"
+    assert "已加入" in out["message"]
+    assert db.add.called
+    assert db.flush.called
+    assert db.commit.called
+
+
+def test_append_idempotent_when_already_in_draft() -> None:
+    db = MagicMock()
+    plan = MagicMock(spec=TradingPlan)
+    plan.id = "p1"
+    plan.trade_date = "2026-08-17"
+    db.scalar.return_value = plan
+    sym = MagicMock()
+    sym.symbol = "600519"
+    sym.exchange = "SSE"
+    db.scalars.return_value = [sym]
+    with patch.object(pd, "resolve_next_trade_date", return_value=("2026-08-17", False)):
+        out = pd.append_symbol_to_draft(db, "u1", vt_symbol="600519.SSE")
+    assert out["added"] is False
+    assert out["symbol_count"] == 1
+    assert "已在" in out["message"]
+    db.commit.assert_not_called()
+
+
+def test_append_rejects_when_full() -> None:
+    from app.services.plan_manage import MAX_PLAN_SYMBOLS
+
+    db = MagicMock()
+    plan = MagicMock(spec=TradingPlan)
+    plan.id = "p1"
+    db.scalar.return_value = plan
+    fake = []
+    for i in range(MAX_PLAN_SYMBOLS):
+        s = MagicMock()
+        s.symbol = f"{i:06d}"
+        s.exchange = "SSE"
+        fake.append(s)
+    db.scalars.return_value = fake
+    with patch.object(pd, "resolve_next_trade_date", return_value=("2026-08-17", False)):
+        with pytest.raises(HTTPException) as ei:
+            pd.append_symbol_to_draft(db, "u1", vt_symbol="600519.SSE")
+    assert ei.value.status_code == 400
+    assert "最多" in str(ei.value.detail)
+
+
+def test_append_ice_stage_still_ok() -> None:
+    db = MagicMock()
+    db.scalar.return_value = None
+    db.scalars.return_value = []
+    with (
+        patch.object(pd, "resolve_next_trade_date", return_value=("2026-08-17", False)),
+        patch("app.services.plan_draft.build_emotion_cycle") as emo,
+        patch.object(pd, "uuid") as u,
+    ):
+        u.uuid4.return_value.hex = "iceok"
+        out = pd.append_symbol_to_draft(db, "u1", vt_symbol="600519.SSE")
+    assert out["added"] is True
+    emo.assert_not_called()
+
+
+def test_api_draft_append() -> None:
+    user = _make_user()
+    client = _api_client(user)
+    with patch(
+        "app.api.v1.content.plan_draft_svc.append_symbol_to_draft",
+        return_value={
+            "added": True,
+            "plan_id": "p1",
+            "trade_date": "2026-08-17",
+            "symbol_count": 1,
+            "status": "draft",
+            "message": "已加入草案 600519.SSE",
+        },
+    ) as append:
+        resp = client.post(
+            "/api/v1/playbook/plans/draft-append",
+            json={"vt_symbol": "600519.SSE", "source": "horizon"},
+        )
+    assert resp.status_code == 200
+    append.assert_called_once()
+    assert append.call_args[0][1] == str(user.id)
+    body = resp.json()
+    assert body["added"] is True
+    assert body["plan_id"] == "p1"

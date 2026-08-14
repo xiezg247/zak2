@@ -13,8 +13,9 @@ from app.models.content import TradingPlan, TradingPlanSymbol
 from app.services.emotion_cycle import build_emotion_cycle
 from app.services.radar import list_radar_cards
 from app.services.radar_resonance import list_radar_resonance
-from app.services.symbols import parse_flexible_symbol
+from app.services.symbols import parse_flexible_symbol, to_vt_symbol
 from app.services.tushare_screener import latest_open_yyyymmdd
+from app.services.plan_manage import MAX_PLAN_SYMBOLS
 
 DEFAULT_PLAN_MAX_POSITION_PCT = 0.3
 
@@ -170,4 +171,100 @@ def create_resonance_plan_draft(
         "symbol_count": len(symbols_out),
         "symbols": symbols_out,
         "replaced": replaced,
+    }
+
+
+def append_symbol_to_draft(
+    db: Session,
+    user_id: str,
+    *,
+    vt_symbol: str,
+    name: str | None = None,
+    source: str | None = None,
+) -> dict:
+    """确保次一交易日 draft 存在并追加一标的（不因情绪拒建）。"""
+    _ = name
+    try:
+        code, exch = parse_flexible_symbol(vt_symbol)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    vt = to_vt_symbol(code, exch)
+    td, _ = resolve_next_trade_date(db)
+    now = _now()
+
+    plan = db.scalar(
+        select(TradingPlan)
+        .where(
+            TradingPlan.user_id == user_id,
+            TradingPlan.trade_date == td,
+            TradingPlan.status == "draft",
+        )
+        .order_by(desc(TradingPlan.updated_at))
+        .limit(1)
+    )
+    if plan is None:
+        plan = TradingPlan(
+            id=uuid.uuid4().hex,
+            user_id=user_id,
+            trade_date=td,
+            emotion_expected="",
+            max_position_pct=DEFAULT_PLAN_MAX_POSITION_PCT,
+            notes="展望行追加",
+            status="draft",
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(plan)
+        db.flush()
+
+    existing = list(
+        db.scalars(
+            select(TradingPlanSymbol)
+            .where(
+                TradingPlanSymbol.plan_id == plan.id,
+                TradingPlanSymbol.user_id == user_id,
+            )
+            .order_by(TradingPlanSymbol.sort_order)
+        )
+    )
+    vts = [to_vt_symbol(s.symbol, s.exchange) for s in existing]
+    if vt in vts:
+        return {
+            "added": False,
+            "plan_id": plan.id,
+            "trade_date": td,
+            "symbol_count": len(vts),
+            "status": "draft",
+            "message": f"已在草案 {vt}",
+        }
+    if len(vts) >= MAX_PLAN_SYMBOLS:
+        raise HTTPException(status_code=400, detail=f"标的最多 {MAX_PLAN_SYMBOLS} 只")
+
+    entry = ""
+    if source == "predict":
+        entry = "来自规则预测"
+    elif source == "horizon":
+        entry = "来自共振展望"
+
+    db.add(
+        TradingPlanSymbol(
+            plan_id=plan.id,
+            symbol=code,
+            exchange=exch,
+            user_id=user_id,
+            allowed_modes="",
+            entry_conditions=entry,
+            exit_conditions="",
+            sort_order=len(existing),
+        )
+    )
+    plan.updated_at = now
+    db.commit()
+    return {
+        "added": True,
+        "plan_id": plan.id,
+        "trade_date": td,
+        "symbol_count": len(vts) + 1,
+        "status": "draft",
+        "message": f"已加入草案 {vt}",
     }

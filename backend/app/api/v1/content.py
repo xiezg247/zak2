@@ -18,6 +18,8 @@ from app.schemas.content import (
     NoteMemoOut,
     NoteMemoUpdate,
     NoteSymbolOut,
+    PlanDraftAppendIn,
+    PlanDraftAppendOut,
     PlanOut,
     PlanUpdate,
     PlaybookSectionOut,
@@ -27,6 +29,7 @@ from app.schemas.content import (
 )
 from app.services import feed as feed_svc
 from app.services import notes as notes_svc
+from app.services import plan_draft as plan_draft_svc
 from app.services import plan_manage as plan_manage_svc
 from app.services import playbook as playbook_svc
 from app.services import team_reports
@@ -74,6 +77,22 @@ def put_discipline(
 @router.get("/playbook/plans", response_model=list[PlanOut])
 def get_plans(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[PlanOut]:
     return feed_svc.list_plans(db, str(user.id))
+
+
+@router.post("/playbook/plans/draft-append", response_model=PlanDraftAppendOut)
+def post_draft_append(
+    body: PlanDraftAppendIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> PlanDraftAppendOut:
+    result = plan_draft_svc.append_symbol_to_draft(
+        db,
+        str(user.id),
+        vt_symbol=body.vt_symbol,
+        name=body.name,
+        source=body.source,
+    )
+    return PlanDraftAppendOut(**result)
 
 
 @router.patch("/playbook/plans/{plan_id}", response_model=PlanOut)
