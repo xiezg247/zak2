@@ -6,6 +6,7 @@ import {
   marketApi,
   type RadarCard,
   type RadarHorizon,
+  type RadarPredict,
   type RadarResonanceEntry,
   type ResonanceWeightItem,
 } from '../api/market'
@@ -43,6 +44,9 @@ const draftMsg = ref('')
 const horizon = ref<RadarHorizon | null>(null)
 const horizonErr = ref('')
 const horizonOpen = ref(false)
+const predict = ref<RadarPredict | null>(null)
+const predictErr = ref('')
+const predictOpen = ref(false)
 
 const cardFilter = ref('')
 const sourceChip = ref('')
@@ -150,6 +154,14 @@ const horizonHeadLabel = computed(() => {
   return (h.label || '').trim() || '启发式展望（基于共振）'
 })
 
+const predictHasCache = computed(() => Boolean(predict.value?.computed_at))
+
+const predictHeadLabel = computed(() => {
+  if (!predictHasCache.value) return '暂无数据'
+  const p = predict.value!
+  return (p.label || '').trim() || '规则预测（共振+可解释加分）'
+})
+
 const cardCountByVt = computed(() => {
   const m = new Map<string, number>()
   for (const e of resonance.value) {
@@ -183,12 +195,17 @@ async function load() {
   sideMsg.value = ''
   detailMsg.value = ''
   horizonErr.value = ''
+  predictErr.value = ''
   const weightsPromise = marketApi.resonanceWeights().catch((e) => {
     weightErr.value = e instanceof Error ? e.message : '权重加载失败'
     return null
   })
   const horizonPromise = marketApi.radarHorizon().catch((e) => {
     horizonErr.value = e instanceof Error ? e.message : '展望加载失败'
+    return null
+  })
+  const predictPromise = marketApi.radarPredict().catch((e) => {
+    predictErr.value = e instanceof Error ? e.message : '预测加载失败'
     return null
   })
   try {
@@ -204,7 +221,7 @@ async function load() {
   } finally {
     loading.value = false
   }
-  const [w, h] = await Promise.all([weightsPromise, horizonPromise])
+  const [w, h, p] = await Promise.all([weightsPromise, horizonPromise, predictPromise])
   if (w) {
     applyWeights(w)
     weightErr.value = ''
@@ -212,6 +229,10 @@ async function load() {
   if (h) {
     horizon.value = h
     horizonErr.value = ''
+  }
+  if (p) {
+    predict.value = p
+    predictErr.value = ''
   }
 }
 
@@ -384,7 +405,7 @@ onMounted(() => {
 
       <div class="horizon-block">
         <div class="horizon-head">
-          <strong>展望</strong>
+          <strong>共振展望</strong>
           <span class="muted">{{ horizonHeadLabel }}</span>
           <span v-if="horizonHasCache && horizon?.computed_at" class="muted tiny">
             · {{ horizon.computed_at }}
@@ -458,7 +479,74 @@ onMounted(() => {
             <p class="muted">
               暂无启发式展望数据。请于 Ops 手动执行
               <code class="mono">scan_horizon_outlook</code>
-              生成展望（基于雷达卡片共振；需先有 warm_radar_card_snapshots 预热卡片）。
+              （需先 warm_radar_card_snapshots）。
+            </p>
+            <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
+          </template>
+        </div>
+      </div>
+
+      <div class="horizon-block">
+        <div class="horizon-head">
+          <strong>规则预测</strong>
+          <span class="muted">{{ predictHeadLabel }}</span>
+          <span v-if="predictHasCache && predict?.computed_at" class="muted tiny">
+            · {{ predict.computed_at }}
+          </span>
+          <button type="button" class="ghost tiny-btn" @click="predictOpen = !predictOpen">
+            {{ predictOpen ? '收起' : '展开' }}
+          </button>
+        </div>
+        <div v-if="predictOpen" class="horizon-panel">
+          <p v-if="predictErr" class="horizon-err">{{ predictErr }}</p>
+          <template v-else-if="predictHasCache">
+            <p v-if="predict?.empty" class="muted">
+              上次预测无入选行（候选 {{ predict.scanned_total }} · 缺日 K {{ predict.kline_missing }}）。
+            </p>
+            <div v-else-if="predict?.rows.length" class="table-wrap horizon-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>标的</th>
+                    <th>预测分</th>
+                    <th>共振</th>
+                    <th>涨跌%</th>
+                    <th>封板</th>
+                    <th>理由</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row, i) in predict.rows" :key="row.vt_symbol">
+                    <td>{{ i + 1 }}</td>
+                    <td>
+                      {{ row.name || row.vt_symbol }}
+                      <div class="mono muted tiny">{{ row.vt_symbol }}</div>
+                    </td>
+                    <td class="mono">{{ row.predict_score.toFixed(2) }}</td>
+                    <td class="mono">{{ row.resonance_score.toFixed(1) }}</td>
+                    <td class="mono">
+                      {{ row.change_pct != null ? row.change_pct.toFixed(2) : '—' }}
+                    </td>
+                    <td class="muted tiny">{{ row.seal_time_label || '—' }}</td>
+                    <td class="muted tiny">{{ (row.reasons || []).join(' · ') || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+          <template v-else-if="horizonHasCache">
+            <p class="muted">
+              上次预测阶段失败或未写入，可于 Ops 重跑
+              <code class="mono">scan_horizon_outlook</code>。
+            </p>
+            <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
+          </template>
+          <template v-else>
+            <p class="muted">
+              暂无规则预测。请于 Ops 执行
+              <code class="mono">scan_horizon_outlook</code>
+              （与共振展望同 job）。
             </p>
             <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
           </template>

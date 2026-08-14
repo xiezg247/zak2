@@ -139,6 +139,29 @@ export type RadarHorizon = {
   label: string
 }
 
+export type RadarPredict = {
+  variant: string
+  model_label: string
+  computed_at: string | null
+  scanned_total: number
+  refined_total: number
+  kline_missing: number
+  rows: Array<{
+    vt_symbol: string
+    name: string
+    predict_score: number
+    resonance_score: number
+    card_count: number
+    card_titles: string[]
+    change_pct: number | null
+    last_price: number | null
+    seal_time_label?: string
+    reasons: string[]
+  }>
+  empty: boolean
+  label: string
+}
+
 export type ResonanceWeightItem = {
   card_id: string
   title: string
@@ -199,6 +222,7 @@ export const marketApi = {
   },
   radarCards: () => api<RadarCard[]>('/api/v1/radar/cards'),
   radarHorizon: () => api<RadarHorizon>('/api/v1/radar/horizon'),
+  radarPredict: () => api<RadarPredict>('/api/v1/radar/predict'),
   radarResonance: (opts: { top_n?: number; min_cards?: number } = {}) => {
     const q = new URLSearchParams()
     q.set('top_n', String(opts.top_n ?? 20))

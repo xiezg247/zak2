@@ -1,7 +1,7 @@
 # 雷达展望加深（共振对齐 + 规则预测）设计
 
 日期：2026-08-14  
-状态：已批准  
+状态：已批准（已实现）  
 范围：仅 zak2；不改 zak；不做 LLM 展望；不移植桌面 horizon/predict 全量管线  
 前置：`scan_horizon_outlook` 启发式闭环（#26）；`cache.radar_predict_cache` 表已存在但无写路径
 

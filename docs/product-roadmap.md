@@ -63,6 +63,7 @@
 49. ~~回测加深（vnpy CTA）~~（已完成 → [spec](./superpowers/specs/2026-08-14-vnpy-backtest-deepen-design.md)）
 50. ~~回测第二策略 trend_ma~~（已完成 → [spec](./superpowers/specs/2026-08-14-backtest-trend-ma-design.md)）：趋势双均线 + ADX + 追踪止损
 51. ~~回测分钟线 1m~~（已完成 → [spec](./superpowers/specs/2026-08-14-backtest-1m-design.md)）：`interval=1m` + 交易日上限 + Ops 引导
+52. ~~雷达展望加深~~（已完成 → [spec](./superpowers/specs/2026-08-14-radar-horizon-deepen-design.md)）：共振对齐 + `rules_v1` 规则预测双区
 
 ## 明确不做（直到本文件改口）
 
