@@ -1,18 +1,22 @@
-"""轻量日 K 双均线回测（不依赖 vnpy）。"""
+"""轻量日 K 双均线回测（不依赖 vnpy）。STRATEGIES/PROFILES 与薄引擎仍在此；日 K 见 backtest_bars。"""
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
-from app.models.bars import DbBarData
-from app.services.watchlist_repo import resolve_symbol_pair
+from app.services.backtest_bars import Bar, load_daily_bars
+
+__all__ = [
+    "STRATEGIES",
+    "PROFILES",
+    "Bar",
+    "load_daily_bars",
+    "run_double_ma",
+    "_sma",
+]
 
 STRATEGIES = (
     {
@@ -21,6 +25,7 @@ STRATEGIES = (
         "interval": "d",
         "description": "快线上穿慢线买入、下穿卖出；整手 100 股；仅做多",
         "implemented": True,
+        "engine": "vnpy",
     },
 )
 
@@ -30,16 +35,6 @@ PROFILES = (
     {"profile_id": "medium_watch", "name": "中线观察", "description": "趋势跟踪辅助", "fast_window": 10, "slow_window": 30, "capital": 100_000},
     {"profile_id": "trend", "name": "趋势", "description": "均线趋势，持仓更长", "fast_window": 20, "slow_window": 60, "capital": 100_000},
 )
-
-
-@dataclass
-class Bar:
-    dt: datetime
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float
 
 
 def _sma(values: list[float], window: int) -> list[float | None]:
@@ -54,49 +49,6 @@ def _sma(values: list[float], window: int) -> list[float | None]:
         if i >= window - 1:
             out[i] = s / window
     return out
-
-
-def load_daily_bars(
-    db: Session,
-    *,
-    vt_symbol: str,
-    start_date: str,
-    end_date: str,
-) -> list[Bar]:
-    symbol, exchange = resolve_symbol_pair(vt_symbol)
-    try:
-        start = datetime.fromisoformat(start_date[:10])
-        end = datetime.fromisoformat(end_date[:10]).replace(hour=23, minute=59, second=59)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="日期格式须为 YYYY-MM-DD") from exc
-
-    rows = list(
-        db.scalars(
-            select(DbBarData)
-            .where(
-                DbBarData.symbol == symbol,
-                DbBarData.exchange == exchange,
-                DbBarData.interval == "d",
-                DbBarData.datetime >= start,
-                DbBarData.datetime <= end,
-            )
-            .order_by(DbBarData.datetime)
-        )
-    )
-    if len(rows) < 30:
-        raise HTTPException(status_code=404, detail=f"日 K 不足（{len(rows)}），请先在 Ops 补全日 K")
-    return [
-        Bar(
-            dt=r.datetime,
-            open=float(r.open_price or 0),
-            high=float(r.high_price or 0),
-            low=float(r.low_price or 0),
-            close=float(r.close_price or 0),
-            volume=float(r.volume or 0),
-        )
-        for r in rows
-        if (r.close_price or 0) > 0
-    ]
 
 
 def run_double_ma(
@@ -125,11 +77,9 @@ def run_double_ma(
 
     for i, bar in enumerate(bars):
         f, s = fast[i], slow[i]
-        # 信号用当日收盘，下一根开盘成交（简化：同日收盘成交）
         if f is not None and s is not None and i > 0:
             pf, ps = fast[i - 1], slow[i - 1]
             if pf is not None and ps is not None:
-                # 金叉买入
                 if pf <= ps and f > s and shares == 0:
                     lot_cost = bar.close * 100 * (1 + commission_rate)
                     lots = int(cash // lot_cost)
@@ -149,7 +99,6 @@ def run_double_ma(
                                 "fee": round(fee, 2),
                             }
                         )
-                # 死叉卖出
                 elif pf >= ps and f < s and shares > 0:
                     proceeds = shares * bar.close
                     fee = proceeds * commission_rate
@@ -178,7 +127,6 @@ def run_double_ma(
         if dd < max_dd:
             max_dd = dd
 
-    # 强制平仓
     if shares > 0 and bars:
         bar = bars[-1]
         proceeds = shares * bar.close
@@ -202,7 +150,6 @@ def run_double_ma(
 
     final = equity[-1]["equity"] if equity else capital
     total_return = (final - capital) / capital * 100.0
-    # 简化年化夏普
     if len(daily_returns) > 2:
         mean = sum(daily_returns) / len(daily_returns)
         var = sum((x - mean) ** 2 for x in daily_returns) / (len(daily_returns) - 1)
