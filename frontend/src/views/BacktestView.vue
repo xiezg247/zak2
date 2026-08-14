@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import { jobsApi } from '../api/screener'
 import {
@@ -11,6 +11,8 @@ import {
   type StrategyInfo,
   type StrategyProfile,
 } from '../api/backtest'
+
+const route = useRoute()
 
 const strategies = ref<StrategyInfo[]>([])
 const profiles = ref<StrategyProfile[]>([])
@@ -266,6 +268,12 @@ async function openBatch(batchId: string) {
 }
 
 onMounted(async () => {
+  const q = route.query
+  if (typeof q.vt_symbol === 'string' && q.vt_symbol.trim()) vtSymbol.value = q.vt_symbol.trim()
+  if (typeof q.strategy === 'string' && q.strategy.trim()) strategy.value = q.strategy.trim()
+  if (typeof q.fast_window === 'string' && Number(q.fast_window) > 0) fast.value = Number(q.fast_window)
+  if (typeof q.slow_window === 'string' && Number(q.slow_window) > 0) slow.value = Number(q.slow_window)
+
   loading.value = true
   try {
     await refresh()

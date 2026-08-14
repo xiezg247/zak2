@@ -121,6 +121,7 @@ export type TradingRiskPrefsPut = {
 
 export type StrategyBoard = {
   config_key: string
+  signal_mode?: string
   as_of: string | null
   source: string
   note: string
@@ -209,8 +210,11 @@ export const watchlistApi = {
     const q = groupId ? `?group_id=${encodeURIComponent(groupId)}` : ''
     return api<WatchlistItem[]>(`/api/v1/watchlist${q}`)
   },
-  strategyBoard: (configKey?: string) => {
-    const q = configKey ? `?config_key=${encodeURIComponent(configKey)}` : ''
+  strategyBoard: (opts?: { configKey?: string; signalMode?: string }) => {
+    const params = new URLSearchParams()
+    if (opts?.configKey) params.set('config_key', opts.configKey)
+    if (opts?.signalMode) params.set('signal_mode', opts.signalMode)
+    const q = params.toString() ? `?${params.toString()}` : ''
     return api<StrategyBoard>(`/api/v1/watchlist/strategy-board${q}`)
   },
   tradingRisk: () => api<TradingRiskPrefs>('/api/v1/watchlist/trading-risk'),

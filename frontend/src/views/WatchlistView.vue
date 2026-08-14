@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import CandleChart from '../components/CandleChart.vue'
 import {
@@ -18,6 +18,7 @@ import {
 import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
 
 const route = useRoute()
+const router = useRouter()
 const items = ref<WatchlistItem[]>([])
 const groups = ref<WatchlistGroup[]>([])
 const groupId = ref<string>('')
@@ -52,6 +53,7 @@ const fund = ref<Fundamentals | null>(null)
 const lastRefresh = ref('')
 const board = ref<StrategyBoard | null>(null)
 const boardError = ref('')
+const signalMode = ref<'heuristic_v2' | 'double_ma'>('heuristic_v2')
 const positions = ref<PositionItem[]>([])
 const posError = ref('')
 const posMsg = ref('')
@@ -283,7 +285,7 @@ async function refreshBoard(quiet = false) {
   const loadPrefs = !quiet || !prefsReady.value
   try {
     const [b, pos, prefs] = await Promise.all([
-      watchlistApi.strategyBoard(),
+      watchlistApi.strategyBoard({ signalMode: signalMode.value }),
       watchlistApi.listPositions(),
       loadPrefs ? watchlistApi.tradingRisk() : Promise.resolve(null),
     ])
@@ -293,6 +295,46 @@ async function refreshBoard(quiet = false) {
   } catch (e) {
     boardError.value = e instanceof Error ? e.message : '策略看板加载失败'
   }
+}
+
+function setSignalMode(mode: 'heuristic_v2' | 'double_ma') {
+  if (signalMode.value === mode) return
+  signalMode.value = mode
+  void refreshBoard()
+}
+
+function parseFastSlowFromConfigKey(ck: string): { fast: number; slow: number } {
+  const parts = (ck || '').split(':')
+  if (parts.length >= 3) {
+    const fast = Number(parts[parts.length - 2])
+    const slow = Number(parts[parts.length - 1])
+    if (Number.isFinite(fast) && Number.isFinite(slow) && fast >= 2 && slow > fast) {
+      return { fast, slow }
+    }
+  }
+  return { fast: 5, slow: 20 }
+}
+
+function openAlignedBacktest() {
+  const vt =
+    selected.value?.vt_symbol ||
+    board.value?.signals[0]?.vt_symbol ||
+    items.value[0]?.vt_symbol ||
+    ''
+  if (!vt) {
+    boardError.value = '无可用标的，请先选中自选或等待信号'
+    return
+  }
+  const { fast, slow } = parseFastSlowFromConfigKey(board.value?.config_key || '')
+  void router.push({
+    path: '/backtest',
+    query: {
+      strategy: 'double_ma',
+      vt_symbol: vt,
+      fast_window: String(fast),
+      slow_window: String(slow),
+    },
+  })
 }
 
 async function saveTradingRisk() {
@@ -1336,8 +1378,28 @@ onUnmounted(() => {
         <div class="strategy-head">
           <h2>策略看盘</h2>
           <span class="muted" v-if="board">
-            {{ board.config_key }} · {{ board.source }} · as_of {{ board.as_of || '—' }}
+            {{ board.config_key }} · {{ board.signal_mode || signalMode }} · {{ board.source }} · as_of
+            {{ board.as_of || '—' }}
           </span>
+          <div class="mode-tabs">
+            <button
+              type="button"
+              class="ghost"
+              :class="{ on: signalMode === 'heuristic_v2' }"
+              @click="setSignalMode('heuristic_v2')"
+            >
+              启发式确认
+            </button>
+            <button
+              type="button"
+              class="ghost"
+              :class="{ on: signalMode === 'double_ma' }"
+              @click="setSignalMode('double_ma')"
+            >
+              回测双均线
+            </button>
+          </div>
+          <button type="button" class="ghost" @click="openAlignedBacktest()">同参回测</button>
           <button type="button" class="ghost" @click="refreshBoard()">刷新看板</button>
         </div>
         <p v-if="boardError" class="err">{{ boardError }}</p>
@@ -1586,6 +1648,10 @@ onUnmounted(() => {
 .strategy-head h2 {
   margin: 0;
   font-size: 1rem;
+}
+.mode-tabs {
+  display: inline-flex;
+  gap: 4px;
 }
 .strategy-grid {
   display: grid;
