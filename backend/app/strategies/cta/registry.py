@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from app.strategies.cta.double_ma import DoubleMaStrategy
+from app.strategies.cta.trend_ma import TrendMaStrategy
 
 _REGISTRY: dict[str, type] = {
     "double_ma": DoubleMaStrategy,
+    "trend_ma": TrendMaStrategy,
 }
 
 
