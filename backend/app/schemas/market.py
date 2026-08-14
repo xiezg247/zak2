@@ -164,6 +164,31 @@ class RadarHorizonOut(BaseModel):
     label: str = "启发式展望（基于共振）"
 
 
+class RadarPredictRow(BaseModel):
+    vt_symbol: str
+    name: str = ""
+    predict_score: float = 0
+    resonance_score: float = 0
+    card_count: int = 0
+    card_titles: list[str] = Field(default_factory=list)
+    change_pct: float | None = None
+    last_price: float | None = None
+    seal_time_label: str = ""
+    reasons: list[str] = Field(default_factory=list)
+
+
+class RadarPredictOut(BaseModel):
+    variant: str = "default"
+    model_label: str = ""
+    computed_at: str | None = None
+    scanned_total: int = 0
+    refined_total: int = 0
+    kline_missing: int = 0
+    rows: list[RadarPredictRow] = Field(default_factory=list)
+    empty: bool = True
+    label: str = "规则预测（共振+可解释加分）"
+
+
 class LimitListRow(BaseModel):
     trade_date: str = ""
     vt_symbol: str = ""
