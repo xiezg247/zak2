@@ -86,7 +86,7 @@ def test_warm_computes_ma_signals() -> None:
     assert out["skipped"] is False
     assert out["success"] is True
     assert out["computed"] == 1
-    assert "双均线启发式" in out["message"]
+    assert "双均线启发式 v2" in out["message"] or "确认 N=2" in out["message"]
     comp.assert_called()
     up.assert_called()
     assert save.call_args.kwargs["last_success"] is True

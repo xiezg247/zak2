@@ -278,7 +278,7 @@ def warm_watchlist_strategy_cache(db: Session) -> dict[str, Any]:
     db.commit()
     msg = (
         f"策略 cache：桥接 signals={written_s} positions={written_p}；"
-        f"双均线启发式 computed={computed} skipped_bars={skipped_bars}"
+        f"双均线启发式 v2（确认 N=2） computed={computed} skipped_bars={skipped_bars}"
     )
     save_job_run_meta(db, JOB_ID, last_message=msg, last_success=True)
     return {

@@ -38,3 +38,8 @@ def test_runners_match_runnable() -> None:
 
 def test_bars_overview_callable() -> None:
     assert callable(bars_overview)
+
+
+def test_warm_strategy_catalog_mentions_v2() -> None:
+    spec = next(s for s in JOB_SPECS if s.job_id == "warm_watchlist_strategy_cache")
+    assert "确认 N=2" in spec.description or "v2" in spec.description
