@@ -15,9 +15,9 @@ from app.core.db import SessionLocal
 from app.core.settings import get_settings
 from app.schemas.backtest import BacktestRunRequest, BatchBacktestRequest, OptimizeBacktestRequest
 from app.services import backtest_repo as repo
-from app.services.backtest_bars import bars_to_records, load_daily_bars
+from app.services.backtest_bars import bars_to_records
 from app.services.backtest_optimize import expand_ma_grid
-from app.services.backtest_settings import build_strategy_setting, min_bars_for_request
+from app.services.backtest_settings import build_strategy_setting
 
 
 def _fail(exc: BaseException) -> dict[str, Any]:
@@ -82,13 +82,7 @@ def _execute_with_optional_subprocess(
         return repo.execute_single(db, user_id, req, batch_id=batch_id, source=source)
 
     # batch/optimize：加载 K 线后子进程跑引擎，父进程落库
-    bars = load_daily_bars(
-        db,
-        vt_symbol=req.vt_symbol,
-        start_date=req.start_date,
-        end_date=req.end_date,
-        min_bars=min_bars_for_request(req),
-    )
+    bars = repo._load_bars_for_request(db, req)  # noqa: SLF001
     setting = build_strategy_setting(req)
     params = {
         "fast_window": req.fast_window,
@@ -100,6 +94,8 @@ def _execute_with_optional_subprocess(
         "adx_period": req.adx_period,
         "adx_threshold": req.adx_threshold,
         "trailing_stop_pct": req.trailing_stop_pct,
+        "interval": req.interval or "d",
+        "max_trading_days": req.max_trading_days,
         "setting": setting,
     }
     try:
@@ -116,6 +112,7 @@ def _execute_with_optional_subprocess(
                     "rate": req.rate,
                     "slippage": req.slippage,
                     "stamp_duty": req.stamp_duty,
+                    "interval": req.interval or "d",
                 }
             )
         else:
@@ -179,6 +176,7 @@ def _run_batch(user_id: str, payload: dict, batch_id: str) -> dict[str, Any]:
                 adx_period=req.adx_period,
                 adx_threshold=req.adx_threshold,
                 trailing_stop_pct=req.trailing_stop_pct,
+                max_trading_days=req.max_trading_days,
             )
             out = _execute_with_optional_subprocess(
                 db, user_id, single, batch_id=batch_id, source="batch"
@@ -220,6 +218,7 @@ def _run_optimize(user_id: str, payload: dict, batch_id: str) -> dict[str, Any]:
                 adx_period=req.adx_period,
                 adx_threshold=req.adx_threshold,
                 trailing_stop_pct=req.trailing_stop_pct,
+                max_trading_days=req.max_trading_days,
             )
             out = _execute_with_optional_subprocess(
                 db, user_id, single, batch_id=batch_id, source="optimize"

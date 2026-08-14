@@ -21,6 +21,7 @@ def run_one_payload(payload: dict[str, Any]) -> dict[str, Any]:
         rate=float(payload["rate"]),
         slippage=float(payload["slippage"]),
         stamp_duty=float(payload["stamp_duty"]),
+        interval=str(payload.get("interval") or "d"),
     )
 
 

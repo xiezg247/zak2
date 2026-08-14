@@ -1,4 +1,4 @@
-"""vnpy CTA 回测编排：PG 日 K 注入 history_data，不调用 load_data()。"""
+"""vnpy CTA 回测编排：PG K 线注入 history_data，不调用 load_data()。"""
 
 from __future__ import annotations
 
@@ -12,6 +12,15 @@ from vnpy_ctastrategy.base import BacktestingMode
 
 from app.services.backtest_map import map_vnpy_statistics
 from app.strategies.cta.registry import get_strategy_class
+
+
+def vnpy_interval(interval: str) -> Interval:
+    key = (interval or "d").strip().lower()
+    if key == "1m":
+        return Interval.MINUTE
+    if key == "d":
+        return Interval.DAILY
+    raise ValueError(f"不支持的周期：{interval}")
 
 
 class AShareDailyResult(DailyResult):
@@ -102,8 +111,14 @@ def _parse_exchange(vt_symbol: str) -> tuple[str, Exchange]:
     return symbol, exchange
 
 
-def records_to_bars(records: list[dict], *, vt_symbol: str) -> list[BarData]:
+def records_to_bars(
+    records: list[dict],
+    *,
+    vt_symbol: str,
+    interval: str = "d",
+) -> list[BarData]:
     symbol, exchange = _parse_exchange(vt_symbol)
+    iv = vnpy_interval(interval)
     bars: list[BarData] = []
     for row in records:
         dt = row["datetime"]
@@ -114,7 +129,7 @@ def records_to_bars(records: list[dict], *, vt_symbol: str) -> list[BarData]:
                 symbol=symbol,
                 exchange=exchange,
                 datetime=dt,
-                interval=Interval.DAILY,
+                interval=iv,
                 volume=float(row.get("volume") or 0),
                 open_price=float(row["open"]),
                 high_price=float(row["high"]),
@@ -178,17 +193,19 @@ def run_cta_backtest(
     stamp_duty: float,
     size: int = 1,
     pricetick: float = 0.01,
+    interval: str = "d",
 ) -> dict[str, Any]:
     if not bar_records:
         raise ValueError("历史数据为空")
 
     strategy_class = get_strategy_class(strategy_id)
-    bars = records_to_bars(bar_records, vt_symbol=vt_symbol)
+    iv = vnpy_interval(interval)
+    bars = records_to_bars(bar_records, vt_symbol=vt_symbol, interval=interval)
     engine = AShareBacktestingEngine()
     engine.stamp_duty = float(stamp_duty)
     engine.set_parameters(
         vt_symbol=vt_symbol,
-        interval=Interval.DAILY,
+        interval=iv,
         start=datetime.fromisoformat(start[:10]),
         end=datetime.fromisoformat(end[:10]),
         rate=float(rate),

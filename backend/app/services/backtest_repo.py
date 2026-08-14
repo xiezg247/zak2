@@ -11,11 +11,24 @@ from sqlalchemy.orm import Session
 
 from app.models.backtest import BacktestRun
 from app.schemas.backtest import BacktestRunOut, BacktestRunRequest, OptimizeSummaryOut
-from app.services.backtest_bars import bars_to_records, load_daily_bars
+from app.services.backtest_bars import bars_to_records, load_bars
 from app.services.backtest_optimize import pick_best
 from app.services.backtest_settings import build_strategy_setting, min_bars_for_request
 from app.services.symbols import to_vt_symbol
 from app.services.watchlist_repo import resolve_symbol_pair
+
+
+def _load_bars_for_request(db: Session, req: BacktestRunRequest):
+    interval = req.interval or "d"
+    return load_bars(
+        db,
+        vt_symbol=req.vt_symbol,
+        start_date=req.start_date,
+        end_date=req.end_date,
+        interval=interval,
+        min_bars=min_bars_for_request(req),
+        max_trading_days=req.max_trading_days if interval == "1m" else None,
+    )
 
 
 def _now() -> str:
@@ -179,6 +192,7 @@ def _run_vnpy(req: BacktestRunRequest, bars) -> dict[str, Any]:
         rate=req.rate,
         slippage=req.slippage,
         stamp_duty=req.stamp_duty,
+        interval=req.interval or "d",
     )
 
 
@@ -210,17 +224,13 @@ def execute_single(
         "adx_period": req.adx_period,
         "adx_threshold": req.adx_threshold,
         "trailing_stop_pct": req.trailing_stop_pct,
+        "interval": req.interval or "d",
+        "max_trading_days": req.max_trading_days,
         "setting": setting,
     }
 
     try:
-        bars = load_daily_bars(
-            db,
-            vt_symbol=req.vt_symbol,
-            start_date=req.start_date,
-            end_date=req.end_date,
-            min_bars=min_bars_for_request(req),
-        )
+        bars = _load_bars_for_request(db, req)
         result = _run_vnpy(req, bars)
         row = save_run(
             db,
