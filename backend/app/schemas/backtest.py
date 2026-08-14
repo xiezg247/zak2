@@ -40,6 +40,9 @@ class BacktestRunRequest(BaseModel):
     rate: float = Field(default=0.00045, ge=0)
     slippage: float = Field(default=0.0, ge=0)
     stamp_duty: float = Field(default=0.0005, ge=0)
+    adx_period: int = Field(default=14, ge=2, le=120)
+    adx_threshold: float = Field(default=25.0, ge=0)
+    trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
 
 
 class BatchBacktestRequest(BaseModel):
@@ -54,6 +57,9 @@ class BatchBacktestRequest(BaseModel):
     rate: float = Field(default=0.00045, ge=0)
     slippage: float = Field(default=0.0, ge=0)
     stamp_duty: float = Field(default=0.0005, ge=0)
+    adx_period: int = Field(default=14, ge=2, le=120)
+    adx_threshold: float = Field(default=25.0, ge=0)
+    trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
 
 
 class OptimizeBacktestRequest(BaseModel):
@@ -66,6 +72,9 @@ class OptimizeBacktestRequest(BaseModel):
     rate: float = Field(default=0.00045, ge=0)
     slippage: float = Field(default=0.0, ge=0)
     stamp_duty: float = Field(default=0.0005, ge=0)
+    adx_period: int = Field(default=14, ge=2, le=120)
+    adx_threshold: float = Field(default=25.0, ge=0)
+    trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
     space: dict[str, list[int]] = Field(default_factory=dict)
     objective: str = "sharpe_ratio"
 

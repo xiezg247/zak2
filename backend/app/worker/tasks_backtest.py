@@ -17,6 +17,7 @@ from app.schemas.backtest import BacktestRunRequest, BatchBacktestRequest, Optim
 from app.services import backtest_repo as repo
 from app.services.backtest_bars import bars_to_records, load_daily_bars
 from app.services.backtest_optimize import expand_ma_grid
+from app.services.backtest_settings import build_strategy_setting, min_bars_for_request
 
 
 def _fail(exc: BaseException) -> dict[str, Any]:
@@ -81,12 +82,14 @@ def _execute_with_optional_subprocess(
         return repo.execute_single(db, user_id, req, batch_id=batch_id, source=source)
 
     # batch/optimize：加载 K 线后子进程跑引擎，父进程落库
-    bars = load_daily_bars(db, vt_symbol=req.vt_symbol, start_date=req.start_date, end_date=req.end_date)
-    setting = {
-        "fast_window": req.fast_window,
-        "slow_window": req.slow_window,
-        "trade_volume": 100,
-    }
+    bars = load_daily_bars(
+        db,
+        vt_symbol=req.vt_symbol,
+        start_date=req.start_date,
+        end_date=req.end_date,
+        min_bars=min_bars_for_request(req),
+    )
+    setting = build_strategy_setting(req)
     params = {
         "fast_window": req.fast_window,
         "slow_window": req.slow_window,
@@ -94,6 +97,9 @@ def _execute_with_optional_subprocess(
         "rate": req.rate,
         "slippage": req.slippage,
         "stamp_duty": req.stamp_duty,
+        "adx_period": req.adx_period,
+        "adx_threshold": req.adx_threshold,
+        "trailing_stop_pct": req.trailing_stop_pct,
         "setting": setting,
     }
     try:
@@ -170,6 +176,9 @@ def _run_batch(user_id: str, payload: dict, batch_id: str) -> dict[str, Any]:
                 rate=req.rate,
                 slippage=req.slippage,
                 stamp_duty=req.stamp_duty,
+                adx_period=req.adx_period,
+                adx_threshold=req.adx_threshold,
+                trailing_stop_pct=req.trailing_stop_pct,
             )
             out = _execute_with_optional_subprocess(
                 db, user_id, single, batch_id=batch_id, source="batch"
@@ -208,6 +217,9 @@ def _run_optimize(user_id: str, payload: dict, batch_id: str) -> dict[str, Any]:
                 rate=req.rate,
                 slippage=req.slippage,
                 stamp_duty=req.stamp_duty,
+                adx_period=req.adx_period,
+                adx_threshold=req.adx_threshold,
+                trailing_stop_pct=req.trailing_stop_pct,
             )
             out = _execute_with_optional_subprocess(
                 db, user_id, single, batch_id=batch_id, source="optimize"

@@ -8,9 +8,17 @@ def test_run_request_fee_defaults():
     assert r.stamp_duty == 0.0005
 
 
+def test_run_request_adx_defaults():
+    r = BacktestRunRequest(vt_symbol="600519.SSE")
+    assert r.adx_period == 14
+    assert r.adx_threshold == 25.0
+    assert r.trailing_stop_pct == 0.12
+
+
 def test_optimize_request_accepts_space():
     o = OptimizeBacktestRequest(
         vt_symbol="600519.SSE",
         space={"fast_window": [5, 10], "slow_window": [20, 30]},
     )
     assert o.objective == "sharpe_ratio"
+    assert o.adx_period == 14

@@ -21,6 +21,14 @@ STRATEGIES = (
         "implemented": True,
         "engine": "vnpy",
     },
+    {
+        "id": "trend_ma",
+        "name": "趋势双均线（ADX）",
+        "interval": "d",
+        "description": "金叉+ADX过滤买入；死叉/破慢线/追踪止损卖出；整手 T+1",
+        "implemented": True,
+        "engine": "vnpy",
+    },
 )
 
 PROFILES = (

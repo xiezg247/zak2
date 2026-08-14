@@ -13,8 +13,10 @@ from app.models.backtest import BacktestRun
 from app.schemas.backtest import BacktestRunOut, BacktestRunRequest, OptimizeSummaryOut
 from app.services.backtest_bars import bars_to_records, load_daily_bars
 from app.services.backtest_optimize import pick_best
+from app.services.backtest_settings import build_strategy_setting, min_bars_for_request
 from app.services.symbols import to_vt_symbol
 from app.services.watchlist_repo import resolve_symbol_pair
+from app.strategies.cta.registry import get_strategy_class
 
 
 def _now() -> str:
@@ -166,11 +168,7 @@ def _run_vnpy(req: BacktestRunRequest, bars) -> dict[str, Any]:
             detail="vnpy 未安装：请使用 backtest-worker（pip/uv extra backtest）",
         ) from exc
 
-    setting = {
-        "fast_window": req.fast_window,
-        "slow_window": req.slow_window,
-        "trade_volume": 100,
-    }
+    setting = build_strategy_setting(req)
     return run_cta_backtest(
         bars_to_records(bars),
         vt_symbol=req.vt_symbol,
@@ -195,9 +193,12 @@ def execute_single(
 ) -> BacktestRunOut:
     if req.fast_window >= req.slow_window:
         raise HTTPException(status_code=400, detail="fast_window 须小于 slow_window")
-    if req.strategy != "double_ma":
-        raise HTTPException(status_code=501, detail=f"策略「{req.strategy}」尚未实现")
+    try:
+        get_strategy_class(req.strategy)
+    except KeyError as exc:
+        raise HTTPException(status_code=501, detail=f"策略「{req.strategy}」尚未实现") from exc
 
+    setting = build_strategy_setting(req)
     params = {
         "fast_window": req.fast_window,
         "slow_window": req.slow_window,
@@ -205,15 +206,20 @@ def execute_single(
         "rate": req.rate,
         "slippage": req.slippage,
         "stamp_duty": req.stamp_duty,
-        "setting": {
-            "fast_window": req.fast_window,
-            "slow_window": req.slow_window,
-            "trade_volume": 100,
-        },
+        "adx_period": req.adx_period,
+        "adx_threshold": req.adx_threshold,
+        "trailing_stop_pct": req.trailing_stop_pct,
+        "setting": setting,
     }
 
     try:
-        bars = load_daily_bars(db, vt_symbol=req.vt_symbol, start_date=req.start_date, end_date=req.end_date)
+        bars = load_daily_bars(
+            db,
+            vt_symbol=req.vt_symbol,
+            start_date=req.start_date,
+            end_date=req.end_date,
+            min_bars=min_bars_for_request(req),
+        )
         result = _run_vnpy(req, bars)
         row = save_run(
             db,

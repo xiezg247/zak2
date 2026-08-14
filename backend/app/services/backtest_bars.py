@@ -29,6 +29,7 @@ def load_daily_bars(
     vt_symbol: str,
     start_date: str,
     end_date: str,
+    min_bars: int = 30,
 ) -> list[Bar]:
     symbol, exchange = resolve_symbol_pair(vt_symbol)
     try:
@@ -50,8 +51,12 @@ def load_daily_bars(
             .order_by(DbBarData.datetime)
         )
     )
-    if len(rows) < 30:
-        raise HTTPException(status_code=404, detail=f"日 K 不足（{len(rows)}），请先在 Ops 补全日 K")
+    need = max(1, int(min_bars))
+    if len(rows) < need:
+        raise HTTPException(
+            status_code=404,
+            detail=f"日 K 不足（{len(rows)}，需要至少 {need} 根），请先在 Ops 补全日 K",
+        )
     return [
         Bar(
             dt=r.datetime,
