@@ -43,6 +43,22 @@ def test_pack_signal_row() -> None:
     assert row["strength"] == 70
 
 
+def test_pack_signal_row_includes_tier() -> None:
+    row = _pack_signal_row(
+        "600519.SSE",
+        {
+            "signal": "buy",
+            "signal_label": "买入",
+            "strength": 0.8,
+            "strength_tier": "mid",
+            "strength_tier_label": "中",
+            "reason_summary": "金叉已确认",
+        },
+    )
+    assert row["strength_tier"] == "mid"
+    assert row["strength_tier_label"] == "中"
+
+
 def test_t1_locked_today() -> None:
     from datetime import datetime, timedelta, timezone
 

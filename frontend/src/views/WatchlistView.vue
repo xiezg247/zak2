@@ -1396,7 +1396,15 @@ onUnmounted(() => {
                     <td>{{ row.name || '—' }}</td>
                     <td>{{ row.last_price != null ? row.last_price.toFixed(2) : '—' }}</td>
                     <td :class="signalClass(row.signal)">{{ row.signal_label }}</td>
-                    <td>{{ row.strength != null ? row.strength.toFixed(0) : '—' }}</td>
+                    <td>
+                      <template v-if="row.strength_tier_label">
+                        {{ row.strength_tier_label
+                        }}<span v-if="row.strength != null"> · {{ row.strength.toFixed(1) }}</span>
+                      </template>
+                      <template v-else>
+                        {{ row.strength != null ? row.strength.toFixed(0) : '—' }}
+                      </template>
+                    </td>
                     <td class="clip">{{ row.reason_summary || '—' }}</td>
                     <td>
                       <button

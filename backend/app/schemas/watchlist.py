@@ -118,6 +118,8 @@ class StrategySignalRow(BaseModel):
     signal_label: str = "—"
     signal_date: str | None = None
     strength: float | None = None
+    strength_tier: str | None = None
+    strength_tier_label: str | None = None
     reason_summary: str = ""
     ref_buy_price: float | None = None
     ref_sell_price: float | None = None

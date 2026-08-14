@@ -59,6 +59,8 @@ export type StrategySignalRow = {
   signal_label: string
   signal_date: string | null
   strength: number | null
+  strength_tier?: string | null
+  strength_tier_label?: string | null
   reason_summary: string
   ref_buy_price: number | null
   ref_sell_price: number | null

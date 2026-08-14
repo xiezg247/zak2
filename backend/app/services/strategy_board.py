@@ -270,6 +270,8 @@ def _pack_signal_row(
         "signal_label": str(snap.get("signal_label") or _signal_label(kind)),
         "signal_date": str(snap.get("signal_date") or "")[:10] or None,
         "strength": _safe_float(snap.get("strength")),
+        "strength_tier": str(snap.get("strength_tier") or "") or None,
+        "strength_tier_label": str(snap.get("strength_tier_label") or "") or None,
         "reason_summary": str(snap.get("reason_summary") or ""),
         "ref_buy_price": _safe_float(snap.get("ref_buy_price")),
         "ref_sell_price": _safe_float(snap.get("ref_sell_price")),
