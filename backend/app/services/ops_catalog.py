@@ -118,7 +118,7 @@ JOB_SPECS: tuple[JobSpec, ...] = (
     JobSpec(
         "scan_horizon_outlook",
         "雷达展望扫描",
-        "共振启发式 → cache.radar_horizon_cache（Web 可跑）",
+        "共振启发式 + 规则预测 → horizon/predict cache（Web 可跑）",
         "scan_horizon_outlook",
     ),
     JobSpec(

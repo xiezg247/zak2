@@ -1,4 +1,4 @@
-"""雷达展望：共振启发式写入 cache.radar_horizon_cache。"""
+"""雷达展望：共振启发式 + 规则预测两阶段写入 cache。"""
 
 from __future__ import annotations
 
@@ -9,9 +9,16 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services.limit_list_store import load_first_time_map
 from app.services.ops_scheduler import save_job_run_meta
 from app.services.radar import list_radar_cards
-from app.services.radar_resonance import compute_resonance
+from app.services.radar_predict import (
+    MODEL_LABEL,
+    score_predict_rows,
+    upsert_predict,
+    vt_with_min_daily_bars,
+)
+from app.services.radar_resonance import compute_resonance, resonance_scan_stats
 
 JOB_ID = "scan_horizon_outlook"
 STRATEGY_KEY = "resonance_heuristic"
@@ -29,6 +36,7 @@ def _upsert_horizon(
     *,
     rows: list[dict[str, Any]],
     scanned_total: int,
+    excluded_count: int,
     refined_total: int,
     computed_at: str,
 ) -> None:
@@ -39,7 +47,7 @@ def _upsert_horizon(
                 variant, rows_json, scanned_total, excluded_count,
                 prefilter_total, refined_total, kline_missing, strategy_key, computed_at
             ) VALUES (
-                :variant, :rows_json, :scanned_total, 0,
+                :variant, :rows_json, :scanned_total, :excluded_count,
                 :prefilter_total, :refined_total, 0, :strategy_key, :computed_at
             )
             ON CONFLICT (variant) DO UPDATE SET
@@ -57,6 +65,7 @@ def _upsert_horizon(
             "variant": VARIANT,
             "rows_json": json.dumps(rows, ensure_ascii=False),
             "scanned_total": scanned_total,
+            "excluded_count": excluded_count,
             "prefilter_total": scanned_total,
             "refined_total": refined_total,
             "strategy_key": STRATEGY_KEY,
@@ -66,8 +75,11 @@ def _upsert_horizon(
 
 
 def scan_horizon_outlook(db: Session) -> dict[str, Any]:
+    computed_at = _now_iso()
     cards = list_radar_cards(db)
-    resonance = compute_resonance(cards, min_cards=MIN_CARDS, top_n=TOP_N)
+    ft = load_first_time_map(db)
+    scanned_total, excluded_count = resonance_scan_stats(cards, min_cards=MIN_CARDS)
+    resonance = compute_resonance(cards, min_cards=MIN_CARDS, top_n=TOP_N, first_time_map=ft)
     rows = [
         {
             "vt_symbol": e.vt_symbol,
@@ -81,24 +93,58 @@ def scan_horizon_outlook(db: Session) -> dict[str, Any]:
         }
         for e in resonance.entries
     ]
-    scanned = sum(len(c.rows or []) for c in cards)
-    computed_at = _now_iso()
     _upsert_horizon(
         db,
         rows=rows,
-        scanned_total=scanned,
+        scanned_total=scanned_total,
+        excluded_count=excluded_count,
         refined_total=len(rows),
         computed_at=computed_at,
     )
     db.commit()
-    msg = f"启发式展望已写入 {len(rows)} 条（resonance_heuristic）"
-    if not rows:
-        msg = "启发式展望已写入 0 条（无达标共振标的）"
-    save_job_run_meta(db, JOB_ID, last_message=msg, last_success=True)
-    return {
+
+    predict_written = 0
+    predict_error: str | None = None
+    try:
+        has_bars = vt_with_min_daily_bars(db, [r["vt_symbol"] for r in rows], min_bars=5)
+        predict_rows, kline_missing = score_predict_rows(rows, has_daily_bars=has_bars, top_n=TOP_N)
+        upsert_predict(
+            db,
+            rows=predict_rows,
+            scanned_total=len(rows),
+            refined_total=len(predict_rows),
+            kline_missing=kline_missing,
+            computed_at=computed_at,
+        )
+        db.commit()
+        predict_written = len(predict_rows)
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        predict_error = str(exc)[:200]
+
+    parts = [
+        f"horizon={len(rows)}",
+        f"predict={predict_written}",
+        f"model={MODEL_LABEL}",
+        f"scanned={scanned_total}",
+        f"excluded={excluded_count}",
+    ]
+    if not cards:
+        parts.append("无雷达卡片，可先 warm_radar_card_snapshots")
+    if predict_error:
+        parts.append(f"predict_error={predict_error}")
+    message = "；".join(parts)
+
+    out = {
         "success": True,
         "skipped": False,
-        "message": msg,
+        "message": message,
         "written": len(rows),
+        "horizon_written": len(rows),
+        "predict_written": predict_written,
+        "predict_error": predict_error,
         "strategy_key": STRATEGY_KEY,
+        "model_label": MODEL_LABEL,
     }
+    save_job_run_meta(db, JOB_ID, last_success=True, message=message)
+    return out
