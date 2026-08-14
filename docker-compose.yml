@@ -73,6 +73,27 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  backtest-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        INSTALL_BACKTEST: "1"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://zak2:zak2@postgres:5432/zak2
+      REDIS_URL: redis://redis:6379/0
+      BACKTEST_SUBPROCESS: "1"
+      QT_QPA_PLATFORM: offscreen
+    entrypoint: ["arq", "app.worker.settings_backtest.WorkerSettings"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
   quote-collector:
     build:
       context: ./backend

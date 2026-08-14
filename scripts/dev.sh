@@ -24,8 +24,8 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> 同步后端依赖"
-(cd backend && uv sync --extra dev)
+echo "==> 同步后端依赖（含回测 extra，便于本地 backtest-worker）"
+(cd backend && uv sync --extra dev --extra backtest)
 
 echo "==> 安装前端依赖"
 (cd frontend && npm install --silent)
@@ -63,6 +63,15 @@ echo "==> 启动 Ops ARQ worker（arq app.worker.settings.WorkerSettings）"
 (
   cd backend
   uv run arq app.worker.settings.WorkerSettings
+) &
+PIDS+=($!)
+
+echo "==> 启动回测 ARQ worker（arq app.worker.settings_backtest.WorkerSettings）"
+(
+  cd backend
+  export BACKTEST_SUBPROCESS=1
+  export QT_QPA_PLATFORM=offscreen
+  uv run --extra backtest arq app.worker.settings_backtest.WorkerSettings
 ) &
 PIDS+=($!)
 
