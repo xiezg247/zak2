@@ -15,7 +15,11 @@ from app.services.ops_bars_fill import list_watchlist_symbols
 from app.services.ops_scheduler import save_job_run_meta
 from app.services.quotes import get_quote_store
 from app.services.strategy_board import DEFAULT_CONFIG_KEY, _parse_payload
-from app.services.strategy_signal_ma import compute_ma_signal, parse_config_key
+from app.services.strategy_signal_ma import (
+    compute_double_ma_signal,
+    compute_ma_signal,
+    parse_config_key,
+)
 from app.services.symbols import to_vt_symbol
 
 JOB_ID = "warm_watchlist_strategy_cache"
@@ -227,6 +231,26 @@ def _compute_pool(db: Session, config_keys: list[str]) -> tuple[int, int]:
     computed = 0
     skipped_bars = 0
     today = _today()
+    seen_dm: set[tuple[int, int]] = set()
+
+    def _upsert_one(
+        *,
+        vt: str,
+        config_key: str,
+        as_of: str,
+        snap: dict[str, Any],
+    ) -> None:
+        nonlocal computed
+        _upsert_signal(
+            db,
+            vt_symbol=vt,
+            config_key=config_key,
+            bar_as_of=as_of,
+            payload=json.dumps(snap, ensure_ascii=False),
+            updated_at=today,
+        )
+        computed += 1
+
     for ck in config_keys:
         parsed = parse_config_key(ck)
         if not parsed:
@@ -251,15 +275,43 @@ def _compute_pool(db: Session, config_keys: list[str]) -> tuple[int, int]:
             if not snap:
                 skipped_bars += 1
                 continue
-            _upsert_signal(
-                db,
+            _upsert_one(vt=vt, config_key=ck, as_of=as_of, snap=snap)
+
+            dm_key = f"double_ma:{fast}:{slow}"
+            dm = compute_double_ma_signal(
+                closes,
+                volumes=volumes,
+                fast=fast,
+                slow=slow,
                 vt_symbol=vt,
-                config_key=ck,
-                bar_as_of=as_of,
-                payload=json.dumps(snap, ensure_ascii=False),
-                updated_at=today,
+                as_of=as_of,
             )
-            computed += 1
+            if dm:
+                _upsert_one(vt=vt, config_key=dm_key, as_of=as_of, snap=dm)
+                seen_dm.add((fast, slow))
+
+    # 保证至少有默认回测窗口 5:20
+    if (5, 20) not in seen_dm and pool:
+        limit = min(200, max(20 * 3, 60))
+        for symbol, exchange in pool:
+            loaded = _load_daily_closes(db, symbol=symbol, exchange=exchange, limit=limit)
+            if not loaded:
+                continue
+            closes, volumes, as_of = loaded
+            vt = to_vt_symbol(symbol, exchange)
+            dm = compute_double_ma_signal(
+                closes,
+                volumes=volumes,
+                fast=5,
+                slow=20,
+                vt_symbol=vt,
+                as_of=as_of,
+            )
+            if not dm:
+                continue
+            _upsert_one(vt=vt, config_key="double_ma:5:20", as_of=as_of, snap=dm)
+        seen_dm.add((5, 20))
+
     return computed, skipped_bars
 
 
@@ -278,7 +330,7 @@ def warm_watchlist_strategy_cache(db: Session) -> dict[str, Any]:
     db.commit()
     msg = (
         f"策略 cache：桥接 signals={written_s} positions={written_p}；"
-        f"双均线启发式 v2（确认 N=2） computed={computed} skipped_bars={skipped_bars}"
+        f"双均线启发式 v2 + double_ma 双轨 computed={computed} skipped_bars={skipped_bars}"
     )
     save_job_run_meta(db, JOB_ID, last_message=msg, last_success=True)
     return {

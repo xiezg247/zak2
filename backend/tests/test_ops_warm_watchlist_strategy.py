@@ -62,7 +62,7 @@ def test_warm_computes_ma_signals() -> None:
         patch.object(
             m,
             "_load_daily_closes",
-            return_value=([10.0] * 20, [100.0] * 20, "2026-08-13"),
+            return_value=([10.0] * 60, [100.0] * 60, "2026-08-13"),
         ),
         patch.object(
             m,
@@ -77,18 +77,32 @@ def test_warm_computes_ma_signals() -> None:
                 "ma_gap_pct": 0.1,
                 "reason_summary": "5/10 日均线持有/观望（启发式）",
                 "strength": 0.1,
+                "signal_mode": "heuristic_v2",
             },
         ) as comp,
+        patch.object(
+            m,
+            "compute_double_ma_signal",
+            return_value={
+                "signal": "buy",
+                "signal_label": "买入",
+                "vt_symbol": "600519.SSE",
+                "as_of": "2026-08-13",
+                "signal_mode": "double_ma",
+            },
+        ) as comp_dm,
         patch.object(m, "_upsert_signal") as up,
         patch("app.services.ops_warm_watchlist_strategy.save_job_run_meta") as save,
     ):
         out = m.warm_watchlist_strategy_cache(db)
     assert out["skipped"] is False
     assert out["success"] is True
-    assert out["computed"] == 1
-    assert "双均线启发式 v2" in out["message"] or "确认 N=2" in out["message"]
+    assert out["computed"] >= 2
+    assert "double_ma" in out["message"]
     comp.assert_called()
-    up.assert_called()
+    comp_dm.assert_called()
+    ck_args = [c.kwargs.get("config_key") for c in up.call_args_list]
+    assert any(str(k).startswith("double_ma:") for k in ck_args)
     assert save.call_args.kwargs["last_success"] is True
 
 
