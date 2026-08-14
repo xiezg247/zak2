@@ -43,9 +43,10 @@ def test_run_job_skips_when_not_enabled(monkeypatch) -> None:
         "load_scheduler_config",
         lambda _db: {"config": {"purge_stale_cache": {"enabled": False}}},
     )
-    with patch.dict(es.RUNNERS, {"purge_stale_cache": MagicMock()}, clear=False):
-        es._run_job("purge_stale_cache")
-        es.RUNNERS["purge_stale_cache"].assert_not_called()
+    enq = MagicMock()
+    monkeypatch.setattr(es, "enqueue_ops_job_sync", enq)
+    es._run_job("purge_stale_cache")
+    enq.assert_not_called()
 
 
 def test_screen_skips_without_user(monkeypatch) -> None:
@@ -61,10 +62,10 @@ def test_screen_skips_without_user(monkeypatch) -> None:
         "load_scheduler_config",
         lambda _db: {"config": {"screen_intraday": {"enabled": True}}},
     )
-    runner = MagicMock()
-    with patch.dict(es.RUNNERS, {"screen_intraday": runner}, clear=False):
-        es._run_job("screen_intraday")
-        runner.assert_not_called()
+    enq = MagicMock()
+    monkeypatch.setattr(es, "enqueue_ops_job_sync", enq)
+    es._run_job("screen_intraday")
+    enq.assert_not_called()
 
 
 def test_screen_calls_with_user(monkeypatch) -> None:
@@ -84,10 +85,10 @@ def test_screen_calls_with_user(monkeypatch) -> None:
         "load_scheduler_config",
         lambda _db: {"config": {"screen_intraday": {"enabled": True}}},
     )
-    runner = MagicMock(return_value={"success": True, "message": "ok"})
-    with patch.dict(es.RUNNERS, {"screen_intraday": runner}, clear=False):
-        es._run_job("screen_intraday")
-        runner.assert_called_once_with(db, user_id="user-1")
+    enq = MagicMock(return_value="jid")
+    monkeypatch.setattr(es, "enqueue_ops_job_sync", enq)
+    es._run_job("screen_intraday")
+    enq.assert_called_once_with("screen_intraday", user_id="user-1", force=False)
 
 
 def test_watchlist_skips_when_stale_running(monkeypatch) -> None:
@@ -157,11 +158,11 @@ def test_run_job_skips_when_distributed_lock_not_acquired(monkeypatch) -> None:
         "load_scheduler_config",
         lambda _db: {"config": {"purge_stale_cache": {"enabled": True}}},
     )
-    runner = MagicMock()
-    with patch.dict(es.RUNNERS, {"purge_stale_cache": runner}, clear=False):
-        es._run_job("purge_stale_cache")
-        runner.assert_not_called()
-        release.assert_not_called()
+    enq = MagicMock()
+    monkeypatch.setattr(es, "enqueue_ops_job_sync", enq)
+    es._run_job("purge_stale_cache")
+    enq.assert_not_called()
+    release.assert_not_called()
     assert "purge_stale_cache" not in es._running
 
 
@@ -180,8 +181,8 @@ def test_run_job_releases_distributed_lock_in_finally(monkeypatch) -> None:
         "load_scheduler_config",
         lambda _db: {"config": {"purge_stale_cache": {"enabled": True}}},
     )
-    runner = MagicMock(return_value={"success": True, "message": "ok"})
-    with patch.dict(es.RUNNERS, {"purge_stale_cache": runner}, clear=False):
-        es._run_job("purge_stale_cache")
-        runner.assert_called_once_with(db)
-        release.assert_called_once_with("purge_stale_cache", "test-token")
+    enq = MagicMock(return_value="jid")
+    monkeypatch.setattr(es, "enqueue_ops_job_sync", enq)
+    es._run_job("purge_stale_cache")
+    enq.assert_called_once_with("purge_stale_cache", user_id=None, force=False)
+    release.assert_called_once_with("purge_stale_cache", "test-token")
