@@ -1,4 +1,4 @@
-"""按策略组装 CTA setting 与日 K 门槛。"""
+"""按策略组装 CTA setting 与 K 线门槛。"""
 
 from __future__ import annotations
 
@@ -24,5 +24,9 @@ def build_strategy_setting(req: BacktestRunRequest) -> dict:
 
 def min_bars_for_request(req: BacktestRunRequest) -> int:
     if req.strategy == "trend_ma":
-        return max(30, req.slow_window + req.adx_period * 2 + 5)
-    return 30
+        base = max(30, req.slow_window + req.adx_period * 2 + 5)
+    else:
+        base = 30
+    if req.interval == "1m":
+        return max(base, 100)
+    return base

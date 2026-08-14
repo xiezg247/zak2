@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+
+BacktestInterval = Literal["d", "1m"]
 
 
 class BacktestRunOut(BaseModel):
@@ -31,7 +33,7 @@ class BacktestRunOut(BaseModel):
 class BacktestRunRequest(BaseModel):
     vt_symbol: str = Field(description="如 600519.SSE")
     strategy: str = "double_ma"
-    interval: str = "d"
+    interval: BacktestInterval = "d"
     start_date: str = "2020-01-01"
     end_date: str = "2026-12-31"
     fast_window: int = Field(default=5, ge=2, le=120)
@@ -43,12 +45,13 @@ class BacktestRunRequest(BaseModel):
     adx_period: int = Field(default=14, ge=2, le=120)
     adx_threshold: float = Field(default=25.0, ge=0)
     trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
+    max_trading_days: int = Field(default=20, ge=1, le=60)
 
 
 class BatchBacktestRequest(BaseModel):
     symbols: list[str] = Field(min_length=1, max_length=50)
     strategy: str = "double_ma"
-    interval: str = "d"
+    interval: BacktestInterval = "d"
     start_date: str = "2020-01-01"
     end_date: str = "2026-12-31"
     fast_window: int = 5
@@ -60,12 +63,13 @@ class BatchBacktestRequest(BaseModel):
     adx_period: int = Field(default=14, ge=2, le=120)
     adx_threshold: float = Field(default=25.0, ge=0)
     trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
+    max_trading_days: int = Field(default=20, ge=1, le=60)
 
 
 class OptimizeBacktestRequest(BaseModel):
     vt_symbol: str = Field(description="如 600519.SSE")
     strategy: str = "double_ma"
-    interval: str = "d"
+    interval: BacktestInterval = "d"
     start_date: str = "2020-01-01"
     end_date: str = "2026-12-31"
     capital: float = Field(default=100_000, gt=0)
@@ -75,6 +79,7 @@ class OptimizeBacktestRequest(BaseModel):
     adx_period: int = Field(default=14, ge=2, le=120)
     adx_threshold: float = Field(default=25.0, ge=0)
     trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
+    max_trading_days: int = Field(default=20, ge=1, le=60)
     space: dict[str, list[int]] = Field(default_factory=dict)
     objective: str = "sharpe_ratio"
 

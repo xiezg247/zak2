@@ -1,4 +1,4 @@
-"""日 K 加载与可序列化 bar 记录（不依赖 vnpy）。"""
+"""K 线加载与可序列化 bar 记录（不依赖 vnpy）。"""
 
 from __future__ import annotations
 
@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from app.models.bars import DbBarData
 from app.services.watchlist_repo import resolve_symbol_pair
 
+ALLOWED_INTERVALS = frozenset({"d", "1m"})
+
 
 @dataclass
 class Bar:
@@ -23,14 +25,23 @@ class Bar:
     volume: float
 
 
-def load_daily_bars(
+def count_trading_days(bars: list[Bar]) -> int:
+    return len({b.dt.date() for b in bars})
+
+
+def load_bars(
     db: Session,
     *,
     vt_symbol: str,
     start_date: str,
     end_date: str,
+    interval: str = "d",
     min_bars: int = 30,
+    max_trading_days: int | None = None,
 ) -> list[Bar]:
+    if interval not in ALLOWED_INTERVALS:
+        raise HTTPException(status_code=400, detail=f"不支持的周期：{interval}")
+
     symbol, exchange = resolve_symbol_pair(vt_symbol)
     try:
         start = datetime.fromisoformat(start_date[:10])
@@ -44,20 +55,14 @@ def load_daily_bars(
             .where(
                 DbBarData.symbol == symbol,
                 DbBarData.exchange == exchange,
-                DbBarData.interval == "d",
+                DbBarData.interval == interval,
                 DbBarData.datetime >= start,
                 DbBarData.datetime <= end,
             )
             .order_by(DbBarData.datetime)
         )
     )
-    need = max(1, int(min_bars))
-    if len(rows) < need:
-        raise HTTPException(
-            status_code=404,
-            detail=f"日 K 不足（{len(rows)}，需要至少 {need} 根），请先在 Ops 补全日 K",
-        )
-    return [
+    bars = [
         Bar(
             dt=r.datetime,
             open=float(r.open_price or 0),
@@ -69,6 +74,46 @@ def load_daily_bars(
         for r in rows
         if (r.close_price or 0) > 0
     ]
+
+    need = max(1, int(min_bars))
+    if len(bars) < need:
+        if interval == "1m":
+            detail = (
+                f"分钟 K 不足（{len(bars)}，需要至少 {need} 根），"
+                "请先在 Ops 跑 fill_focus_pool_minute 补全关注池 1m"
+            )
+        else:
+            detail = f"日 K 不足（{len(bars)}，需要至少 {need} 根），请先在 Ops 补全日 K"
+        raise HTTPException(status_code=404, detail=detail)
+
+    if interval == "1m" and max_trading_days is not None:
+        days = count_trading_days(bars)
+        limit = int(max_trading_days)
+        if days > limit:
+            raise HTTPException(
+                status_code=400,
+                detail=f"分钟回测交易日过多（{days} 天，上限 {limit}），请缩小日期区间",
+            )
+
+    return bars
+
+
+def load_daily_bars(
+    db: Session,
+    *,
+    vt_symbol: str,
+    start_date: str,
+    end_date: str,
+    min_bars: int = 30,
+) -> list[Bar]:
+    return load_bars(
+        db,
+        vt_symbol=vt_symbol,
+        start_date=start_date,
+        end_date=end_date,
+        interval="d",
+        min_bars=min_bars,
+    )
 
 
 def bars_to_records(bars: list[Bar]) -> list[dict]:

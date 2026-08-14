@@ -15,6 +15,15 @@ def test_run_request_adx_defaults():
     assert r.trailing_stop_pct == 0.12
 
 
+def test_run_request_interval_and_max_trading_days():
+    r = BacktestRunRequest(vt_symbol="600519.SSE")
+    assert r.interval == "d"
+    assert r.max_trading_days == 20
+    m = BacktestRunRequest(vt_symbol="600519.SSE", interval="1m", max_trading_days=40)
+    assert m.interval == "1m"
+    assert m.max_trading_days == 40
+
+
 def test_optimize_request_accepts_space():
     o = OptimizeBacktestRequest(
         vt_symbol="600519.SSE",
