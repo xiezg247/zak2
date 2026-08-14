@@ -61,8 +61,8 @@ def test_warm_computes_ma_signals() -> None:
         patch.object(m, "list_watchlist_symbols", return_value=[("600519", "SSE")]),
         patch.object(
             m,
-            "_load_daily_closes",
-            return_value=([10.0] * 60, [100.0] * 60, "2026-08-13"),
+            "_load_daily_bars",
+            return_value=([11.0] * 60, [9.0] * 60, [10.0] * 60, [100.0] * 60, "2026-08-13"),
         ),
         patch.object(
             m,
@@ -91,18 +91,32 @@ def test_warm_computes_ma_signals() -> None:
                 "signal_mode": "double_ma",
             },
         ) as comp_dm,
+        patch.object(
+            m,
+            "compute_trend_ma_signal",
+            return_value={
+                "signal": "hold",
+                "signal_label": "观望",
+                "vt_symbol": "600519.SSE",
+                "as_of": "2026-08-13",
+                "signal_mode": "trend_ma",
+            },
+        ) as comp_tm,
         patch.object(m, "_upsert_signal") as up,
         patch("app.services.ops_warm_watchlist_strategy.save_job_run_meta") as save,
     ):
         out = m.warm_watchlist_strategy_cache(db)
     assert out["skipped"] is False
     assert out["success"] is True
-    assert out["computed"] >= 2
+    assert out["computed"] >= 3
     assert "double_ma" in out["message"]
+    assert "trend_ma" in out["message"]
     comp.assert_called()
     comp_dm.assert_called()
+    comp_tm.assert_called()
     ck_args = [c.kwargs.get("config_key") for c in up.call_args_list]
     assert any(str(k).startswith("double_ma:") for k in ck_args)
+    assert any(k == "trend_ma:20:60" for k in ck_args)
     assert save.call_args.kwargs["last_success"] is True
 
 
@@ -112,7 +126,7 @@ def test_warm_skips_missing_bars() -> None:
         patch.object(m, "_redis_client", return_value=None),
         patch.object(m, "_list_config_keys", return_value=["AshareShortBreakoutStrategy:5:10"]),
         patch.object(m, "list_watchlist_symbols", return_value=[("600519", "SSE")]),
-        patch.object(m, "_load_daily_closes", return_value=None),
+        patch.object(m, "_load_daily_bars", return_value=None),
         patch.object(m, "_upsert_signal") as up,
         patch("app.services.ops_warm_watchlist_strategy.save_job_run_meta"),
     ):

@@ -16,8 +16,13 @@ from app.services.ops_scheduler import save_job_run_meta
 from app.services.quotes import get_quote_store
 from app.services.strategy_board import DEFAULT_CONFIG_KEY, _parse_payload
 from app.services.strategy_signal_ma import (
+    TREND_ADX_PERIOD,
+    TREND_ADX_THRESHOLD,
+    TREND_MA_FAST,
+    TREND_MA_SLOW,
     compute_double_ma_signal,
     compute_ma_signal,
+    compute_trend_ma_signal,
     parse_config_key,
 )
 from app.services.symbols import to_vt_symbol
@@ -198,10 +203,10 @@ def _bridge_config(db: Session, client: Any, config_key: str) -> tuple[int, int]
     return written_s, written_p
 
 
-def _load_daily_closes(
+def _load_daily_bars(
     db: Session, *, symbol: str, exchange: str, limit: int
-) -> tuple[list[float], list[float], str] | None:
-    """返回 (closes, volumes, as_of)；无数据返回 None（不抛）。"""
+) -> tuple[list[float], list[float], list[float], list[float], str] | None:
+    """返回 (highs, lows, closes, volumes, as_of)；无数据返回 None（不抛）。"""
     from app.services.symbols import normalize_exchange
 
     exch = normalize_exchange(exchange)
@@ -220,10 +225,12 @@ def _load_daily_closes(
     if not rows:
         return None
     rows.reverse()
+    highs = [float(r.high_price or 0) for r in rows]
+    lows = [float(r.low_price or 0) for r in rows]
     closes = [float(r.close_price or 0) for r in rows]
     volumes = [float(r.volume or 0) for r in rows]
     as_of = rows[-1].datetime.date().isoformat()
-    return closes, volumes, as_of
+    return highs, lows, closes, volumes, as_of
 
 
 def _compute_pool(db: Session, config_keys: list[str]) -> tuple[int, int]:
@@ -258,11 +265,11 @@ def _compute_pool(db: Session, config_keys: list[str]) -> tuple[int, int]:
         fast, slow = parsed
         limit = min(200, max(slow * 3, 60))
         for symbol, exchange in pool:
-            loaded = _load_daily_closes(db, symbol=symbol, exchange=exchange, limit=limit)
+            loaded = _load_daily_bars(db, symbol=symbol, exchange=exchange, limit=limit)
             if not loaded:
                 skipped_bars += 1
                 continue
-            closes, volumes, as_of = loaded
+            highs, lows, closes, volumes, as_of = loaded
             vt = to_vt_symbol(symbol, exchange)
             snap = compute_ma_signal(
                 closes,
@@ -294,10 +301,10 @@ def _compute_pool(db: Session, config_keys: list[str]) -> tuple[int, int]:
     if (5, 20) not in seen_dm and pool:
         limit = min(200, max(20 * 3, 60))
         for symbol, exchange in pool:
-            loaded = _load_daily_closes(db, symbol=symbol, exchange=exchange, limit=limit)
+            loaded = _load_daily_bars(db, symbol=symbol, exchange=exchange, limit=limit)
             if not loaded:
                 continue
-            closes, volumes, as_of = loaded
+            _highs, _lows, closes, volumes, as_of = loaded
             vt = to_vt_symbol(symbol, exchange)
             dm = compute_double_ma_signal(
                 closes,
@@ -311,6 +318,32 @@ def _compute_pool(db: Session, config_keys: list[str]) -> tuple[int, int]:
                 continue
             _upsert_one(vt=vt, config_key="double_ma:5:20", as_of=as_of, snap=dm)
         seen_dm.add((5, 20))
+
+    # 第三轨 trend_ma:20:60
+    if pool:
+        tm_key = f"trend_ma:{TREND_MA_FAST}:{TREND_MA_SLOW}"
+        limit_tm = min(200, max(TREND_MA_SLOW * 3, TREND_ADX_PERIOD * 4, 80))
+        for symbol, exchange in pool:
+            loaded = _load_daily_bars(db, symbol=symbol, exchange=exchange, limit=limit_tm)
+            if not loaded:
+                continue
+            highs, lows, closes, volumes, as_of = loaded
+            vt = to_vt_symbol(symbol, exchange)
+            tm = compute_trend_ma_signal(
+                highs,
+                lows,
+                closes,
+                volumes=volumes,
+                fast=TREND_MA_FAST,
+                slow=TREND_MA_SLOW,
+                adx_period=TREND_ADX_PERIOD,
+                adx_threshold=TREND_ADX_THRESHOLD,
+                vt_symbol=vt,
+                as_of=as_of,
+            )
+            if not tm:
+                continue
+            _upsert_one(vt=vt, config_key=tm_key, as_of=as_of, snap=tm)
 
     return computed, skipped_bars
 
@@ -330,7 +363,7 @@ def warm_watchlist_strategy_cache(db: Session) -> dict[str, Any]:
     db.commit()
     msg = (
         f"策略 cache：桥接 signals={written_s} positions={written_p}；"
-        f"双均线启发式 v2 + double_ma 双轨 computed={computed} skipped_bars={skipped_bars}"
+        f"启发式 v2 + double_ma + trend_ma 三轨 computed={computed} skipped_bars={skipped_bars}"
     )
     save_job_run_meta(db, JOB_ID, last_message=msg, last_success=True)
     return {
