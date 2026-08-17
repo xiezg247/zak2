@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -46,7 +48,7 @@ from app.services.symbols import normalize_exchange, to_tf_symbol, to_vt_symbol
 router = APIRouter(tags=["watchlist"])
 
 
-def _enrich(items: list, *, with_quotes: bool, db: Session | None = None) -> list[WatchlistItemOut]:  # type: ignore[no-untyped-def]
+def _enrich(items: list[Any], *, with_quotes: bool, db: Session | None = None) -> list[WatchlistItemOut]:
     suspended = load_suspended_vt_symbols(db) if db is not None else set()
     quote_map: dict[str, QuoteRow] = {}
     if with_quotes and items:

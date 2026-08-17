@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -104,7 +104,7 @@ def _skip(db: Session, message: str) -> dict[str, Any]:
 def _sync_one_subscription(db: Session, client: BilibiliClient, sub: FeedSubscription) -> int:
     raws = list_recent_dynamics(client, sub.source_id, count=FEED_RECENT_LIMIT)
     author = sub.display_name or sub.source_id
-    created_at = datetime.now().isoformat(timespec="seconds")
+    created_at = datetime.now(UTC).isoformat(timespec="seconds")
     inserted = 0
     for raw in raws:
         draft = normalize_dynamic(raw, author_name=author)

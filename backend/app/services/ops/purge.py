@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import text
@@ -28,7 +28,7 @@ def _delete_count(db: Session, sql: str, params: dict[str, str]) -> int:
 
 
 def purge_stale_cache(db: Session) -> dict[str, Any]:
-    now = datetime.now()
+    now = datetime.now(UTC)
     now_text = now.isoformat(timespec="seconds")
     signal_cutoff = (now - timedelta(days=_env_int("CACHE_SIGNAL_RETENTION_DAYS", 7))).isoformat(timespec="seconds")
     radar_snapshot_cutoff = (now - timedelta(days=_env_int("CACHE_RADAR_SNAPSHOT_RETENTION_DAYS", 30))).isoformat(

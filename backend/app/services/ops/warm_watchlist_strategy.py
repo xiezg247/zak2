@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import redis
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.redis_keys import KEY_PREFIX
+from app.core.time import china_today
 from app.models.bars import DbBarData
 from app.services.ops.bars_fill import list_watchlist_symbols
 from app.services.ops.scheduler import save_job_run_meta
@@ -29,10 +30,9 @@ from app.services.symbols import to_vt_symbol
 
 JOB_ID = "warm_watchlist_strategy_cache"
 POOL_CAP = 500
-_CHINA_TZ = timezone(timedelta(hours=8))
 
 
-def _redis_client():
+def _redis_client() -> redis.Redis | None:
     store = get_quote_store()
     if not store.available():
         return None
@@ -40,7 +40,7 @@ def _redis_client():
 
 
 def _today() -> str:
-    return datetime.now(_CHINA_TZ).date().isoformat()
+    return china_today().isoformat()
 
 
 def _list_config_keys(db: Session) -> list[str]:

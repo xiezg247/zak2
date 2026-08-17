@@ -9,9 +9,7 @@ def test_warm_bridges_redis_signals() -> None:
     # scan yields one signal key; get returns envelope JSON
     signal_key = b"zak2:cache:signal:latest:AshareShortBreakoutStrategy:5:10:600519.SSE"
     fake_client.scan_iter.side_effect = lambda **kw: (
-        iter([signal_key])
-        if "signal:latest" in kw.get("match", "")
-        else iter([])
+        iter([signal_key]) if "signal:latest" in kw.get("match", "") else iter([])
     )
     fake_client.get.return_value = (
         b'{"payload":"{\\"signal\\":\\"buy\\",\\"vt_symbol\\":\\"600519.SSE\\"}",'

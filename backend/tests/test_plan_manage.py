@@ -223,9 +223,7 @@ def test_activate_then_off_plan_uses_plan_symbols() -> None:
     snap = op.load_active_plan_snapshot(db_snap, "u1", "2026-08-14")
     assert snap is not None
     assert snap["vt_symbols"] == {"600519.SSE"}
-    assert op.list_off_plan_vt_symbols(["600519.SSE", "000001.SZSE"], snap["vt_symbols"]) == [
-        "000001.SZSE"
-    ]
+    assert op.list_off_plan_vt_symbols(["600519.SSE", "000001.SZSE"], snap["vt_symbols"]) == ["000001.SZSE"]
     assert op.list_off_plan_vt_symbols(["600519.SSE", "000001.SZSE"], None) == []
 
 

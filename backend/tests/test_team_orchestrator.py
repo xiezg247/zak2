@@ -37,11 +37,7 @@ def test_stream_team_with_prefetch_mock() -> None:
     assert "financial" in agents and "chief" in agents and "system" in agents
     assert any(e.get("kind") == "score" and e.get("agent") == "financial" for e in events)
     # fast：子 Agent 无 LLM delta
-    sub_deltas = [
-        e
-        for e in events
-        if e.get("kind") == "delta" and e.get("agent") in ("financial", "risk", "strategy")
-    ]
+    sub_deltas = [e for e in events if e.get("kind") == "delta" and e.get("agent") in ("financial", "risk", "strategy")]
     assert not sub_deltas
     done = [e for e in events if e.get("agent") == "system" and e.get("kind") == "done"]
     assert done and "汇总" in str(done[0].get("report") or "")
@@ -68,11 +64,7 @@ def test_stream_team_deep_parallel_deltas() -> None:
         events = list(team_orchestrator.stream_team_analysis(db, "u1", "600519.SSE", mode="deep"))
 
     by_agent_delta = {
-        a: "".join(
-            str(e.get("content") or "")
-            for e in events
-            if e.get("agent") == a and e.get("kind") == "delta"
-        )
+        a: "".join(str(e.get("content") or "") for e in events if e.get("agent") == a and e.get("kind") == "delta")
         for a in ("financial", "risk", "strategy", "chief")
     }
     assert "财务要点A" in by_agent_delta["financial"]
@@ -104,9 +96,7 @@ def test_stream_team_deep_analyst_fallback() -> None:
     ):
         events = list(team_orchestrator.stream_team_analysis(db, "u1", "600519.SSE", mode="deep"))
 
-    fin_done = [
-        e for e in events if e.get("agent") == "financial" and e.get("kind") == "done"
-    ]
+    fin_done = [e for e in events if e.get("agent") == "financial" and e.get("kind") == "done"]
     assert fin_done and fin_done[0].get("fallback") is True
     assert any(e.get("agent") == "system" and e.get("kind") == "done" for e in events)
 

@@ -55,9 +55,7 @@ def test_run_skill_radar_mocked() -> None:
 
 def test_list_note_symbols_limit() -> None:
     items = [
-        SimpleNamespace(
-            model_dump=lambda i=i: {"vt_symbol": f"{i}.SSE", "memo_preview": "", "entry_count": 0}
-        )
+        SimpleNamespace(model_dump=lambda i=i: {"vt_symbol": f"{i}.SSE", "memo_preview": "", "entry_count": 0})
         for i in range(5)
     ]
     with patch.object(art, "notes") as n:
@@ -212,9 +210,7 @@ def test_get_positions_quote_store_failure_still_returns() -> None:
 
 def test_get_signal_panel_delegates() -> None:
     payload = {"symbols": ["600519.SSE"], "count": 1, "max_symbols": 10}
-    with patch(
-        "app.repositories.signal_panel.SignalPanelRepository.panel_payload", return_value=payload
-    ) as pp:
+    with patch("app.repositories.signal_panel.SignalPanelRepository.panel_payload", return_value=payload) as pp:
         out = art.get_signal_panel(MagicMock(), "u", {})
     assert out == payload
     pp.assert_called_once()
@@ -245,9 +241,7 @@ def test_run_skill_positions_section_signals() -> None:
         "app.services.ai_read_tools.get_signal_panel",
         return_value={"symbols": ["600519.SSE"], "count": 1, "max_symbols": 10},
     ) as gs:
-        out = execute_tool(
-            MagicMock(), "u", "run_skill", {"skill_id": "positions", "section": "signals"}
-        )
+        out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "positions", "section": "signals"})
     assert "600519" in out or "symbols" in out
     gs.assert_called_once()
 
@@ -281,6 +275,4 @@ def test_get_trading_risk_prefs_and_summary() -> None:
         out = art.get_trading_risk(MagicMock(), "u", {})
     assert out["prefs"]["total_capital"] == 100000.0
     assert out["risk_summary"]["actual_position_pct"] == 0.2
-    assert out["risk_summary"]["plan_symbols"] == [
-        {"vt_symbol": "600519.SSE", "status": "in_position"}
-    ]
+    assert out["risk_summary"]["plan_symbols"] == [{"vt_symbol": "600519.SSE", "status": "in_position"}]

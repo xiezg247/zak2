@@ -10,6 +10,8 @@ from vnpy.trader.object import BarData, OrderData, TickData, TradeData
 from vnpy_ctastrategy import CtaTemplate
 from vnpy_ctastrategy.base import StopOrder
 
+from app.core.time import china_today
+
 
 class AShareCtaTemplate(CtaTemplate):
     """仅做多；买入整手；卖出受 T+1 限制。"""
@@ -67,7 +69,7 @@ class AShareCtaTemplate(CtaTemplate):
 
     def on_trade(self, trade: TradeData) -> None:
         if trade.offset == Offset.OPEN or (trade.direction.name == "LONG" and trade.offset == Offset.NONE):
-            d = trade.datetime.date() if trade.datetime else date.today()
+            d = trade.datetime.date() if trade.datetime else china_today()
             self._lot_buy_dates[d] = self._lot_buy_dates.get(d, 0) + int(trade.volume)
         super().on_trade(trade)
 

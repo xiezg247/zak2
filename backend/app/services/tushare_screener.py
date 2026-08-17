@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.time import china_today
 from app.services import tushare_client as ts
 from app.services.quotes import QuoteRow
 
@@ -39,7 +40,7 @@ def latest_open_yyyymmdd(db: Session | None = None) -> str:
         ).scalar()
         if cal:
             return str(cal).replace("-", "")[:8]
-    day = date.today()
+    day = china_today()
     while day.weekday() >= 5:
         day -= timedelta(days=1)
     return day.strftime("%Y%m%d")

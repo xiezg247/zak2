@@ -60,10 +60,7 @@ def test_search_users_empty_keyword() -> None:
 def test_search_users_calls_signed_path_and_limits() -> None:
     client = MagicMock()
     client.get_json.return_value = {
-        "result": [
-            {"type": "bili_user", "mid": i, "uname": f"U{i}", "upic": ""}
-            for i in range(1, 12)
-        ]
+        "result": [{"type": "bili_user", "mid": i, "uname": f"U{i}", "upic": ""} for i in range(1, 12)]
     }
     out = search_users(client, "量化", limit=3)
     assert len(out) == 3

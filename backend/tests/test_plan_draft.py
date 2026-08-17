@@ -77,7 +77,9 @@ def test_ice_stage_raises_no_write() -> None:
 def test_recession_stage_raises_no_write() -> None:
     db = MagicMock()
     with (
-        patch("app.services.plan_draft.build_emotion_cycle", return_value={"stage": "recession", "stage_label": "退潮"}),
+        patch(
+            "app.services.plan_draft.build_emotion_cycle", return_value={"stage": "recession", "stage_label": "退潮"}
+        ),
         patch("app.services.plan_draft.list_radar_cards") as cards,
     ):
         with pytest.raises(HTTPException) as ei:
@@ -92,7 +94,9 @@ def test_recession_stage_raises_no_write() -> None:
 def test_no_cards_400() -> None:
     db = MagicMock()
     with (
-        patch("app.services.plan_draft.build_emotion_cycle", return_value={"stage": "divergence", "stage_label": "分歧"}),
+        patch(
+            "app.services.plan_draft.build_emotion_cycle", return_value={"stage": "divergence", "stage_label": "分歧"}
+        ),
         patch("app.services.plan_draft.list_radar_cards", return_value=[]),
     ):
         with pytest.raises(HTTPException) as ei:
@@ -105,7 +109,9 @@ def test_empty_resonance_400() -> None:
     db = MagicMock()
     empty = RadarResonanceOut(min_cards=2, top_n=5, total=0, entries=[])
     with (
-        patch("app.services.plan_draft.build_emotion_cycle", return_value={"stage": "divergence", "stage_label": "分歧"}),
+        patch(
+            "app.services.plan_draft.build_emotion_cycle", return_value={"stage": "divergence", "stage_label": "分歧"}
+        ),
         patch("app.services.plan_draft.list_radar_cards", return_value=[MagicMock()]),
         patch("app.services.plan_draft.list_radar_resonance", return_value=empty),
         patch("app.services.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
@@ -135,7 +141,9 @@ def test_create_draft_and_replace() -> None:
     db.scalars.return_value = []
 
     with (
-        patch("app.services.plan_draft.build_emotion_cycle", return_value={"stage": "divergence", "stage_label": "分歧"}),
+        patch(
+            "app.services.plan_draft.build_emotion_cycle", return_value={"stage": "divergence", "stage_label": "分歧"}
+        ),
         patch("app.services.plan_draft.list_radar_cards", return_value=[MagicMock()]),
         patch("app.services.plan_draft.list_radar_resonance", return_value=out),
         patch("app.services.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
@@ -161,7 +169,9 @@ def test_create_draft_and_replace() -> None:
     db.reset_mock()
 
     with (
-        patch("app.services.plan_draft.build_emotion_cycle", return_value={"stage": "divergence", "stage_label": "分歧"}),
+        patch(
+            "app.services.plan_draft.build_emotion_cycle", return_value={"stage": "divergence", "stage_label": "分歧"}
+        ),
         patch("app.services.plan_draft.list_radar_cards", return_value=[MagicMock()]),
         patch("app.services.plan_draft.list_radar_resonance", return_value=out),
         patch("app.services.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
@@ -196,7 +206,9 @@ def test_replace_path_flush_before_commit() -> None:
     out = RadarResonanceOut(min_cards=2, top_n=5, total=1, entries=entries)
 
     with (
-        patch("app.services.plan_draft.build_emotion_cycle", return_value={"stage": "divergence", "stage_label": "分歧"}),
+        patch(
+            "app.services.plan_draft.build_emotion_cycle", return_value={"stage": "divergence", "stage_label": "分歧"}
+        ),
         patch("app.services.plan_draft.list_radar_cards", return_value=[MagicMock()]),
         patch("app.services.plan_draft.list_radar_resonance", return_value=out),
         patch("app.services.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
@@ -362,7 +374,10 @@ def test_append_rejects_when_full() -> None:
         s.exchange = "SSE"
         fake.append(s)
     db.scalars.return_value = fake
-    with patch.object(pd, "resolve_next_trade_date", return_value=("2026-08-17", False)), pytest.raises(HTTPException) as ei:
+    with (
+        patch.object(pd, "resolve_next_trade_date", return_value=("2026-08-17", False)),
+        pytest.raises(HTTPException) as ei,
+    ):
         pd.append_symbol_to_draft(db, "u1", vt_symbol="600519.SSE")
     assert ei.value.status_code == 400
     assert "最多" in str(ei.value.detail)

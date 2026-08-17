@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import HTTPException
@@ -116,7 +116,7 @@ def sync_stock_industry(db: Session) -> dict[str, Any]:
             db.rollback()
             return _fail(db, "无有效行业映射", skipped=skipped)
 
-        updated_at = datetime.now().isoformat(timespec="seconds")
+        updated_at = datetime.now(UTC).isoformat(timespec="seconds")
         db.execute(text("DELETE FROM app.stock_industry"))
         for i in range(0, len(rows), INSERT_CHUNK):
             chunk = rows[i : i + INSERT_CHUNK]

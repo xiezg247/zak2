@@ -13,18 +13,18 @@ from app.services.quotes import QuoteRow
 
 
 def _row(symbol: str, **kwargs) -> QuoteRow:
-    base = dict(
-        symbol=symbol,
-        name="测试",
-        change_pct=9.8,
-        turnover_rate=8.0,
-        amount=2e8,
-        volume=1e6,
-        volume_ratio=2.0,
-        limit_times=2,
-        industry="半导体",
-        net_mf_amount=3000,
-    )
+    base = {
+        "symbol": symbol,
+        "name": "测试",
+        "change_pct": 9.8,
+        "turnover_rate": 8.0,
+        "amount": 2e8,
+        "volume": 1e6,
+        "volume_ratio": 2.0,
+        "limit_times": 2,
+        "industry": "半导体",
+        "net_mf_amount": 3000,
+    }
     base.update(kwargs)
     return QuoteRow(**base)  # type: ignore[arg-type]
 
@@ -65,9 +65,7 @@ def test_compute_leader_score_range() -> None:
 def test_seal_time_raises_leader_score() -> None:
     row = _row("SHSE.600519", limit_times=3, amount=4e8, net_mf_amount=8000)
     base = compute_leader_score(row, amount_rank=0.9, sector_strength=1.0, max_net_mf=10000)
-    with_seal = compute_leader_score(
-        row, amount_rank=0.9, sector_strength=1.0, max_net_mf=10000, seal_time=1.0
-    )
+    with_seal = compute_leader_score(row, amount_rank=0.9, sector_strength=1.0, max_net_mf=10000, seal_time=1.0)
     assert with_seal > base
 
     row_no = _row("SHSE.600519", limit_times=3, amount=4e8, net_mf_amount=8000)

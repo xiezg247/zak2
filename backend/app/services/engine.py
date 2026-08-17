@@ -374,13 +374,13 @@ def run_recipe_screen(
 
     scorer = _RECIPE_SCORERS.get(recipe.recipe_id, _score_intraday_multi)
     if recipe.recipe_id in recipe_weights_svc.EDITABLE_RECIPES:
-        scored = [(scorer(r, weights), r) for r in rows]  # type: ignore[call-arg]
+        scored = [(scorer(r, weights), r) for r in rows]
     else:
         scored = [(scorer(r), r) for r in rows]
     scored.sort(key=lambda x: x[0], reverse=True)
     selected = [r for _, r in scored[:top_n]]
     for score, row in scored[:top_n]:
-        row.__dict__["_score"] = round(score, 4)  # type: ignore[attr-defined]
+        row.__dict__["_score"] = round(score, 4)
 
     return _pack_result(
         selected,

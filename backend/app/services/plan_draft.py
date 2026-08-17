@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy import delete, desc, select, text
 from sqlalchemy.orm import Session
 
+from app.core.time import china_today
 from app.models.content import TradingPlan, TradingPlanSymbol
 from app.services.emotion_cycle import build_emotion_cycle
 from app.services.plan_manage import MAX_PLAN_SYMBOLS
@@ -44,7 +45,7 @@ def normalize_trade_date(raw: str | None) -> str | None:
 
 
 def resolve_next_trade_date(db: Session, *, today: date | None = None) -> tuple[str, bool]:
-    ref = today or date.today()
+    ref = today or china_today()
     ymd = ref.strftime("%Y%m%d")
     cal = db.execute(
         text(

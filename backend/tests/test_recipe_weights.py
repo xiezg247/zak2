@@ -34,7 +34,7 @@ def test_normalize_rejects_all_zero() -> None:
     with pytest.raises(ValueError):
         rw.normalize_weights(
             "intraday_multi",
-            {k: 0 for k in rw.DEFAULT_WEIGHTS["intraday_multi"]},
+            dict.fromkeys(rw.DEFAULT_WEIGHTS["intraday_multi"], 0),
         )
 
 
@@ -247,8 +247,12 @@ def test_run_recipe_screen_loads_user_weights() -> None:
         def load_ranked_quotes(self, field: str, *, pool: int = 500) -> list[QuoteRow]:
             _ = field, pool
             return [
-                QuoteRow(symbol="SHSE.A", name="动量强", change_pct=9.0, turnover_rate=1.0, volume_ratio=1.0, amount=1e7),
-                QuoteRow(symbol="SHSE.B", name="换手强", change_pct=1.0, turnover_rate=14.0, volume_ratio=1.0, amount=1e7),
+                QuoteRow(
+                    symbol="SHSE.A", name="动量强", change_pct=9.0, turnover_rate=1.0, volume_ratio=1.0, amount=1e7
+                ),
+                QuoteRow(
+                    symbol="SHSE.B", name="换手强", change_pct=1.0, turnover_rate=14.0, volume_ratio=1.0, amount=1e7
+                ),
             ]
 
     custom = {"momentum": 0.05, "turnover": 0.8, "volume_ratio": 0.1, "surge": 0.05}

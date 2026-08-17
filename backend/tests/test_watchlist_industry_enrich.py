@@ -29,9 +29,9 @@ def test_enrich_fills_empty_industry_from_db() -> None:
     db = MagicMock()
     with (
         patch.object(wl, "get_quote_store", return_value=store),
-        patch.object(wl, "enrich_rows_from_db", side_effect=lambda _db, rows: (
-            setattr(rows[0], "industry", "白酒") or 1
-        )) as enrich_mock,
+        patch.object(
+            wl, "enrich_rows_from_db", side_effect=lambda _db, rows: setattr(rows[0], "industry", "白酒") or 1
+        ) as enrich_mock,
     ):
         out = wl._enrich([_item()], with_quotes=True, db=db)
     assert out[0].industry == "白酒"

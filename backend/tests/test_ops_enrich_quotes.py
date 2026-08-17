@@ -5,10 +5,13 @@ from app.services.ops import enrich_quotes as m
 
 def test_enrich_skips_without_token() -> None:
     db = MagicMock()
-    with patch(
-        "app.services.ops.enrich_quotes.ts.require_token",
-        side_effect=m.ts.TushareNotConfiguredError("未配置 TUSHARE_TOKEN"),
-    ), patch("app.services.ops.enrich_quotes.save_job_run_meta") as save_meta:
+    with (
+        patch(
+            "app.services.ops.enrich_quotes.ts.require_token",
+            side_effect=m.ts.TushareNotConfiguredError("未配置 TUSHARE_TOKEN"),
+        ),
+        patch("app.services.ops.enrich_quotes.save_job_run_meta") as save_meta,
+    ):
         out = m.enrich_market_quotes(db)
     assert out["skipped"] is True
     assert "TUSHARE" in out["message"] or "未配置" in out["message"]
@@ -19,9 +22,11 @@ def test_enrich_skips_when_redis_unavailable() -> None:
     db = MagicMock()
     store = MagicMock()
     store.meta.return_value = {"available": False}
-    with patch("app.services.ops.enrich_quotes.ts.require_token", return_value="tok"), patch(
-        "app.services.ops.enrich_quotes.get_quote_store", return_value=store
-    ), patch("app.services.ops.enrich_quotes.save_job_run_meta") as save_meta:
+    with (
+        patch("app.services.ops.enrich_quotes.ts.require_token", return_value="tok"),
+        patch("app.services.ops.enrich_quotes.get_quote_store", return_value=store),
+        patch("app.services.ops.enrich_quotes.save_job_run_meta") as save_meta,
+    ):
         out = m.enrich_market_quotes(db)
     assert out["skipped"] is True
     save_meta.assert_called_once()
@@ -42,20 +47,19 @@ def test_enrich_applies_patches_from_tushare() -> None:
         }
     ]
     flow = [{"ts_code": "600519.SH", "net_mf_amount": 5.0}]
-    with patch("app.services.ops.enrich_quotes.ts.require_token", return_value="tok"), patch(
-        "app.services.ops.enrich_quotes.get_quote_store", return_value=store
-    ), patch("app.services.ops.enrich_quotes.latest_open_yyyymmdd", return_value="20260811"), patch(
-        "app.services.ops.enrich_quotes.fetch_daily_basic_rows", return_value=basic
-    ), patch(
-        "app.services.ops.enrich_quotes.fetch_moneyflow_rows", return_value=flow
-    ), patch(
-        "app.services.ops.enrich_quotes.apply_factor_patches",
-        return_value={"updated": 1, "seq": 7, "published": True},
-    ) as ap, patch(
-        "app.services.ops.enrich_quotes.save_job_run_meta"
-    ), patch(
-        "app.services.ops.enrich_quotes.redis.Redis.from_url", return_value=client
-    ) as from_url:
+    with (
+        patch("app.services.ops.enrich_quotes.ts.require_token", return_value="tok"),
+        patch("app.services.ops.enrich_quotes.get_quote_store", return_value=store),
+        patch("app.services.ops.enrich_quotes.latest_open_yyyymmdd", return_value="20260811"),
+        patch("app.services.ops.enrich_quotes.fetch_daily_basic_rows", return_value=basic),
+        patch("app.services.ops.enrich_quotes.fetch_moneyflow_rows", return_value=flow),
+        patch(
+            "app.services.ops.enrich_quotes.apply_factor_patches",
+            return_value={"updated": 1, "seq": 7, "published": True},
+        ) as ap,
+        patch("app.services.ops.enrich_quotes.save_job_run_meta"),
+        patch("app.services.ops.enrich_quotes.redis.Redis.from_url", return_value=client) as from_url,
+    ):
         out = m.enrich_market_quotes(db)
     assert out["success"] is True
     assert out.get("skipped") is not True
@@ -73,15 +77,15 @@ def test_enrich_skips_when_tushare_empty() -> None:
     db = MagicMock()
     store = MagicMock()
     store.meta.return_value = {"available": True}
-    with patch("app.services.ops.enrich_quotes.ts.require_token", return_value="tok"), patch(
-        "app.services.ops.enrich_quotes.get_quote_store", return_value=store
-    ), patch("app.services.ops.enrich_quotes.latest_open_yyyymmdd", return_value="20260811"), patch(
-        "app.services.ops.enrich_quotes.fetch_daily_basic_rows", return_value=[]
-    ), patch(
-        "app.services.ops.enrich_quotes.fetch_moneyflow_rows", return_value=[]
-    ), patch("app.services.ops.enrich_quotes.save_job_run_meta") as save_meta, patch(
-        "app.services.ops.enrich_quotes.redis.Redis.from_url"
-    ) as from_url:
+    with (
+        patch("app.services.ops.enrich_quotes.ts.require_token", return_value="tok"),
+        patch("app.services.ops.enrich_quotes.get_quote_store", return_value=store),
+        patch("app.services.ops.enrich_quotes.latest_open_yyyymmdd", return_value="20260811"),
+        patch("app.services.ops.enrich_quotes.fetch_daily_basic_rows", return_value=[]),
+        patch("app.services.ops.enrich_quotes.fetch_moneyflow_rows", return_value=[]),
+        patch("app.services.ops.enrich_quotes.save_job_run_meta") as save_meta,
+        patch("app.services.ops.enrich_quotes.redis.Redis.from_url") as from_url,
+    ):
         out = m.enrich_market_quotes(db)
     assert out["skipped"] is True
     assert "因子" in out["message"] or "Tushare" in out["message"]
@@ -95,17 +99,18 @@ def test_enrich_skips_when_no_quote_keys() -> None:
     store.meta.return_value = {"available": True}
     client = MagicMock()
     basic = [{"ts_code": "600519.SH", "turnover_rate": 1.0, "volume_ratio": 2.0, "total_mv": 10, "circ_mv": 9}]
-    with patch("app.services.ops.enrich_quotes.ts.require_token", return_value="tok"), patch(
-        "app.services.ops.enrich_quotes.get_quote_store", return_value=store
-    ), patch("app.services.ops.enrich_quotes.latest_open_yyyymmdd", return_value="20260811"), patch(
-        "app.services.ops.enrich_quotes.fetch_daily_basic_rows", return_value=basic
-    ), patch(
-        "app.services.ops.enrich_quotes.fetch_moneyflow_rows", return_value=[]
-    ), patch(
-        "app.services.ops.enrich_quotes.apply_factor_patches",
-        return_value={"updated": 0, "seq": None, "published": False},
-    ), patch("app.services.ops.enrich_quotes.save_job_run_meta") as save_meta, patch(
-        "app.services.ops.enrich_quotes.redis.Redis.from_url", return_value=client
+    with (
+        patch("app.services.ops.enrich_quotes.ts.require_token", return_value="tok"),
+        patch("app.services.ops.enrich_quotes.get_quote_store", return_value=store),
+        patch("app.services.ops.enrich_quotes.latest_open_yyyymmdd", return_value="20260811"),
+        patch("app.services.ops.enrich_quotes.fetch_daily_basic_rows", return_value=basic),
+        patch("app.services.ops.enrich_quotes.fetch_moneyflow_rows", return_value=[]),
+        patch(
+            "app.services.ops.enrich_quotes.apply_factor_patches",
+            return_value={"updated": 0, "seq": None, "published": False},
+        ),
+        patch("app.services.ops.enrich_quotes.save_job_run_meta") as save_meta,
+        patch("app.services.ops.enrich_quotes.redis.Redis.from_url", return_value=client),
     ):
         out = m.enrich_market_quotes(db)
     assert out["skipped"] is True

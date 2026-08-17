@@ -97,12 +97,7 @@ def test_platform_break_reject_no_breakout() -> None:
     closes = [10.0] * 50
     highs = [10.2] * 50
     lows = [9.9] * 50
-    assert (
-        match_platform_break(
-            BarSeries(closes=closes, highs=highs, lows=lows, volumes=[1000.0] * 50)
-        )
-        is None
-    )
+    assert match_platform_break(BarSeries(closes=closes, highs=highs, lows=lows, volumes=[1000.0] * 50)) is None
 
 
 def test_platform_break_reject_wide_amplitude() -> None:

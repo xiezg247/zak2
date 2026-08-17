@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.time import china_today
 from app.models.content import DisciplineDaily, PlaybookSection
 from app.schemas.content import DisciplineCheckOut, PlaybookSectionOut, PlaybookSectionUpdate
 
@@ -61,7 +62,7 @@ def update_section(db: Session, section_id: str, body: PlaybookSectionUpdate) ->
 
 
 def list_discipline(db: Session, user_id: str, trade_date: str | None = None) -> list[DisciplineCheckOut]:
-    day = (trade_date or date.today().isoformat())[:10]
+    day = (trade_date or china_today().isoformat())[:10]
     rows = db.scalars(
         select(DisciplineDaily).where(DisciplineDaily.user_id == user_id, DisciplineDaily.trade_date == day)
     )
@@ -78,7 +79,7 @@ def set_discipline(
     labels = dict(DEFAULT_DISCIPLINE_CHECKS)
     if check_id not in labels:
         raise HTTPException(status_code=400, detail="未知检查项")
-    day = (trade_date or date.today().isoformat())[:10]
+    day = (trade_date or china_today().isoformat())[:10]
     row = db.scalar(
         select(DisciplineDaily).where(
             DisciplineDaily.user_id == user_id,

@@ -12,12 +12,8 @@ depends_on = None
 
 def upgrade() -> None:
     op.execute("ALTER TABLE app.backtest_runs ADD COLUMN IF NOT EXISTS engine TEXT")
-    op.execute(
-        "ALTER TABLE app.backtest_runs ADD COLUMN IF NOT EXISTS params_json TEXT NOT NULL DEFAULT '{}'"
-    )
-    op.execute(
-        "ALTER TABLE app.backtest_runs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'success'"
-    )
+    op.execute("ALTER TABLE app.backtest_runs ADD COLUMN IF NOT EXISTS params_json TEXT NOT NULL DEFAULT '{}'")
+    op.execute("ALTER TABLE app.backtest_runs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'success'")
     op.execute("ALTER TABLE app.backtest_runs ADD COLUMN IF NOT EXISTS error_message TEXT")
 
 

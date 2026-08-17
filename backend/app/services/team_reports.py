@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -22,7 +22,7 @@ SUMMARY_MAX = 240
 
 
 def _now_iso() -> str:
-    return datetime.now().isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def _clip(text_v: str, max_len: int) -> str:

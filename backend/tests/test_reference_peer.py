@@ -21,9 +21,7 @@ def test_turnover_score() -> None:
 def test_scoring_helpers() -> None:
     assert peer.valuation_score(pe=20, mv=1000, ref_pe=20, ref_mv=1000) == 100.0
     assert peer.momentum_score(5.0, 5.0) == 100.0
-    assert peer.composite_similarity(
-        val_score=100, mom5_score=100, mom20_score=100, turnover_s=100
-    ) == 100.0
+    assert peer.composite_similarity(val_score=100, mom5_score=100, mom20_score=100, turnover_s=100) == 100.0
     got = peer.cumulative_return("A", [{"A": 10.0}, {"A": -5.0}])
     assert abs(got - 4.5) < 0.01
 
@@ -41,8 +39,22 @@ def test_resolve_weights_defaults_and_override() -> None:
 
 def test_run_reference_peer_mocked() -> None:
     basic = [
-        {"ts_code": "600519.SH", "close": 1800, "pe_ttm": 30, "circ_mv": 2_000_000, "total_mv": 2_100_000, "turnover_rate": 1},
-        {"ts_code": "600000.SH", "close": 10, "pe_ttm": 28, "circ_mv": 1_800_000, "total_mv": 1_900_000, "turnover_rate": 2},
+        {
+            "ts_code": "600519.SH",
+            "close": 1800,
+            "pe_ttm": 30,
+            "circ_mv": 2_000_000,
+            "total_mv": 2_100_000,
+            "turnover_rate": 1,
+        },
+        {
+            "ts_code": "600000.SH",
+            "close": 10,
+            "pe_ttm": 28,
+            "circ_mv": 1_800_000,
+            "total_mv": 1_900_000,
+            "turnover_rate": 2,
+        },
         {"ts_code": "000001.SZ", "close": 12, "pe_ttm": 8, "circ_mv": 500_000, "total_mv": 600_000, "turnover_rate": 3},
     ]
     meta = {

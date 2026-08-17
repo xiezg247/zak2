@@ -43,12 +43,15 @@ def test_float_gain() -> None:
 
 
 def test_missing_fields_empty() -> None:
-    assert compute_position_risk_tags(
-        exit_signal=None,
-        unrealized_pnl_pct=None,
-        change_pct=None,
-        volume_ratio=None,
-    ) == []
+    assert (
+        compute_position_risk_tags(
+            exit_signal=None,
+            unrealized_pnl_pct=None,
+            change_pct=None,
+            volume_ratio=None,
+        )
+        == []
+    )
 
 
 def test_off_plan_tag_order() -> None:

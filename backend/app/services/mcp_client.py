@@ -6,7 +6,7 @@ import asyncio
 import json
 import threading
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from app.core.settings import Settings, get_settings
 
@@ -254,9 +254,9 @@ async def _list_tools_async(
                 )
             return tools
 
-        return await _session_call(url, headers, timeout=timeout, action=action)
+        return cast(list[McpToolInfo], await _session_call(url, headers, timeout=timeout, action=action))
 
-    return await _with_retry(_once)
+    return cast(list[McpToolInfo], await _with_retry(_once))
 
 
 async def _call_tool_async(

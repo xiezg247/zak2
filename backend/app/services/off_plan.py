@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
@@ -66,7 +66,7 @@ def load_active_plan_vt_symbols(
     snap = load_active_plan_snapshot(db, user_id, trade_date)
     if snap is None:
         return None
-    return snap["vt_symbols"]
+    return cast(set[str], snap["vt_symbols"])
 
 
 def list_off_plan_vt_symbols(

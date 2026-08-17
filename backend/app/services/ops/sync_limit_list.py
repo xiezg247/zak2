@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import os
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.time import china_today
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 from app.services.tushare_screener import latest_open_yyyymmdd, ts_code_to_tf
@@ -47,7 +48,7 @@ def recent_open_dates(db: Session, *, lookback: int) -> list[str]:
     if dates:
         return dates
     out: list[str] = []
-    day = date.today()
+    day = china_today()
     while len(out) < lookback:
         if day.weekday() < 5:
             out.append(day.strftime("%Y%m%d"))

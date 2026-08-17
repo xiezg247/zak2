@@ -1,4 +1,5 @@
 """Alembic 环境：DATABASE_URL 来自 app.core.settings。"""
+
 from __future__ import annotations
 
 import sys

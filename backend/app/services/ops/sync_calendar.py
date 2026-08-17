@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.time import china_today
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 
@@ -16,7 +17,7 @@ DEFAULT_START = date(2019, 1, 1)
 
 
 def _calendar_end(today: date | None = None) -> date:
-    current = today or date.today()
+    current = today or china_today()
     return date(current.year + 1, 12, 31)
 
 
@@ -80,7 +81,7 @@ def sync_trade_calendar(db: Session, *, start: date | None = None, end: date | N
     for key, value in (
         ("trade_calendar_range_start", _fmt(start)),
         ("trade_calendar_range_end", _fmt(end)),
-        ("trade_calendar_synced_at", datetime.now().isoformat(timespec="seconds")),
+        ("trade_calendar_synced_at", datetime.now(UTC).isoformat(timespec="seconds")),
     ):
         db.execute(
             text(

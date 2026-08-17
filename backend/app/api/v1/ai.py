@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
@@ -138,7 +139,7 @@ def post_team_stream(
     session_id = (body.session_id or "").strip() or None
     mode: Literal["fast", "deep"] = "deep" if (body.mode or "").strip().lower() == "deep" else "fast"
 
-    def event_gen():
+    def event_gen() -> Iterator[str]:
         report = ""
         weighted = None
         name = ""
@@ -186,7 +187,7 @@ def post_chat_stream(
     finally:
         db.close()
 
-    def event_gen():
+    def event_gen() -> Iterator[str]:
         reply = ""
         db2 = SessionLocal()
         try:

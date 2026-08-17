@@ -31,9 +31,7 @@ def test_select_universe_daily_targets() -> None:
         ("000001", "SZSE"): date(2021, 1, 1),  # start too late
         # 300750 missing
     }
-    out = bars.select_universe_daily_targets(
-        uni, starts, unified_start=date(2020, 1, 1)
-    )
+    out = bars.select_universe_daily_targets(uni, starts, unified_start=date(2020, 1, 1))
     assert out == [("000001", "SZSE"), ("300750", "SZSE")]
 
 
@@ -99,7 +97,9 @@ def test_download_daily_bars_upserts(monkeypatch) -> None:
 def test_fill_watchlist_no_token() -> None:
     db = MagicMock()
     with (
-        patch.object(ops_bars_fill.ts, "require_token", side_effect=ops_bars_fill.ts.TushareNotConfiguredError("未配置")),
+        patch.object(
+            ops_bars_fill.ts, "require_token", side_effect=ops_bars_fill.ts.TushareNotConfiguredError("未配置")
+        ),
         patch.object(ops_bars_fill, "save_job_run_meta"),
     ):
         out = ops_bars_fill.fill_watchlist_bars(db)

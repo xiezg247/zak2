@@ -67,7 +67,7 @@ def bars_overview(db: Session, *, interval: str = "d") -> dict[str, Any]:
         if v is None:
             return None
         if hasattr(v, "isoformat"):
-            return v.isoformat()
+            return str(v.isoformat())
         return str(v)
 
     symbol_count = int(row["symbol_count"] or 0)

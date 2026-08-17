@@ -10,6 +10,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.time import china_today
 from app.services import bar_download as bars
 from app.services import tushare_client as ts
 from app.services.bar_download import INTERVAL_1M, download_minute_bars, get_overview_row
@@ -55,7 +56,7 @@ def _open_date_window(db: Session) -> tuple[date, date]:
     ymds = recent_open_dates(db, lookback=_lookback_days())
     dates = [_yyyymmdd_to_date(y) for y in ymds if y]
     if not dates:
-        today = date.today()
+        today = china_today()
         return today, today
     return min(dates), max(dates)
 

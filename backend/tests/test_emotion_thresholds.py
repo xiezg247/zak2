@@ -104,9 +104,7 @@ def test_save_thresholds_persists_merged() -> None:
 
 def test_save_thresholds_merges_over_existing() -> None:
     db = MagicMock()
-    db.execute.return_value.scalar.return_value = json.dumps(
-        {"recession_limit_down": 30, "climax_limit_up": 90}
-    )
+    db.execute.return_value.scalar.return_value = json.dumps({"recession_limit_down": 30, "climax_limit_up": 90})
     out = et.save_thresholds(db, {"recession_limit_down": 45})
     assert out.recession_limit_down == 45
     assert out.climax_limit_up == 90

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from app.core.redis_keys import (
@@ -92,7 +92,7 @@ class RedisQuoteWriter:
                 mapping = {sym: score for score, sym in members}
                 pipe.zadd(rank_key, mapping)
 
-        pipe.set(META_UPDATED_AT_KEY, datetime.now().isoformat(timespec="seconds"))
+        pipe.set(META_UPDATED_AT_KEY, datetime.now(UTC).isoformat(timespec="seconds"))
         pipe.set(META_QUOTE_COUNT_KEY, str(len(quotes)))
         results = pipe.execute()
         new_seq = int(results[0]) if results else 0

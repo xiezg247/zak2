@@ -63,10 +63,14 @@ def test_screen_post_close_saves_run() -> None:
     assert run.call_args.args[0].top_n == 15
     assert run.call_args.kwargs.get("user_id") == "u1"
     assert run.call_args.kwargs.get("db") is db
-    assert "ops.screen_post_close" in str(
-        # save_run result trigger checked via message
-        out["message"]
-    ) or out["row_count"] == 3
+    assert (
+        "ops.screen_post_close"
+        in str(
+            # save_run result trigger checked via message
+            out["message"]
+        )
+        or out["row_count"] == 3
+    )
 
 
 def test_post_close_recipe_and_runnable() -> None:

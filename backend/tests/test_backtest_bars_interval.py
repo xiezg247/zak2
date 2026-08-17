@@ -10,10 +10,7 @@ from app.services.backtest_settings import min_bars_for_request
 
 def test_count_trading_days():
     start = datetime(2024, 1, 2, 9, 30)
-    bars = [
-        Bar(dt=start + timedelta(minutes=i), open=1, high=1, low=1, close=1, volume=1)
-        for i in range(3)
-    ]
+    bars = [Bar(dt=start + timedelta(minutes=i), open=1, high=1, low=1, close=1, volume=1) for i in range(3)]
     bars.append(Bar(dt=start + timedelta(days=1), open=1, high=1, low=1, close=1, volume=1))
     assert count_trading_days(bars) == 2
 

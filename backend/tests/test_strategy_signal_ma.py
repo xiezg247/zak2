@@ -36,9 +36,7 @@ def test_same_day_cross_is_pending_hold(monkeypatch) -> None:
         return out
 
     monkeypatch.setattr(m, "sma", fake_sma)
-    out = m.compute_ma_signal(
-        closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13"
-    )
+    out = m.compute_ma_signal(closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13")
     assert out is not None
     assert out["signal"] == "hold"
     assert "待确认" in out["reason_summary"]
@@ -61,9 +59,7 @@ def test_confirmed_buy_after_cross(monkeypatch) -> None:
         return out
 
     monkeypatch.setattr(m, "sma", fake_sma)
-    out = m.compute_ma_signal(
-        closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13"
-    )
+    out = m.compute_ma_signal(closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13")
     assert out is not None
     assert out["signal"] == "buy"
     assert "已确认" in out["reason_summary"]
@@ -84,19 +80,14 @@ def test_confirmed_sell_after_cross(monkeypatch) -> None:
         return out
 
     monkeypatch.setattr(m, "sma", fake_sma)
-    out = m.compute_ma_signal(
-        closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13"
-    )
+    out = m.compute_ma_signal(closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13")
     assert out is not None
     assert out["signal"] == "sell"
     assert "已确认" in out["reason_summary"]
 
 
 def test_insufficient_slow_plus_two_returns_none() -> None:
-    assert (
-        m.compute_ma_signal([1.0] * 11, fast=5, slow=10, vt_symbol="x", as_of="2026-01-01")
-        is None
-    )
+    assert m.compute_ma_signal([1.0] * 11, fast=5, slow=10, vt_symbol="x", as_of="2026-01-01") is None
 
 
 def test_double_ma_same_day_cross_is_buy(monkeypatch) -> None:
@@ -112,12 +103,8 @@ def test_double_ma_same_day_cross_is_buy(monkeypatch) -> None:
         return out
 
     monkeypatch.setattr(m, "sma", fake_sma)
-    d = m.compute_double_ma_signal(
-        closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13"
-    )
-    h = m.compute_ma_signal(
-        closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13"
-    )
+    d = m.compute_double_ma_signal(closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13")
+    h = m.compute_ma_signal(closes, fast=5, slow=10, vt_symbol="600519.SSE", as_of="2026-08-13")
     assert d is not None and h is not None
     assert d["signal"] == "buy"
     assert d["signal_mode"] == "double_ma"
@@ -142,9 +129,7 @@ def test_trend_ma_buy_when_cross_and_adx(monkeypatch) -> None:
 
     monkeypatch.setattr(m, "sma", fake_sma)
     monkeypatch.setattr(m, "wilder_adx", lambda *a, **k: [None] * (n - 1) + [30.0])
-    out = m.compute_trend_ma_signal(
-        highs, lows, closes, fast=20, slow=60, vt_symbol="600519.SSE", as_of="2026-08-14"
-    )
+    out = m.compute_trend_ma_signal(highs, lows, closes, fast=20, slow=60, vt_symbol="600519.SSE", as_of="2026-08-14")
     assert out is not None
     assert out["signal"] == "buy"
     assert out["signal_mode"] == "trend_ma"
@@ -165,8 +150,6 @@ def test_trend_ma_sell_on_structure_break(monkeypatch) -> None:
 
     monkeypatch.setattr(m, "sma", fake_sma)
     monkeypatch.setattr(m, "wilder_adx", lambda *a, **k: [None] * (n - 1) + [10.0])
-    out = m.compute_trend_ma_signal(
-        highs, lows, closes, fast=20, slow=60, vt_symbol="600519.SSE", as_of="2026-08-14"
-    )
+    out = m.compute_trend_ma_signal(highs, lows, closes, fast=20, slow=60, vt_symbol="600519.SSE", as_of="2026-08-14")
     assert out is not None
     assert out["signal"] == "sell"

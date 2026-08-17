@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import HTTPException
@@ -91,7 +91,7 @@ def sync_universe(db: Session) -> dict[str, Any]:
                 params,
             )
 
-        synced_at = datetime.now().isoformat(timespec="seconds")
+        synced_at = datetime.now(UTC).isoformat(timespec="seconds")
         db.execute(
             text(
                 """

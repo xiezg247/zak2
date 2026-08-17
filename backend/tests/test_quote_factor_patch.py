@@ -83,15 +83,9 @@ def test_apply_patches_existing_and_rebuilds_ranks() -> None:
     client.pipeline.assert_called_once_with(transaction=False)
     for field in ("turnover_rate", "volume_ratio", "net_mf_amount"):
         pipe.delete.assert_any_call(RANK_KEY_FMT.format(field=field))
-    pipe.zadd.assert_any_call(
-        RANK_KEY_FMT.format(field="turnover_rate"), {"SHSE.600519": 1.5}
-    )
-    pipe.zadd.assert_any_call(
-        RANK_KEY_FMT.format(field="volume_ratio"), {"SHSE.600519": 2.0}
-    )
-    pipe.zadd.assert_any_call(
-        RANK_KEY_FMT.format(field="net_mf_amount"), {"SHSE.600519": -3.0}
-    )
+    pipe.zadd.assert_any_call(RANK_KEY_FMT.format(field="turnover_rate"), {"SHSE.600519": 1.5})
+    pipe.zadd.assert_any_call(RANK_KEY_FMT.format(field="volume_ratio"), {"SHSE.600519": 2.0})
+    pipe.zadd.assert_any_call(RANK_KEY_FMT.format(field="net_mf_amount"), {"SHSE.600519": -3.0})
     pipe.incr.assert_called_once_with(META_SEQ_KEY)
     pipe.execute.assert_called_once()
     client.publish.assert_called_with(NOTIFY_CHANNEL, "42")

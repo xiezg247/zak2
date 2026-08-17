@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.time import china_today
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 
@@ -46,10 +47,10 @@ def recent_open_dates(db: Session, *, lookback: int) -> list[str]:
     if dates:
         return dates
     # 无日历时降级：最近 lookback 个工作日
-    from datetime import date, timedelta
+    from datetime import timedelta
 
     out: list[str] = []
-    day = date.today()
+    day = china_today()
     while len(out) < lookback:
         if day.weekday() < 5:
             out.append(day.strftime("%Y%m%d"))

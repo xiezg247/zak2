@@ -7,15 +7,15 @@ from app.services.quotes import QuoteRow
 
 
 def _row(symbol: str, **kwargs) -> QuoteRow:  # type: ignore[no-untyped-def]
-    base = dict(
-        symbol=symbol,
-        name="测试",
-        change_pct=6.0,
-        turnover_rate=3.0,
-        amount=1e8,
-        volume=1e6,
-        volume_ratio=2.0,
-    )
+    base = {
+        "symbol": symbol,
+        "name": "测试",
+        "change_pct": 6.0,
+        "turnover_rate": 3.0,
+        "amount": 1e8,
+        "volume": 1e6,
+        "volume_ratio": 2.0,
+    }
     base.update(kwargs)
     return QuoteRow(**base)  # type: ignore[arg-type]
 
@@ -74,7 +74,9 @@ class _FakeStore:
 
 def test_condition_strong_up() -> None:
     result = run_condition_screen(
-        ConditionRunRequest(preset="强势上涨", top_n=10, hard_filter=HardFilterPrefs(min_amount_wan=0, min_total_mv_yi=0)),
+        ConditionRunRequest(
+            preset="强势上涨", top_n=10, hard_filter=HardFilterPrefs(min_amount_wan=0, min_total_mv_yi=0)
+        ),
         store=_FakeStore(),  # type: ignore[arg-type]
     )
     assert result["row_count"] == 1
@@ -92,7 +94,9 @@ def test_condition_limit_up() -> None:
             ]
 
     result = run_condition_screen(
-        ConditionRunRequest(preset="涨停股", top_n=10, hard_filter=HardFilterPrefs(min_amount_wan=0, min_total_mv_yi=0)),
+        ConditionRunRequest(
+            preset="涨停股", top_n=10, hard_filter=HardFilterPrefs(min_amount_wan=0, min_total_mv_yi=0)
+        ),
         store=_LimitStore(),  # type: ignore[arg-type]
     )
     assert result["row_count"] == 2

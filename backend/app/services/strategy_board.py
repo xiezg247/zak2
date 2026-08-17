@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any
 
+import redis
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.redis_keys import KEY_PREFIX
+from app.core.time import china_today
 from app.repositories import positions as positions_repo
 from app.repositories import signal_panel as signal_panel_repo
 from app.repositories import watchlist as repo
@@ -34,7 +36,6 @@ SIGNAL_MODE_DOUBLE_MA = "double_ma"
 SIGNAL_MODE_TREND_MA = "trend_ma"
 DEFAULT_DOUBLE_MA_FAST = 5
 DEFAULT_DOUBLE_MA_SLOW = 20
-_CHINA_TZ = timezone(timedelta(hours=8))
 
 
 def _safe_float(value: Any) -> float | None:
@@ -149,7 +150,7 @@ def resolve_board_config_key(
     return resolve_config_key(db, user_id, None)
 
 
-def _redis_client():
+def _redis_client() -> redis.Redis | None:
     store = get_quote_store()
     if not store.available():
         return None
@@ -266,10 +267,6 @@ def _load_position_signal_pg(db: Session, config_key: str, vt_symbol: str, posit
     return snap
 
 
-def _china_today() -> date:
-    return datetime.now(_CHINA_TZ).date()
-
-
 def _t1_locked(buy_date: str) -> bool:
     text_v = (buy_date or "").strip()[:10]
     if not text_v:
@@ -278,7 +275,7 @@ def _t1_locked(buy_date: str) -> bool:
         parsed = datetime.strptime(text_v, "%Y-%m-%d").date()
     except ValueError:
         return False
-    return parsed >= _china_today()
+    return parsed >= china_today()
 
 
 def _signal_label(kind: str) -> str:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -123,5 +123,5 @@ def _first_image(opus: dict[str, Any]) -> str:
 
 def _iso_from_unix(ts: int) -> str:
     if ts <= 0:
-        return datetime.now().isoformat(timespec="seconds")
-    return datetime.fromtimestamp(ts).isoformat(timespec="seconds")
+        return datetime.now(UTC).isoformat(timespec="seconds")
+    return datetime.fromtimestamp(ts, UTC).isoformat(timespec="seconds")

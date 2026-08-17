@@ -7,9 +7,7 @@ from app.services.ops import scan_horizon_outlook as m
 def test_horizon_writes_rows() -> None:
     db = MagicMock()
     cards = [
-        RadarCardOut(
-            card_id="c1", title="T", source="synthesized", rows=[{"vt_symbol": "600519.SSE", "name": "茅台"}]
-        )
+        RadarCardOut(card_id="c1", title="T", source="synthesized", rows=[{"vt_symbol": "600519.SSE", "name": "茅台"}])
     ]
     resonance = RadarResonanceOut(
         min_cards=2,

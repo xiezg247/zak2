@@ -198,7 +198,7 @@ class QuoteStore:
         ranked = self.list_rank(field, top_n=pool)
         if not ranked:
             return []
-        score_map = {symbol: score for symbol, score in ranked}
+        score_map = dict(ranked)
         quotes = self.get_quotes([symbol for symbol, _ in ranked])
         # 若 hash 缺字段，用 zset score 回填主排序字段
         field_attr = {

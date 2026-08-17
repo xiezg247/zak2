@@ -8,6 +8,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.core.time import china_now
 from app.repositories import watchlist as watchlist_repo
 from app.services import emotion_cycle as emotion_cycle_svc
 from app.services import strategy_board
@@ -75,10 +76,9 @@ def _try_valuation(symbol: str, exchange: str) -> dict[str, Any]:
         else:
             ts_code = f"{symbol}.SH"
 
-        from datetime import datetime, timedelta, timezone
+        from datetime import timedelta
 
-        china = timezone(timedelta(hours=8))
-        day = datetime.now(china)
+        day = china_now()
         for _ in range(8):
             trade_date = day.strftime("%Y%m%d")
             try:

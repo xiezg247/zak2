@@ -80,7 +80,7 @@ def _normalize_rows(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def fetch_reports_for_symbol(ts_code: str, *, years: int = YEARS) -> dict[str, list[dict[str, Any]]]:
     years = max(1, min(int(years), 15))
-    end_dt = datetime.now()
+    end_dt = datetime.now(UTC)
     start = (end_dt - timedelta(days=years * 366)).strftime("%Y%m%d")
     end = end_dt.strftime("%Y%m%d")
     result: dict[str, list[dict[str, Any]]] = {}

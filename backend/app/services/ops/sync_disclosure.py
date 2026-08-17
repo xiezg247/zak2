@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.time import china_today
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 
@@ -18,7 +19,7 @@ _FIELDS = "ts_code,end_date,pre_date,ann_date,actual_date"
 
 def latest_report_end_yyyymmdd(today: date | None = None) -> str:
     """不晚于 today 的最近财报季末（3/6/9/12 月最后一天）。"""
-    d = today or date.today()
+    d = today or china_today()
     year = d.year
     quarter_ends = (
         date(year, 3, 31),

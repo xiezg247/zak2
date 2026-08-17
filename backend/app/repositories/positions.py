@@ -7,12 +7,13 @@ symbol+exchange）。对外返回 dict（含 vt_symbol 派生字段），保持�
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.time import china_now, china_today
 from app.models.watchlist import WatchlistPosition
 from app.repositories.watchlist import WatchlistItemRepository
 from app.services.symbols import normalize_exchange, to_vt_symbol
@@ -20,15 +21,14 @@ from app.services.symbols import normalize_exchange, to_vt_symbol
 POSITION_MAX_ITEMS = 20
 LOT_SIZE = 100
 PRICE_TICK = 0.01
-_CHINA_TZ = timezone(timedelta(hours=8))
 
 
 def _now_iso() -> str:
-    return datetime.now(_CHINA_TZ).replace(microsecond=0).isoformat()
+    return china_now().replace(microsecond=0).isoformat()
 
 
 def _china_today() -> str:
-    return datetime.now(_CHINA_TZ).strftime("%Y-%m-%d")
+    return china_today().strftime("%Y-%m-%d")
 
 
 def normalize_cost_price(cost_price: float) -> float:
@@ -55,7 +55,7 @@ def validate_inputs(*, cost_price: float, volume: int, buy_date: str) -> None:
         parsed = datetime.strptime(buy_date[:10], "%Y-%m-%d").date()
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="买入日格式须为 YYYY-MM-DD") from exc
-    today = datetime.now(_CHINA_TZ).date()
+    today = china_today()
     if parsed > today:
         raise HTTPException(status_code=400, detail="买入日不能晚于今日")
 

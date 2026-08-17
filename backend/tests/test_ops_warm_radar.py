@@ -26,8 +26,9 @@ def test_warm_upserts_cards() -> None:
             empty_message="",
         ),
     ]
-    with patch("app.services.ops.warm_radar.build_synthesized_cards", return_value=cards), patch(
-        "app.services.ops.warm_radar.save_job_run_meta"
+    with (
+        patch("app.services.ops.warm_radar.build_synthesized_cards", return_value=cards),
+        patch("app.services.ops.warm_radar.save_job_run_meta"),
     ):
         out = warm.warm_radar_card_snapshots(db)
     assert out["success"] is True

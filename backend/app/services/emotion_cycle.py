@@ -134,7 +134,7 @@ def _index_above_ma5(db: Session) -> bool | None:
         resp = load_bars(db, symbol="000001", exchange="SSE", interval="d", limit=8)
     except Exception:
         return None
-    bars = sorted(list(resp.bars or []), key=lambda b: b.datetime)
+    bars = sorted(resp.bars or [], key=lambda b: b.datetime)
     if len(bars) < 5:
         return None
     closes = [float(b.close) for b in bars[-5:]]
