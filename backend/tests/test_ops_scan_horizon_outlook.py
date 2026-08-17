@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from app.schemas.market import RadarCardOut, RadarResonanceEntry, RadarResonanceOut
-from app.services import ops_scan_horizon_outlook as m
+from app.services.ops import scan_horizon_outlook as m
 
 
 def test_horizon_writes_rows() -> None:

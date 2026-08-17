@@ -8,7 +8,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.services import ai_proposals, llm as llm_svc
+from app.services import ai_proposals
+from app.services import llm as llm_svc
 from app.services.ai_tools import (
     WRITE_TOOL_NAMES,
     _parse_args,

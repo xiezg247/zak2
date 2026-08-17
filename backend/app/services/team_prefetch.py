@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.services import emotion_cycle as emotion_cycle_svc
 from app.repositories import watchlist as watchlist_repo
+from app.services import emotion_cycle as emotion_cycle_svc
 from app.services import strategy_board
 from app.services.bars import load_bars
 from app.services.quotes import get_quote_store
 from app.services.symbols import to_tf_symbol, to_vt_symbol
+
+logger = logging.getLogger(__name__)
 
 
 def _volatility_and_dd(closes: list[float]) -> tuple[float | None, float | None]:
@@ -166,7 +169,7 @@ def prefetch_team(db: Session, user_id: str, raw_symbol: str) -> dict[str, Any]:
                 signal_label = str(row.get("signal_label") or "—")
                 break
     except Exception:  # noqa: BLE001
-        pass
+        logger.warning("加载策略信号失败，信号置为 na: vt=%s", vt, exc_info=True)
 
     valuation = _try_valuation(symbol, exchange)
     financial: dict[str, Any] = {**valuation}

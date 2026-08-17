@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services import tushare_client as ts
-from app.services.ops_scheduler import save_job_run_meta
+from app.services.ops.scheduler import save_job_run_meta
 from app.services.tushare_screener import (
     fetch_daily_basic_rows,
     fetch_moneyflow_rows,

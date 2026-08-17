@@ -1,3 +1,5 @@
+import pytest
+
 from app.services.ai_tools import (
     TOOL_DEFINITIONS,
     TOOL_HANDLERS,
@@ -5,7 +7,6 @@ from app.services.ai_tools import (
     execute_tool,
     get_tool_definitions,
 )
-import pytest
 
 
 def test_tools_registered() -> None:

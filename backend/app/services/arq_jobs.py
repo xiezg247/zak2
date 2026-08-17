@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import UTC, datetime
 from typing import Any
 
@@ -19,6 +20,8 @@ from app.core.redis_keys import (
 )
 from app.core.settings import get_settings
 from app.schemas.screener import JobOut
+
+logger = logging.getLogger(__name__)
 
 _pool: ArqRedis | None = None
 
@@ -106,7 +109,7 @@ async def _clear_arq_job_keys(pool: ArqRedis, job_id: str) -> None:
     try:
         await pool.zrem(queue, job_id)
     except Exception:  # noqa: BLE001
-        pass
+        logger.warning("清理 ARQ job 键失败: %s", job_id)
 
 
 async def enqueue_ops_job(

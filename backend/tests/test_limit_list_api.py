@@ -8,11 +8,11 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.api.deps import get_current_user
 from app.services.limit_list_store import list_limit_list
 from app.services.radar import _synth_limit_ladder
 

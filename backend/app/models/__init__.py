@@ -19,9 +19,11 @@ from app.models.market import (
     SectorFlowDaily,
     SectorFlowIntraday,
 )
+from app.models.notify import NotifyDeliveryLog
+from app.models.report import WebTeamReport
 from app.models.screener import ScreenerRecipe, ScreenerRun, ScreenerScheme
 from app.models.user import User
-from app.models.watchlist import WatchlistGroup, WatchlistGroupMember, WatchlistItem
+from app.models.watchlist import WatchlistGroup, WatchlistGroupMember, WatchlistItem, WatchlistPosition
 
 __all__ = [
     "User",
@@ -31,6 +33,7 @@ __all__ = [
     "WatchlistItem",
     "WatchlistGroup",
     "WatchlistGroupMember",
+    "WatchlistPosition",
     "DbBarData",
     "BacktestRun",
     "ChatSession",
@@ -40,6 +43,8 @@ __all__ = [
     "EmotionLimitLadderDaily",
     "LimitListDaily",
     "RadarCardSnapshot",
+    "NotifyDeliveryLog",
+    "WebTeamReport",
     "PlaybookSection",
     "DisciplineDaily",
     "StockNoteMemo",

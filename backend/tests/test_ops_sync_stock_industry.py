@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.services import ops_sync_stock_industry as svc
+from app.services.ops import sync_stock_industry as svc
 
 
 def test_rows_from_sw_members() -> None:

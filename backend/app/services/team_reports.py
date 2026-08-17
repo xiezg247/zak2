@@ -7,9 +7,10 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.report import WebTeamReport
 from app.services.symbols import parse_flexible_symbol, to_vt_symbol
 
 _logger = logging.getLogger(__name__)
@@ -67,40 +68,28 @@ def persist_team_report(
     vt = to_vt_symbol(symbol, exchange)
     ctx = json.dumps(context or {}, ensure_ascii=False)
     now = _now_iso()
-    row = db.execute(
-        text(
-            """
-            INSERT INTO app.web_team_reports (
-              user_id, symbol, exchange, vt_symbol, title, body, summary, mode, context_json, created_at
-            ) VALUES (
-              CAST(:uid AS uuid), :symbol, :exchange, :vt, :title, :body, :summary, :mode, :ctx, :now
-            )
-            RETURNING id, title, vt_symbol, created_at, summary, mode
-            """
-        ),
-        {
-            "uid": user_id,
-            "symbol": symbol,
-            "exchange": exchange,
-            "vt": vt,
-            "title": title,
-            "body": body_clipped,
-            "summary": summary,
-            "mode": mode if mode in {"fast", "deep"} else "fast",
-            "ctx": ctx,
-            "now": now,
-        },
-    ).mappings().first()
+    row = WebTeamReport(
+        user_id=user_id,
+        symbol=symbol,
+        exchange=exchange,
+        vt_symbol=vt,
+        title=title,
+        body=body_clipped,
+        summary=summary,
+        mode=mode if mode in {"fast", "deep"} else "fast",
+        context_json=ctx,
+        created_at=now,
+    )
+    db.add(row)
     db.commit()
-    if not row:
-        return None
+    db.refresh(row)
     return {
-        "id": int(row["id"]),
-        "title": str(row["title"] or ""),
-        "vt_symbol": str(row["vt_symbol"] or vt),
-        "created_at": str(row["created_at"] or now),
-        "summary": str(row["summary"] or ""),
-        "mode": str(row["mode"] or mode),
+        "id": int(row.id),
+        "title": str(row.title or ""),
+        "vt_symbol": str(row.vt_symbol or vt),
+        "created_at": str(row.created_at or now),
+        "summary": str(row.summary or ""),
+        "mode": str(row.mode or mode),
     }
 
 
@@ -110,53 +99,47 @@ def list_reports(db: Session, user_id: str, vt_symbol: str, *, limit: int = 50) 
     except ValueError as exc:
         raise ValueError(str(exc)) from exc
     limit = max(1, min(int(limit), 100))
-    rows = db.execute(
-        text(
-            """
-            SELECT id, title, summary, mode, created_at, vt_symbol
-            FROM app.web_team_reports
-            WHERE user_id = CAST(:uid AS uuid) AND symbol = :s AND exchange = :e
-            ORDER BY created_at DESC, id DESC
-            LIMIT :lim
-            """
-        ),
-        {"uid": user_id, "s": symbol, "e": exchange, "lim": limit},
-    ).mappings().all()
+    rows = db.scalars(
+        select(WebTeamReport)
+        .where(
+            WebTeamReport.user_id == user_id,
+            WebTeamReport.symbol == symbol,
+            WebTeamReport.exchange == exchange,
+        )
+        .order_by(WebTeamReport.created_at.desc(), WebTeamReport.id.desc())
+        .limit(limit)
+    )
     return [
         {
-            "id": int(r["id"]),
-            "title": str(r["title"] or ""),
-            "summary": str(r["summary"] or ""),
-            "mode": str(r["mode"] or ""),
-            "created_at": str(r["created_at"] or ""),
-            "vt_symbol": str(r["vt_symbol"] or to_vt_symbol(symbol, exchange)),
+            "id": int(r.id),
+            "title": str(r.title or ""),
+            "summary": str(r.summary or ""),
+            "mode": str(r.mode or ""),
+            "created_at": str(r.created_at or ""),
+            "vt_symbol": str(r.vt_symbol or to_vt_symbol(symbol, exchange)),
         }
         for r in rows
     ]
 
 
 def get_report(db: Session, user_id: str, report_id: int) -> dict[str, Any] | None:
-    row = db.execute(
-        text(
-            """
-            SELECT id, symbol, exchange, vt_symbol, title, body, summary, mode, context_json, created_at
-            FROM app.web_team_reports
-            WHERE id = :id AND user_id = CAST(:uid AS uuid)
-            """
-        ),
-        {"id": int(report_id), "uid": user_id},
-    ).mappings().first()
+    row = db.scalar(
+        select(WebTeamReport).where(
+            WebTeamReport.id == int(report_id),
+            WebTeamReport.user_id == user_id,
+        )
+    )
     if not row:
         return None
     return {
-        "id": int(row["id"]),
-        "symbol": str(row["symbol"]),
-        "exchange": str(row["exchange"]),
-        "vt_symbol": str(row["vt_symbol"] or ""),
-        "title": str(row["title"] or ""),
-        "body": str(row["body"] or ""),
-        "summary": str(row["summary"] or ""),
-        "mode": str(row["mode"] or ""),
-        "context_json": str(row["context_json"] or ""),
-        "created_at": str(row["created_at"] or ""),
+        "id": int(row.id),
+        "symbol": str(row.symbol),
+        "exchange": str(row.exchange),
+        "vt_symbol": str(row.vt_symbol or ""),
+        "title": str(row.title or ""),
+        "body": str(row.body or ""),
+        "summary": str(row.summary or ""),
+        "mode": str(row.mode or ""),
+        "context_json": str(row.context_json or ""),
+        "created_at": str(row.created_at or ""),
     }

@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.services.ops_scheduler import save_job_run_meta
+from app.services.ops.scheduler import save_job_run_meta
 
 JOB_ID = "purge_stale_cache"
 

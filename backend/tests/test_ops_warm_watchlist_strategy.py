@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from app.services import ops_warm_watchlist_strategy as m
+from app.services.ops import warm_watchlist_strategy as m
 
 
 def test_warm_bridges_redis_signals() -> None:
@@ -23,7 +23,7 @@ def test_warm_bridges_redis_signals() -> None:
         patch.object(m, "list_watchlist_symbols", return_value=[]),
         patch.object(m, "_upsert_signal") as up_sig,
         patch.object(m, "_upsert_position") as up_pos,
-        patch("app.services.ops_warm_watchlist_strategy.save_job_run_meta") as save,
+        patch("app.services.ops.warm_watchlist_strategy.save_job_run_meta") as save,
     ):
         out = m.warm_watchlist_strategy_cache(db)
     assert out["skipped"] is False
@@ -42,7 +42,7 @@ def test_warm_empty_redis_still_success() -> None:
         patch.object(m, "_redis_client", return_value=None),
         patch.object(m, "_list_config_keys", return_value=["AshareShortBreakoutStrategy:5:10"]),
         patch.object(m, "list_watchlist_symbols", return_value=[]),
-        patch("app.services.ops_warm_watchlist_strategy.save_job_run_meta") as save,
+        patch("app.services.ops.warm_watchlist_strategy.save_job_run_meta") as save,
     ):
         out = m.warm_watchlist_strategy_cache(db)
     assert out["skipped"] is False
@@ -103,7 +103,7 @@ def test_warm_computes_ma_signals() -> None:
             },
         ) as comp_tm,
         patch.object(m, "_upsert_signal") as up,
-        patch("app.services.ops_warm_watchlist_strategy.save_job_run_meta") as save,
+        patch("app.services.ops.warm_watchlist_strategy.save_job_run_meta") as save,
     ):
         out = m.warm_watchlist_strategy_cache(db)
     assert out["skipped"] is False
@@ -128,7 +128,7 @@ def test_warm_skips_missing_bars() -> None:
         patch.object(m, "list_watchlist_symbols", return_value=[("600519", "SSE")]),
         patch.object(m, "_load_daily_bars", return_value=None),
         patch.object(m, "_upsert_signal") as up,
-        patch("app.services.ops_warm_watchlist_strategy.save_job_run_meta"),
+        patch("app.services.ops.warm_watchlist_strategy.save_job_run_meta"),
     ):
         out = m.warm_watchlist_strategy_cache(db)
     assert out["computed"] == 0

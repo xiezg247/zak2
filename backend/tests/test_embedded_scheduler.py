@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.services import embedded_scheduler as es
-from app.services.ops_catalog import RUNNABLE_JOB_IDS
+from app.services.ops.catalog import RUNNABLE_JOB_IDS
 
 
 @pytest.fixture(autouse=True)
@@ -14,7 +14,7 @@ def _default_scheduler_lock(monkeypatch) -> None:
 
 
 def test_runners_cover_runnable() -> None:
-    from app.services.ops_runners import RUNNERS
+    from app.services.ops.runners import RUNNERS
 
     assert set(RUNNERS) == set(RUNNABLE_JOB_IDS)
 

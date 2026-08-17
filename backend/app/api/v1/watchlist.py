@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.models.user import User
-from app.schemas.common import ApiResponse
+from app.repositories import positions as positions_repo
+from app.repositories import signal_panel as signal_panel_repo
+from app.repositories import watchlist as repo
+from app.schemas.common import ApiResponse, OkOut
 from app.schemas.watchlist import (
     BarsResponse,
     FundamentalsOut,
     GroupCreate,
+    GroupMemberOut,
     GroupMemberRequest,
     GroupMembersBatchOut,
     GroupMembersBatchRequest,
@@ -33,9 +35,8 @@ from app.schemas.watchlist import (
     WatchlistItemOut,
     WatchlistReorderRequest,
 )
-from app.repositories import positions as positions_repo, signal_panel as signal_panel_repo, watchlist as repo
-from app.services import notify_log, strategy_board, trading_risk
 from app.services import fundamentals as fundamentals_svc
+from app.services import notify_log, strategy_board, trading_risk
 from app.services.bars import load_bars
 from app.services.quotes import QuoteRow, get_quote_store
 from app.services.stock_industry import enrich_rows_from_db
@@ -278,16 +279,16 @@ def put_position(
     return ApiResponse(data=PositionOut(**row))
 
 
-@router.delete("/watchlist/positions/{vt_symbol}", response_model=ApiResponse[dict[str, Any]])
+@router.delete("/watchlist/positions/{vt_symbol}", response_model=ApiResponse[OkOut])
 def delete_position(
     vt_symbol: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
+) -> ApiResponse[OkOut]:
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
     if not positions_repo.PositionRepository(db, str(user.id)).delete_position(symbol=symbol, exchange=exchange):
         raise HTTPException(status_code=404, detail="持仓不存在")
-    return ApiResponse(data={"ok": True})
+    return ApiResponse(data=OkOut())
 
 
 @router.post("/watchlist", response_model=ApiResponse[WatchlistItemOut])
@@ -348,26 +349,26 @@ def patch_group(
     return ApiResponse(data=GroupOut(id=g.id, name=g.name, sort_order=g.sort_order))
 
 
-@router.delete("/watchlist/groups/{group_id}", response_model=ApiResponse[dict[str, Any]])
+@router.delete("/watchlist/groups/{group_id}", response_model=ApiResponse[OkOut])
 def remove_group(
     group_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
+) -> ApiResponse[OkOut]:
     if not repo.WatchlistGroupRepository(db, str(user.id)).delete_group(group_id):
         raise HTTPException(status_code=404, detail="分组不存在")
-    return ApiResponse(data={"ok": True})
+    return ApiResponse(data=OkOut())
 
 
-@router.post("/watchlist/groups/{group_id}/members", response_model=ApiResponse[dict[str, Any]])
+@router.post("/watchlist/groups/{group_id}/members", response_model=ApiResponse[GroupMemberOut])
 def post_group_member(
     group_id: str,
     body: GroupMemberRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
+) -> ApiResponse[GroupMemberOut]:
     row = repo.WatchlistGroupMemberRepository(db, str(user.id)).add_group_member(group_id, body.symbol, body.exchange)
-    return ApiResponse(data={"ok": True, "symbol": row.symbol, "exchange": row.exchange})
+    return ApiResponse(data=GroupMemberOut(symbol=row.symbol, exchange=row.exchange))
 
 
 @router.post("/watchlist/groups/{group_id}/members/batch", response_model=ApiResponse[GroupMembersBatchOut])
@@ -381,29 +382,29 @@ def post_group_members_batch(
     return ApiResponse(data=GroupMembersBatchOut(**raw))
 
 
-@router.delete("/watchlist/groups/{group_id}/members/{vt_symbol}", response_model=ApiResponse[dict[str, Any]])
+@router.delete("/watchlist/groups/{group_id}/members/{vt_symbol}", response_model=ApiResponse[OkOut])
 def delete_group_member(
     group_id: str,
     vt_symbol: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
+) -> ApiResponse[OkOut]:
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
     if not repo.WatchlistGroupMemberRepository(db, str(user.id)).remove_group_member(group_id, symbol, exchange):
         raise HTTPException(status_code=404, detail="分组成员不存在")
-    return ApiResponse(data={"ok": True})
+    return ApiResponse(data=OkOut())
 
 
-@router.delete("/watchlist/{vt_symbol}", response_model=ApiResponse[dict[str, Any]])
+@router.delete("/watchlist/{vt_symbol}", response_model=ApiResponse[OkOut])
 def delete_watchlist(
     vt_symbol: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
+) -> ApiResponse[OkOut]:
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
     if not repo.WatchlistItemRepository(db, str(user.id)).remove_item(symbol, exchange):
         raise HTTPException(status_code=404, detail="不在自选中")
-    return ApiResponse(data={"ok": True})
+    return ApiResponse(data=OkOut())
 
 
 @router.get("/quotes", response_model=ApiResponse[list[QuoteOut]])

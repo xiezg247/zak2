@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.security import hash_password

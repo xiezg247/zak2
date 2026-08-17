@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -66,7 +67,7 @@ def test_parse_payload_non_dict() -> None:
 
 def test_list_empty() -> None:
     db = MagicMock()
-    db.execute.return_value.mappings.return_value.all.return_value = []
+    db.scalars.return_value = []
     out = list_notify_log(db, "u1", limit=50)
     assert out["items"] == []
     assert out["count"] == 0
@@ -75,16 +76,16 @@ def test_list_empty() -> None:
 
 def test_list_maps_payload() -> None:
     db = MagicMock()
-    db.execute.return_value.mappings.return_value.all.return_value = [
-        {
-            "id": "1",
-            "event_type": "test",
-            "channel": "feishu",
-            "payload_json": '{"x": 1}',
-            "status": "ok",
-            "error": "",
-            "created_at": "2026-08-07 10:00:00",
-        }
+    db.scalars.return_value = [
+        SimpleNamespace(
+            id="1",
+            event_type="test",
+            channel="feishu",
+            payload_json='{"x": 1}',
+            status="ok",
+            error="",
+            created_at="2026-08-07 10:00:00",
+        )
     ]
     out = list_notify_log(db, "u1", limit=10)
     assert out["items"][0]["payload"] == {"x": 1}

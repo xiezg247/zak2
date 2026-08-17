@@ -10,6 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.redis_keys import KEY_PREFIX
+from app.repositories import positions as positions_repo
 from app.repositories import signal_panel as signal_panel_repo
 from app.repositories import watchlist as repo
 from app.services.off_plan import (
@@ -453,17 +454,7 @@ def load_strategy_board(
     plan_vts: set[str] | None = plan_snap["vt_symbols"] if plan_snap else None
 
     # 持仓记账
-    pos_rows = db.execute(
-        text(
-            """
-            SELECT symbol, exchange, cost_price, volume, buy_date, notes, source, plan_pct, sort_order
-            FROM app.watchlist_positions
-            WHERE user_id = CAST(:uid AS uuid)
-            ORDER BY sort_order, buy_date DESC
-            """
-        ),
-        {"uid": user_id},
-    ).mappings().all()
+    pos_rows = positions_repo.PositionRepository(db, user_id).list_positions()
 
     position_vts = [to_vt_symbol(str(r["symbol"]), str(r["exchange"])) for r in pos_rows]
     off_set = set(list_off_plan_vt_symbols(position_vts, plan_vts))

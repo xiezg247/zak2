@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Callable
+import logging
+from collections.abc import Callable
+from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.repositories import backtest as backtest_repo, positions as positions_repo, signal_panel as signal_panel_repo, watchlist as watchlist_repo
+from app.repositories import backtest as backtest_repo
+from app.repositories import positions as positions_repo
+from app.repositories import signal_panel as signal_panel_repo
+from app.repositories import watchlist as watchlist_repo
 from app.services import bars, notes
 from app.services.symbols import to_vt_symbol
+
+logger = logging.getLogger(__name__)
 
 MAX_RESULT_CHARS = 6000
 
@@ -229,7 +236,7 @@ def _remove_watchlist(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         if vt in panel:
             signal_panel_repo.SignalPanelRepository(db, user_id).save_symbols([s for s in panel if s != vt])
     except Exception:  # noqa: BLE001
-        pass
+        logger.warning("同步移出信号名单失败: vt=%s", to_vt_symbol(symbol, exchange), exc_info=True)
     return {"ok": True, "vt_symbol": to_vt_symbol(symbol, exchange), "removed": True}
 
 

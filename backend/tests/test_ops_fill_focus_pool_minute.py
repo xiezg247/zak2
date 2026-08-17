@@ -1,15 +1,15 @@
 from datetime import date
 from unittest.mock import MagicMock, patch
 
-from app.services import ops_fill_focus_pool_minute as m
 from app.services import tushare_client as ts
+from app.services.ops import fill_focus_pool_minute as m
 
 
 def test_minute_skips_without_token() -> None:
     db = MagicMock()
     with (
         patch.object(m.ts, "require_token", side_effect=ts.TushareNotConfiguredError("未配置")),
-        patch("app.services.ops_fill_focus_pool_minute.save_job_run_meta") as save,
+        patch("app.services.ops.fill_focus_pool_minute.save_job_run_meta") as save,
     ):
         out = m.fill_focus_pool_minute(db)
     assert out["skipped"] is True
@@ -31,7 +31,7 @@ def test_minute_downloads() -> None:
         patch.object(m, "download_minute_bars", return_value=100) as dl,
         patch.object(m, "_count_overview", side_effect=[1, 1]),
         patch.object(m, "_sleep", return_value=None),
-        patch("app.services.ops_fill_focus_pool_minute.save_job_run_meta") as save,
+        patch("app.services.ops.fill_focus_pool_minute.save_job_run_meta") as save,
     ):
         out = m.fill_focus_pool_minute(db)
     assert out["success"] is True
@@ -50,7 +50,7 @@ def test_minute_empty_pool_ok() -> None:
         patch.object(m, "list_watchlist_symbols", return_value=[]),
         patch.object(m, "_lookback_days", return_value=5),
         patch.object(m, "_max_symbols", return_value=50),
-        patch("app.services.ops_fill_focus_pool_minute.save_job_run_meta"),
+        patch("app.services.ops.fill_focus_pool_minute.save_job_run_meta"),
     ):
         out = m.fill_focus_pool_minute(db)
     assert out["success"] is True

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 PROPOSAL_TTL_SEC = 600
 
 _lock = threading.Lock()
-_STORE: dict[str, "Proposal"] = {}
+_STORE: dict[str, Proposal] = {}
 
 
 @dataclass

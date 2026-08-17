@@ -11,11 +11,11 @@ from sqlalchemy.orm import Session
 
 from app.models.content import TradingPlan, TradingPlanSymbol
 from app.services.emotion_cycle import build_emotion_cycle
+from app.services.plan_manage import MAX_PLAN_SYMBOLS
 from app.services.radar import list_radar_cards
 from app.services.radar_resonance import list_radar_resonance
 from app.services.symbols import parse_flexible_symbol, to_vt_symbol
 from app.services.tushare_screener import latest_open_yyyymmdd
-from app.services.plan_manage import MAX_PLAN_SYMBOLS
 
 DEFAULT_PLAN_MAX_POSITION_PCT = 0.3
 

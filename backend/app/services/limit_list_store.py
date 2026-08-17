@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services import tushare_client as ts
-from app.services.ops_sync_limit_list import sync_one_day
+from app.services.ops.sync_limit_list import sync_one_day
 from app.services.seal_time import format_seal_time_label, seal_time_score
 from app.services.symbols import parse_flexible_symbol, to_tf_symbol, to_vt_symbol
 from app.services.tushare_screener import latest_open_yyyymmdd

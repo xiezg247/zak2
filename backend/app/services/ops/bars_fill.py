@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.services import bar_download as bars
 from app.services import tushare_client as ts
-from app.services.ops_scheduler import save_job_run_meta
+from app.services.ops.scheduler import save_job_run_meta
 from app.services.symbols import normalize_exchange
 
 JOB_WATCHLIST = "fill_watchlist_bars"

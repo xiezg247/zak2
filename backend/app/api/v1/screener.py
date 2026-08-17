@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
@@ -9,10 +8,12 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.models.user import User
-from app.schemas.common import ApiResponse, PageOut
+from app.repositories import screener as repo
+from app.schemas.common import ApiResponse, OkOut, PageOut
 from app.schemas.screener import (
     BuiltinRecipeOut,
     ConditionRunRequest,
+    DataStatusOut,
     HardFilterTemplate,
     IndustryListOut,
     JobAccepted,
@@ -32,7 +33,6 @@ from app.schemas.screener import (
     SchemeOut,
     SchemeUpdate,
 )
-from app.repositories import screener as repo
 from app.services import recipe_weights as recipe_weights_svc
 from app.services.arq_jobs import SCREENER_FUNCS, enqueue_app_job
 from app.services.hard_filters import TEMPLATES
@@ -123,14 +123,14 @@ def patterns(user: User = Depends(get_current_user)) -> ApiResponse[list[Pattern
     return ApiResponse(data=[PatternOut(**m) for m in list_patterns()])
 
 
-@router.get("/data-status", response_model=ApiResponse[dict[str, Any]])
-def data_status(user: User = Depends(get_current_user)) -> ApiResponse[dict[str, Any]]:
+@router.get("/data-status", response_model=ApiResponse[DataStatusOut])
+def data_status(user: User = Depends(get_current_user)) -> ApiResponse[DataStatusOut]:
     _ = user
     from app.core.settings import get_settings
 
     store = get_quote_store()
     meta = store.meta()
-    return ApiResponse(data={"redis": meta, "tushare_configured": bool(get_settings().tushare_token)})
+    return ApiResponse(data=DataStatusOut(redis=meta, tushare_configured=bool(get_settings().tushare_token)))
 
 
 @router.get("/schemes", response_model=ApiResponse[list[SchemeOut]])
@@ -160,15 +160,15 @@ def patch_scheme(
     return ApiResponse(data=_scheme_out(row))
 
 
-@router.delete("/schemes/{scheme_id}", response_model=ApiResponse[dict[str, Any]])
+@router.delete("/schemes/{scheme_id}", response_model=ApiResponse[OkOut])
 def remove_scheme(
     scheme_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
+) -> ApiResponse[OkOut]:
     if not repo.ScreenerSchemeRepository(db, str(user.id)).delete_scheme(scheme_id):
         raise HTTPException(status_code=404, detail="方案不存在")
-    return ApiResponse(data={"ok": True})
+    return ApiResponse(data=OkOut())
 
 
 @router.get("/recipes", response_model=ApiResponse[list[RecipeOut]])
@@ -198,15 +198,15 @@ def patch_recipe(
     return ApiResponse(data=_recipe_out(row))
 
 
-@router.delete("/recipes/{recipe_id}", response_model=ApiResponse[dict[str, Any]])
+@router.delete("/recipes/{recipe_id}", response_model=ApiResponse[OkOut])
 def remove_recipe(
     recipe_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
+) -> ApiResponse[OkOut]:
     if not repo.ScreenerRecipeRepository(db, str(user.id)).delete_recipe(recipe_id):
         raise HTTPException(status_code=404, detail="配方不存在")
-    return ApiResponse(data={"ok": True})
+    return ApiResponse(data=OkOut())
 
 
 @router.get("/recipes/{recipe_id}/weights", response_model=ApiResponse[RecipeWeightsOut])

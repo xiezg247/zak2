@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from app.schemas.screener import HardFilterPrefs
+from app.schemas.screener import ConditionRunRequest, HardFilterPrefs
 from app.services.engine import run_condition_screen
 from app.services.hard_filters import apply_hard_filters
 from app.services.quotes import QuoteRow
-from app.schemas.screener import ConditionRunRequest
 
 
 def _row(symbol: str, **kwargs) -> QuoteRow:  # type: ignore[no-untyped-def]

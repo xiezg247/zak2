@@ -62,7 +62,7 @@ def test_activate_replaces_same_day_active() -> None:
     db.scalars.return_value = iter([old])
     with (
         patch("app.services.plan_manage._now", return_value="t1"),
-        patch("app.services.plan_manage.load_plan_out", return_value=MagicMock(status="active", id="d1")) as load,
+        patch("app.services.plan_manage.load_plan_out", return_value=MagicMock(status="active", id="d1")),
     ):
         out = pm.activate_plan(db, "u1", "d1")
     assert old.status == "abandoned"

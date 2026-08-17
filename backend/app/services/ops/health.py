@@ -10,8 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.core.settings import get_settings
 from app.services import mcp_client, scheduler_lock
-from app.services.quotes import get_quote_store
 from app.services.quote_collect.control import collector_health
+from app.services.quotes import get_quote_store
 
 
 def _mask_url(url: str) -> str:

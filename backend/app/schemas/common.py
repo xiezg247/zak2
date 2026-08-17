@@ -25,3 +25,9 @@ class PageOut(BaseModel, Generic[T]):
     page: int
     page_size: int
     pages: int
+
+
+class OkOut(BaseModel):
+    """通用成功回执：写/删操作成功时返回。"""
+
+    ok: bool = True

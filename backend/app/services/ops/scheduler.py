@@ -6,13 +6,13 @@ import json
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-JobKind = Literal["runnable", "process", "planned"]
-
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.services.ops_catalog import JOB_SPECS, JOBS_BY_ID, RUNNABLE_JOB_IDS
+from app.services.ops.catalog import JOB_SPECS, JOBS_BY_ID, RUNNABLE_JOB_IDS
 from app.services.scheduler_defaults import resolve_cron
+
+JobKind = Literal["runnable", "process", "planned"]
 
 _CONFIG_ID = "default"
 _META_PREFIX = "scheduler/job_last_run/"

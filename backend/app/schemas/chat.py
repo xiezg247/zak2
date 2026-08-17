@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -45,3 +47,20 @@ class TeamStreamRequest(BaseModel):
     vt_symbol: str = Field(min_length=1, description="如 600519.SSE")
     session_id: str | None = Field(default=None, description="可选：完成后写入该会话一条助手消息")
     mode: str = Field(default="fast", description="fast=规则分+首席；deep=三分析师并行 LLM+首席")
+
+
+class ProposalConfirmOut(BaseModel):
+    ok: bool = True
+    proposal_id: str
+    tool: str
+    summary: str
+    result: Any = None
+
+
+class ProposalRejectOut(BaseModel):
+    ok: bool = True
+    proposal_id: str
+    tool: str
+    summary: str
+    args: dict
+    status: str

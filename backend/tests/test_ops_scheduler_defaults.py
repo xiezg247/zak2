@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from app.services import ops_scheduler
+from app.services.ops import scheduler as ops_scheduler
 
 
 def test_list_merges_default_cron() -> None:

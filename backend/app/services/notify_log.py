@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from app.models.notify import NotifyDeliveryLog
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 100
@@ -33,31 +35,24 @@ def parse_payload(payload_json: str) -> dict:
 
 def list_notify_log(db: Session, user_id: str, *, limit: int | None = None) -> dict:
     lim = clamp_limit(limit)
-    rows = db.execute(
-        text(
-            """
-            SELECT id, event_type, channel, payload_json, status, error, created_at
-            FROM app.notify_delivery_log
-            WHERE user_id = CAST(:uid AS uuid)
-            ORDER BY created_at DESC
-            LIMIT :lim
-            """
-        ),
-        {"uid": user_id, "lim": lim},
-    ).mappings().all()
+    rows = db.scalars(
+        select(NotifyDeliveryLog)
+        .where(NotifyDeliveryLog.user_id == user_id)
+        .order_by(NotifyDeliveryLog.created_at.desc())
+        .limit(lim)
+    )
 
     items = []
     for row in rows:
-        raw_payload = row.get("payload_json")
-        payload_text = "" if raw_payload is None else str(raw_payload)
+        payload_text = str(row.payload_json or "")
         items.append(
             {
-                "id": str(row["id"]),
-                "event_type": str(row["event_type"]),
-                "channel": str(row["channel"]),
-                "status": str(row["status"]),
-                "error": str(row.get("error") or ""),
-                "created_at": str(row["created_at"]),
+                "id": str(row.id),
+                "event_type": str(row.event_type),
+                "channel": str(row.channel),
+                "status": str(row.status),
+                "error": str(row.error or ""),
+                "created_at": str(row.created_at),
                 "payload": parse_payload(payload_text),
             }
         )

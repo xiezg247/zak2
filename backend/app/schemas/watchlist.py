@@ -75,6 +75,11 @@ class GroupMembersBatchOut(BaseModel):
     errors: list[GroupMembersBatchError] = Field(default_factory=list)
 
 
+class GroupMemberOut(BaseModel):
+    symbol: str
+    exchange: str
+
+
 class QuoteOut(BaseModel):
     symbol: str
     exchange: str

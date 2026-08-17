@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from app.services import ops_health
+from app.services.ops import health as ops_health
 
 
 def test_health_scheduler_lock_has_ok() -> None:

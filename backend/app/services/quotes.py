@@ -9,7 +9,6 @@ from typing import Any
 import redis
 
 from app.core.redis_keys import (
-    KEY_PREFIX,
     META_QUOTE_COUNT_KEY,
     META_UPDATED_AT_KEY,
     QUOTE_BLOB_KEY_FMT,

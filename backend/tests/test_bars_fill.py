@@ -6,7 +6,7 @@ from datetime import date
 from unittest.mock import MagicMock, patch
 
 from app.services import bar_download as bars
-from app.services import ops_bars_fill
+from app.services.ops import bars_fill as ops_bars_fill
 
 
 def test_parse_universe_start_default(monkeypatch) -> None:

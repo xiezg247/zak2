@@ -1,14 +1,14 @@
 from unittest.mock import MagicMock, patch
 
-from app.services import ops_sync_disclosure as m
+from app.services.ops import sync_disclosure as m
 
 
 def test_disclosure_skips_without_token() -> None:
     db = MagicMock()
     with patch(
-        "app.services.ops_sync_disclosure.ts.require_token",
+        "app.services.ops.sync_disclosure.ts.require_token",
         side_effect=m.ts.TushareNotConfiguredError("未配置 TUSHARE_TOKEN"),
-    ), patch("app.services.ops_sync_disclosure.save_job_run_meta"):
+    ), patch("app.services.ops.sync_disclosure.save_job_run_meta"):
         out = m.sync_disclosure_calendar(db)
     assert out["skipped"] is True
 
@@ -24,10 +24,10 @@ def test_disclosure_upserts() -> None:
             "actual_date": "",
         }
     ]
-    with patch("app.services.ops_sync_disclosure.ts.require_token", return_value="t"), patch(
-        "app.services.ops_sync_disclosure.latest_report_end_yyyymmdd", return_value="20260630"
-    ), patch("app.services.ops_sync_disclosure.ts.query", return_value=rows), patch(
-        "app.services.ops_sync_disclosure.save_job_run_meta"
+    with patch("app.services.ops.sync_disclosure.ts.require_token", return_value="t"), patch(
+        "app.services.ops.sync_disclosure.latest_report_end_yyyymmdd", return_value="20260630"
+    ), patch("app.services.ops.sync_disclosure.ts.query", return_value=rows), patch(
+        "app.services.ops.sync_disclosure.save_job_run_meta"
     ):
         out = m.sync_disclosure_calendar(db)
     assert out["success"] is True

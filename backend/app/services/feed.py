@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import UTC, datetime
 
@@ -14,8 +15,10 @@ from app.integrations.bilibili.client import BilibiliApiError, BilibiliClient
 from app.integrations.bilibili.user import get_user_profile, search_users
 from app.models.content import FeedItem, FeedItemRead, FeedSubscription, TradingPlan, TradingPlanSymbol
 from app.schemas.content import FeedItemOut, FeedSubOut, PlanOut
-from app.services.ops_sync_bilibili_feed import SOURCE_TYPE, sync_one_subscription
+from app.services.ops.sync_bilibili_feed import SOURCE_TYPE, sync_one_subscription
 from app.services.symbols import to_vt_symbol
+
+logger = logging.getLogger(__name__)
 
 MAX_FEED_SUBSCRIPTIONS = 50
 
@@ -119,7 +122,7 @@ def add_bilibili_up(
             display_name = profile.get("name") or mid
             avatar_url = profile.get("avatar") or ""
         except Exception:  # noqa: BLE001 — profile 失败仍创建
-            pass
+            logger.warning("获取 UP 资料失败，仍创建订阅: mid=%s", mid)
 
         now = _now()
         row = FeedSubscription(

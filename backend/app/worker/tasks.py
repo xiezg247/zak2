@@ -6,10 +6,10 @@ import asyncio
 from typing import Any
 
 from app.core.db import SessionLocal
-from app.services import ops_sync_bilibili_feed
 from app.services.bars_lock import BARS_JOBS, release_bars, try_acquire_bars
-from app.services.ops_catalog import RUNNABLE_JOB_IDS
-from app.services.ops_runners import RUNNERS, needs_user_id
+from app.services.ops import sync_bilibili_feed as ops_sync_bilibili_feed
+from app.services.ops.catalog import RUNNABLE_JOB_IDS
+from app.services.ops.runners import RUNNERS, needs_user_id
 
 
 def _execute_sync(

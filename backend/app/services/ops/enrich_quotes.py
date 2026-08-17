@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.settings import get_settings
 from app.services import tushare_client as ts
-from app.services.ops_scheduler import save_job_run_meta
+from app.services.ops.scheduler import save_job_run_meta
 from app.services.quote_factor_patch import apply_factor_patches
 from app.services.quotes import get_quote_store
 from app.services.tushare_screener import (

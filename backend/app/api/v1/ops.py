@@ -12,8 +12,8 @@ from app.schemas.ops import (
     HealthOut,
     JobAccepted,
     JobEnabledPatch,
-    McpToolsOut,
     McpToolOut,
+    McpToolsOut,
     PurgeResult,
     SchedulerConfigOut,
     SchedulerConfigPut,
@@ -23,17 +23,31 @@ from app.schemas.ops import (
 from app.schemas.screener import JobOut
 from app.services import (
     mcp_client,
-    ops_auto_screen,
-    ops_bars,
-    ops_health,
-    ops_purge,
-    ops_scheduler,
-    ops_sync_calendar,
-    ops_sync_sector,
 )
-from app.services.ops_catalog import JOBS_BY_ID
-from app.services.ops_enqueue import enqueue_ops_job, list_ops_job_outs
-from app.services.ops_runners import RUNNERS
+from app.services.ops import (
+    auto_screen as ops_auto_screen,
+)
+from app.services.ops import (
+    bars as ops_bars,
+)
+from app.services.ops import (
+    health as ops_health,
+)
+from app.services.ops import (
+    purge as ops_purge,
+)
+from app.services.ops import (
+    scheduler as ops_scheduler,
+)
+from app.services.ops import (
+    sync_calendar as ops_sync_calendar,
+)
+from app.services.ops import (
+    sync_sector as ops_sync_sector,
+)
+from app.services.ops.catalog import JOBS_BY_ID
+from app.services.ops.enqueue import enqueue_ops_job, list_ops_job_outs
+from app.services.ops.runners import RUNNERS
 
 router = APIRouter(prefix="/ops", tags=["ops"])
 

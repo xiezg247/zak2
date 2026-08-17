@@ -10,8 +10,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services import tushare_client as ts
-from app.services.ops_scheduler import save_job_run_meta
-from app.services.ops_sync_universe import parse_ts_code
+from app.services.ops.scheduler import save_job_run_meta
+from app.services.ops.sync_universe import parse_ts_code
 
 JOB_ID = "sync_stock_industry"
 SYNCED_AT_KEY = "stock_industry_synced_at"

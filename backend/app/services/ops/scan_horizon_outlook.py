@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services.limit_list_store import load_first_time_map
-from app.services.ops_scheduler import save_job_run_meta
+from app.services.ops.scheduler import save_job_run_meta
 from app.services.radar import list_radar_cards
 from app.services.radar_predict import (
     MODEL_LABEL,

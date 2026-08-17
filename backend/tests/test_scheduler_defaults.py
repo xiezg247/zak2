@@ -1,5 +1,5 @@
+from app.services.ops.catalog import RUNNABLE_JOB_IDS
 from app.services.scheduler_defaults import resolve_cron
-from app.services.ops_catalog import RUNNABLE_JOB_IDS
 
 
 def test_defaults_cover_all_runnable() -> None:

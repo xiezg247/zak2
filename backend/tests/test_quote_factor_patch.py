@@ -34,7 +34,6 @@ def test_apply_mv_only_patches_hash_without_touching_ranks() -> None:
     assert out["seq"] == 43
     assert out["published"] is True
 
-    key = QUOTE_KEY_FMT.format(symbol="SHSE.600519")
     client.hset.assert_called_once()
     hset_kwargs = client.hset.call_args.kwargs
     mapping = hset_kwargs.get("mapping") or client.hset.call_args.args[1]

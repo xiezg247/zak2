@@ -169,3 +169,8 @@ class JobOut(BaseModel):
     result_ref: str | None = None
     created_at: str
     updated_at: str
+
+
+class DataStatusOut(BaseModel):
+    redis: dict[str, Any]
+    tushare_configured: bool

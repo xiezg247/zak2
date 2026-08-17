@@ -18,7 +18,7 @@ from app.integrations.bilibili.client import BilibiliApiError, BilibiliClient
 from app.integrations.bilibili.dynamics import list_recent_dynamics
 from app.integrations.bilibili.normalize import normalize_dynamic
 from app.models.content import FeedItem, FeedSubscription
-from app.services.ops_scheduler import save_job_run_meta
+from app.services.ops.scheduler import save_job_run_meta
 
 JOB_ID = "sync_bilibili_feed"
 FEED_RECENT_LIMIT = 10

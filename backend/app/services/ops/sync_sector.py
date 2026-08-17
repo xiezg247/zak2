@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
 
@@ -9,7 +10,9 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services import tushare_client as ts
-from app.services.ops_scheduler import save_job_run_meta
+from app.services.ops.scheduler import save_job_run_meta
+
+logger = logging.getLogger(__name__)
 
 JOB_ID = "sync_sector_flow_daily"
 
@@ -69,7 +72,7 @@ def _load_sw_name_map(db: Session) -> dict[str, str]:
             if name and code:
                 mapping[name] = code
     except Exception:  # noqa: BLE001
-        pass
+        logger.warning("Tushare index_classify 获取失败，回退库内行业映射", exc_info=True)
     if mapping:
         return mapping
     existing = db.execute(

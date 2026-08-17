@@ -13,9 +13,9 @@ from sqlalchemy.orm import Session
 from app.services import bar_download as bars
 from app.services import tushare_client as ts
 from app.services.bar_download import INTERVAL_1M, download_minute_bars, get_overview_row
-from app.services.ops_bars_fill import list_watchlist_symbols
-from app.services.ops_scheduler import save_job_run_meta
-from app.services.ops_sync_sector import recent_open_dates
+from app.services.ops.bars_fill import list_watchlist_symbols
+from app.services.ops.scheduler import save_job_run_meta
+from app.services.ops.sync_sector import recent_open_dates
 from app.services.symbols import normalize_exchange
 
 JOB_ID = "fill_focus_pool_minute"

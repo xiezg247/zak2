@@ -1,6 +1,6 @@
-from app.services.ops_catalog import JOB_SPECS, RUNNABLE_JOB_IDS
-from app.services.ops_bars import bars_overview
-from app.services.ops_runners import RUNNERS
+from app.services.ops.bars import bars_overview
+from app.services.ops.catalog import JOB_SPECS, RUNNABLE_JOB_IDS
+from app.services.ops.runners import RUNNERS
 
 
 def test_catalog_runnable_jobs() -> None:

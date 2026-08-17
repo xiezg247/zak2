@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
-from app.services.ops_auto_screen import screen_intraday, screen_post_close
-from app.services.ops_catalog import RUNNABLE_JOB_IDS
+from app.services.ops.auto_screen import screen_intraday, screen_post_close
+from app.services.ops.catalog import RUNNABLE_JOB_IDS
 from app.services.presets import get_builtin_recipe
 
 
@@ -22,11 +22,11 @@ def test_screen_intraday_saves_run() -> None:
     }
     fake_run = MagicMock(id="run-1")
     with (
-        patch("app.services.ops_auto_screen.load_scheduler_config", return_value={"config": {}}),
+        patch("app.services.ops.auto_screen.load_scheduler_config", return_value={"config": {}}),
         patch("app.repositories.screener.ScreenerRunRepository.latest_run_symbols", return_value=None),
-        patch("app.services.ops_auto_screen.run_recipe_screen", return_value=fake_result),
+        patch("app.services.ops.auto_screen.run_recipe_screen", return_value=fake_result),
         patch("app.repositories.screener.ScreenerRunRepository.save_run", return_value=fake_run) as save,
-        patch("app.services.ops_auto_screen.save_job_run_meta"),
+        patch("app.services.ops.auto_screen.save_job_run_meta"),
     ):
         out = screen_intraday(db, user_id="u1")
     assert out["success"] is True
@@ -48,13 +48,13 @@ def test_screen_post_close_saves_run() -> None:
     fake_run = MagicMock(id="run-pc")
     with (
         patch(
-            "app.services.ops_auto_screen.load_scheduler_config",
+            "app.services.ops.auto_screen.load_scheduler_config",
             return_value={"config": {"screen_post_close": {"recipe_id": "post_close_multi", "top_n": 15}}},
         ),
         patch("app.repositories.screener.ScreenerRunRepository.latest_run_symbols", return_value=None),
-        patch("app.services.ops_auto_screen.run_recipe_screen", return_value=fake_result) as run,
+        patch("app.services.ops.auto_screen.run_recipe_screen", return_value=fake_result) as run,
         patch("app.repositories.screener.ScreenerRunRepository.save_run", return_value=fake_run),
-        patch("app.services.ops_auto_screen.save_job_run_meta"),
+        patch("app.services.ops.auto_screen.save_job_run_meta"),
     ):
         out = screen_post_close(db, user_id="u1")
     assert out["success"] is True

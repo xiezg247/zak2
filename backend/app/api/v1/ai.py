@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
@@ -10,17 +9,19 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.db import SessionLocal, get_db
 from app.models.user import User
+from app.repositories import chat as repo
 from app.schemas.chat import (
     ChatRequest,
     LlmStatus,
     MessageOut,
+    ProposalConfirmOut,
+    ProposalRejectOut,
     SessionCreate,
     SessionOut,
     SessionUpdate,
     TeamStreamRequest,
 )
-from app.schemas.common import ApiResponse, PageOut
-from app.repositories import chat as repo
+from app.schemas.common import ApiResponse, OkOut, PageOut
 from app.services import ai_agent, ai_proposals, team_orchestrator
 from app.services import llm as llm_svc
 
@@ -78,14 +79,14 @@ def patch_session(
     return ApiResponse(data=repo.ChatRepository(db, str(user.id)).update_session(session_id, title=body.title, scene=body.scene))
 
 
-@router.delete("/sessions/{session_id}", response_model=ApiResponse[dict[str, Any]])
+@router.delete("/sessions/{session_id}", response_model=ApiResponse[OkOut])
 def remove_session(
     session_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
+) -> ApiResponse[OkOut]:
     repo.ChatRepository(db, str(user.id)).delete_session(session_id)
-    return ApiResponse(data={"ok": True})
+    return ApiResponse(data=OkOut())
 
 
 @router.get("/sessions/{session_id}/messages", response_model=ApiResponse[list[MessageOut]])
@@ -114,22 +115,22 @@ def post_chat(
     )
 
 
-@router.post("/proposals/{proposal_id}/confirm", response_model=ApiResponse[dict[str, Any]])
+@router.post("/proposals/{proposal_id}/confirm", response_model=ApiResponse[ProposalConfirmOut])
 def post_confirm_proposal(
     proposal_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
-    return ApiResponse(data=ai_proposals.confirm_proposal(db, proposal_id, str(user.id)))
+) -> ApiResponse[ProposalConfirmOut]:
+    return ApiResponse(data=ProposalConfirmOut(**ai_proposals.confirm_proposal(db, proposal_id, str(user.id))))
 
 
-@router.post("/proposals/{proposal_id}/reject", response_model=ApiResponse[dict[str, Any]])
+@router.post("/proposals/{proposal_id}/reject", response_model=ApiResponse[ProposalRejectOut])
 def post_reject_proposal(
     proposal_id: str,
     user: User = Depends(get_current_user),
-) -> ApiResponse[dict[str, Any]]:
+) -> ApiResponse[ProposalRejectOut]:
     proposal = ai_proposals.reject_proposal(proposal_id, str(user.id))
-    return ApiResponse(data={"ok": True, **ai_proposals.proposal_public(proposal)})
+    return ApiResponse(data=ProposalRejectOut(**{"ok": True, **ai_proposals.proposal_public(proposal)}))
 
 
 @router.post("/team/stream")

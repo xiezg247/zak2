@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.core.redis_keys import KEY_PREFIX
 from app.models.bars import DbBarData
-from app.services.ops_bars_fill import list_watchlist_symbols
-from app.services.ops_scheduler import save_job_run_meta
+from app.services.ops.bars_fill import list_watchlist_symbols
+from app.services.ops.scheduler import save_job_run_meta
 from app.services.quotes import get_quote_store
 from app.services.strategy_board import DEFAULT_CONFIG_KEY, _parse_payload
 from app.services.strategy_signal_ma import (

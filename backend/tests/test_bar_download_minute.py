@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 from app.services import bar_download as bars

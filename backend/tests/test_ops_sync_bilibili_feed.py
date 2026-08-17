@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.integrations.bilibili.client import BilibiliApiError
 from app.integrations.bilibili.normalize import FeedItemDraft
-from app.services import ops_sync_bilibili_feed as svc
+from app.services.ops import sync_bilibili_feed as svc
 
 
 def test_in_sync_window() -> None:

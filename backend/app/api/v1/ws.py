@@ -6,12 +6,11 @@ import asyncio
 import logging
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
-from sqlalchemy import select
 
 from app.core.db import SessionLocal
 from app.core.redis_keys import NOTIFY_CHANNEL
 from app.core.security import decode_access_token
-from app.models.user import User
+from app.repositories.user import UserRepository
 from app.services.quote_notify_hub import get_quote_notify_hub
 
 logger = logging.getLogger(__name__)
@@ -30,7 +29,7 @@ def _user_id_from_token(token: str) -> str | None:
 def _user_active(user_id: str) -> bool:
     db = SessionLocal()
     try:
-        user = db.scalar(select(User).where(User.id == user_id))
+        user = UserRepository(db).get_by_id(user_id)
         return bool(user and user.is_active)
     finally:
         db.close()

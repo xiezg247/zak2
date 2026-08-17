@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.services import ops_sync_universe as svc
-from app.services.ops_sync_universe import parse_ts_code, rows_from_stock_basic
+from app.services.ops import sync_universe as svc
+from app.services.ops.sync_universe import parse_ts_code, rows_from_stock_basic
 
 
 def test_parse_ts_code() -> None:

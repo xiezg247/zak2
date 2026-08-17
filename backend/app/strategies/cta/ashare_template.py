@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 from vnpy.trader.constant import Offset
-from vnpy.trader.object import BarData, TickData, OrderData, TradeData
+from vnpy.trader.object import BarData, OrderData, TickData, TradeData
 from vnpy_ctastrategy import CtaTemplate
 from vnpy_ctastrategy.base import StopOrder
 

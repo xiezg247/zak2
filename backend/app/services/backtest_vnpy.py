@@ -163,7 +163,6 @@ def _daily_rows(engine: BacktestingEngine) -> list[dict[str, Any]]:
     if df is None or getattr(df, "empty", True):
         return rows
     for idx, row in df.iterrows():
-        bal = row.get("balance") if "balance" in df.columns else row.get("net_pnl")
         # vnpy daily often has end_balance via calculate_statistics path; prefer balance/end_balance
         equity = None
         for key in ("balance", "end_balance", "net_pnl"):

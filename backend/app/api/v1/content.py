@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.models.user import User
-from app.schemas.common import ApiResponse
+from app.schemas.common import ApiResponse, OkOut
 from app.schemas.content import (
     BilibiliSearchOut,
     DisciplineCheckOut,
@@ -209,15 +207,15 @@ def post_note_entry(
     return ApiResponse(data=notes_svc.add_entry(db, str(user.id), vt_symbol, body.body))
 
 
-@router.delete("/notes/entries/{entry_id}", response_model=ApiResponse[dict[str, Any]])
+@router.delete("/notes/entries/{entry_id}", response_model=ApiResponse[OkOut])
 def delete_note_entry(
     entry_id: int,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
+) -> ApiResponse[OkOut]:
     if not notes_svc.delete_entry(db, str(user.id), entry_id):
         raise HTTPException(status_code=404, detail="流水不存在")
-    return ApiResponse(data={"ok": True})
+    return ApiResponse(data=OkOut())
 
 
 @router.get("/feed/bilibili/search", response_model=ApiResponse[BilibiliSearchOut])
@@ -256,14 +254,14 @@ def patch_feed_sub(
     return ApiResponse(data=feed_svc.set_subscription_enabled(db, str(user.id), sub_id, enabled))
 
 
-@router.delete("/feed/subscriptions/{sub_id}", response_model=ApiResponse[dict[str, Any]])
+@router.delete("/feed/subscriptions/{sub_id}", response_model=ApiResponse[OkOut])
 def delete_feed_sub(
     sub_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
+) -> ApiResponse[OkOut]:
     feed_svc.delete_subscription(db, str(user.id), sub_id)
-    return ApiResponse(data={"ok": True})
+    return ApiResponse(data=OkOut())
 
 
 @router.get("/feed/items", response_model=ApiResponse[list[FeedItemOut]])
@@ -278,10 +276,10 @@ def get_feed_items(
     )
 
 
-@router.post("/feed/items/{item_id}/read", response_model=ApiResponse[dict[str, Any]])
+@router.post("/feed/items/{item_id}/read", response_model=ApiResponse[OkOut])
 def post_feed_read(
     item_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ApiResponse[dict[str, Any]]:
-    return ApiResponse(data=feed_svc.mark_feed_read(db, str(user.id), item_id))
+) -> ApiResponse[OkOut]:
+    return ApiResponse(data=OkOut(**feed_svc.mark_feed_read(db, str(user.id), item_id)))

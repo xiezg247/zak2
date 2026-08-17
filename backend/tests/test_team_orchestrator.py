@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 from app.services import team_orchestrator
 
-
 _PREFETCH = {
     "vt_symbol": "600519.SSE",
     "name": "茅台",

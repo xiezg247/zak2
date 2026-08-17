@@ -9,13 +9,13 @@ from typing import Any
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.schemas.screener import HardFilterPrefs, ReferencePeerRequest
+from app.schemas.screener import ReferencePeerRequest
 from app.services import stock_industry
+from app.services import tushare_client as ts
 from app.services.hard_filters import apply_hard_filters, resolve_hard_filter
 from app.services.quotes import QuoteRow, get_quote_store
 from app.services.suspend import load_suspended_vt_symbols
 from app.services.symbols import parse_flexible_symbol, to_vt_symbol
-from app.services import tushare_client as ts
 from app.services.tushare_screener import (
     _fetch_with_lookback,
     _iter_trade_dates,

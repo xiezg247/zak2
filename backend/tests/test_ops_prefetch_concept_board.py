@@ -1,14 +1,14 @@
 from unittest.mock import MagicMock, patch
 
-from app.services import ops_prefetch_concept_board as m
+from app.services.ops import prefetch_concept_board as m
 
 
 def test_concept_delegates_success() -> None:
     db = MagicMock()
     child = {"success": True, "skipped": False, "message": "ok 2 days", "days": 2}
     with (
-        patch("app.services.ops_prefetch_concept_board.sync_sector_flow_daily", return_value=child),
-        patch("app.services.ops_prefetch_concept_board.save_job_run_meta") as save,
+        patch("app.services.ops.prefetch_concept_board.sync_sector_flow_daily", return_value=child),
+        patch("app.services.ops.prefetch_concept_board.save_job_run_meta") as save,
     ):
         out = m.prefetch_concept_board(db)
     assert out["skipped"] is False
@@ -23,8 +23,8 @@ def test_concept_delegates_skipped() -> None:
     db = MagicMock()
     child = {"success": False, "skipped": True, "message": "Tushare token missing", "days": 0}
     with (
-        patch("app.services.ops_prefetch_concept_board.sync_sector_flow_daily", return_value=child),
-        patch("app.services.ops_prefetch_concept_board.save_job_run_meta") as save,
+        patch("app.services.ops.prefetch_concept_board.sync_sector_flow_daily", return_value=child),
+        patch("app.services.ops.prefetch_concept_board.save_job_run_meta") as save,
     ):
         out = m.prefetch_concept_board(db)
     assert out["skipped"] is True

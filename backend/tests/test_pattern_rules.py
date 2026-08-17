@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from app.services.pattern_rules import (
-    BarSeries,
     PATTERN_MATCHERS,
     PATTERN_META,
+    BarSeries,
     match_ma_bull,
     match_old_duck,
     match_platform_break,

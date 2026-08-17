@@ -224,8 +224,24 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
         sql = str(stmt)
         if "user_preferences" in sql:
             result.scalar.return_value = None
-        elif "watchlist_positions" in sql:
-            result.mappings.return_value.all.return_value = [
+        else:
+            result.mappings.return_value.all.return_value = []
+            result.mappings.return_value.first.return_value = None
+        return result
+
+    db.execute.side_effect = _execute
+    with (
+        patch.object(
+            strategy_board.repo.WatchlistItemRepository,
+            "list_items",
+            return_value=[
+                SimpleNamespace(symbol="600519", exchange="SSE", name="茅台"),
+            ],
+        ),
+        patch.object(
+            strategy_board.positions_repo.PositionRepository,
+            "list_positions",
+            return_value=[
                 {
                     "symbol": "000001",
                     "exchange": "SZSE",
@@ -248,19 +264,6 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
                     "plan_pct": None,
                     "sort_order": 1,
                 },
-            ]
-        else:
-            result.mappings.return_value.all.return_value = []
-            result.mappings.return_value.first.return_value = None
-        return result
-
-    db.execute.side_effect = _execute
-    with (
-        patch.object(
-            strategy_board.repo.WatchlistItemRepository,
-            "list_items",
-            return_value=[
-                SimpleNamespace(symbol="600519", exchange="SSE", name="茅台"),
             ],
         ),
         patch.object(strategy_board.signal_panel_repo.SignalPanelRepository, "load_symbols", return_value=[]),
@@ -387,8 +390,18 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
         sql = str(stmt)
         if "user_preferences" in sql:
             result.scalar.return_value = None
-        elif "watchlist_positions" in sql:
-            result.mappings.return_value.all.return_value = [
+        else:
+            result.mappings.return_value.all.return_value = []
+            result.mappings.return_value.first.return_value = None
+        return result
+
+    db.execute.side_effect = _execute
+    with (
+        patch.object(strategy_board.repo.WatchlistItemRepository, "list_items", return_value=[]),
+        patch.object(
+            strategy_board.positions_repo.PositionRepository,
+            "list_positions",
+            return_value=[
                 {
                     "symbol": "600519",
                     "exchange": "SSE",
@@ -400,16 +413,8 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
                     "plan_pct": None,
                     "sort_order": 0,
                 }
-            ]
-            result.mappings.return_value.first.return_value = None
-        else:
-            result.mappings.return_value.all.return_value = []
-            result.mappings.return_value.first.return_value = None
-        return result
-
-    db.execute.side_effect = _execute
-    with (
-        patch.object(strategy_board.repo.WatchlistItemRepository, "list_items", return_value=[]),
+            ],
+        ),
         patch.object(strategy_board.signal_panel_repo.SignalPanelRepository, "load_symbols", return_value=[]),
         patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
         patch.object(strategy_board, "get_quote_store") as gs,

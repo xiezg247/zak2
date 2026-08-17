@@ -9,10 +9,11 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.models.user import User
+from app.repositories import backtest as repo
 from app.schemas.backtest import (
-    BatchBacktestRequest,
     BacktestRunOut,
     BacktestRunRequest,
+    BatchBacktestRequest,
     JobAccepted,
     OptimizeBacktestRequest,
     OptimizeSummaryOut,
@@ -20,7 +21,6 @@ from app.schemas.backtest import (
     StrategyProfileOut,
 )
 from app.schemas.common import ApiResponse, PageOut
-from app.repositories import backtest as repo
 from app.services.arq_jobs import BACKTEST_FUNCS, enqueue_app_job
 from app.services.backtest_engine import PROFILES, STRATEGIES
 from app.services.backtest_optimize import expand_ma_grid

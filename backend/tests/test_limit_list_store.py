@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from app.services.limit_list_store import attach_first_time_fields, load_first_time_map
-from app.services.ops_sync_limit_list import JOB_ID, sync_limit_list
+from app.services.ops.sync_limit_list import JOB_ID, sync_limit_list
 
 
 def test_attach_first_time_fields_by_vt_and_tf() -> None:
@@ -114,10 +114,10 @@ def test_sync_limit_list_without_token() -> None:
     db = MagicMock()
     with (
         patch(
-            "app.services.ops_sync_limit_list.ts.require_token",
+            "app.services.ops.sync_limit_list.ts.require_token",
             side_effect=ts.TushareNotConfiguredError("未配置 TUSHARE_TOKEN"),
         ),
-        patch("app.services.ops_sync_limit_list.save_job_run_meta") as meta,
+        patch("app.services.ops.sync_limit_list.save_job_run_meta") as meta,
     ):
         out = sync_limit_list(db)
     assert out["success"] is False
@@ -143,10 +143,10 @@ def test_sync_limit_list_upserts() -> None:
         }
     ]
     with (
-        patch("app.services.ops_sync_limit_list.ts.require_token", return_value="tok"),
-        patch("app.services.ops_sync_limit_list.ts.query", return_value=mock_rows),
-        patch("app.services.ops_sync_limit_list.recent_open_dates", return_value=["20240805"]),
-        patch("app.services.ops_sync_limit_list.save_job_run_meta") as meta,
+        patch("app.services.ops.sync_limit_list.ts.require_token", return_value="tok"),
+        patch("app.services.ops.sync_limit_list.ts.query", return_value=mock_rows),
+        patch("app.services.ops.sync_limit_list.recent_open_dates", return_value=["20240805"]),
+        patch("app.services.ops.sync_limit_list.save_job_run_meta") as meta,
     ):
         out = sync_limit_list(db)
     assert out["success"] is True

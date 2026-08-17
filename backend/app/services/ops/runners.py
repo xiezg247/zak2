@@ -2,30 +2,70 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
-from app.services import (
-    ops_auto_screen,
-    ops_bars_fill,
-    ops_enrich_quotes,
-    ops_fill_focus_pool_minute,
-    ops_prefetch_concept_board,
-    ops_prefetch_moneyflow,
-    ops_prefetch_tushare,
-    ops_sync_watchlist_financials,
-    ops_purge,
-    ops_sync_bilibili_feed,
-    ops_sync_calendar,
-    ops_sync_disclosure,
-    ops_sync_limit_list,
-    ops_sync_sector,
-    ops_sync_stock_industry,
-    ops_sync_suspend,
-    ops_sync_universe,
-    ops_scan_horizon_outlook,
-    ops_warm_market,
-    ops_warm_radar,
-    ops_warm_watchlist_strategy,
+from app.services.ops import (
+    auto_screen as ops_auto_screen,
+)
+from app.services.ops import (
+    bars_fill as ops_bars_fill,
+)
+from app.services.ops import (
+    enrich_quotes as ops_enrich_quotes,
+)
+from app.services.ops import (
+    fill_focus_pool_minute as ops_fill_focus_pool_minute,
+)
+from app.services.ops import (
+    prefetch_concept_board as ops_prefetch_concept_board,
+)
+from app.services.ops import (
+    prefetch_moneyflow as ops_prefetch_moneyflow,
+)
+from app.services.ops import (
+    prefetch_tushare as ops_prefetch_tushare,
+)
+from app.services.ops import (
+    purge as ops_purge,
+)
+from app.services.ops import (
+    scan_horizon_outlook as ops_scan_horizon_outlook,
+)
+from app.services.ops import (
+    sync_bilibili_feed as ops_sync_bilibili_feed,
+)
+from app.services.ops import (
+    sync_calendar as ops_sync_calendar,
+)
+from app.services.ops import (
+    sync_disclosure as ops_sync_disclosure,
+)
+from app.services.ops import (
+    sync_limit_list as ops_sync_limit_list,
+)
+from app.services.ops import (
+    sync_sector as ops_sync_sector,
+)
+from app.services.ops import (
+    sync_stock_industry as ops_sync_stock_industry,
+)
+from app.services.ops import (
+    sync_suspend as ops_sync_suspend,
+)
+from app.services.ops import (
+    sync_universe as ops_sync_universe,
+)
+from app.services.ops import (
+    sync_watchlist_financials as ops_sync_watchlist_financials,
+)
+from app.services.ops import (
+    warm_market as ops_warm_market,
+)
+from app.services.ops import (
+    warm_radar as ops_warm_radar,
+)
+from app.services.ops import (
+    warm_watchlist_strategy as ops_warm_watchlist_strategy,
 )
 
 SCREEN_JOB_IDS = frozenset({"screen_intraday", "screen_post_close"})

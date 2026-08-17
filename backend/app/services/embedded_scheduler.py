@@ -12,10 +12,10 @@ from apscheduler.triggers.cron import CronTrigger
 from app.core.db import SessionLocal
 from app.core.settings import get_settings
 from app.services import scheduler_lock
-from app.services.ops_catalog import RUNNABLE_JOB_IDS
-from app.services.ops_enqueue import enqueue_ops_job_sync
-from app.services.ops_runners import needs_user_id
-from app.services.ops_scheduler import load_scheduler_config
+from app.services.ops.catalog import RUNNABLE_JOB_IDS
+from app.services.ops.enqueue import enqueue_ops_job_sync
+from app.services.ops.runners import needs_user_id
+from app.services.ops.scheduler import load_scheduler_config
 from app.services.scheduler_defaults import resolve_cron
 
 _logger = logging.getLogger(__name__)

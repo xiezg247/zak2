@@ -6,8 +6,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.services.ops_scheduler import save_job_run_meta
-from app.services.ops_sync_sector import sync_sector_flow_daily
+from app.services.ops.scheduler import save_job_run_meta
+from app.services.ops.sync_sector import sync_sector_flow_daily
 
 JOB_ID = "prefetch_concept_board"
 

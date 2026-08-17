@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
-from app.services.ops_catalog import JOB_SPECS
-from app.services.ops_scheduler import job_kind_for, list_scheduler_jobs
+from app.services.ops.catalog import JOB_SPECS
+from app.services.ops.scheduler import job_kind_for, list_scheduler_jobs
 
 
 def test_job_kind_mapping() -> None:
@@ -27,8 +27,8 @@ def test_no_planned_jobs_in_catalog() -> None:
 
 def test_list_jobs_includes_job_kind() -> None:
     db = MagicMock()
-    with patch("app.services.ops_scheduler.load_scheduler_config", return_value={"config": {}}), patch(
-        "app.services.ops_scheduler.load_job_run_meta", return_value=None
+    with patch("app.services.ops.scheduler.load_scheduler_config", return_value={"config": {}}), patch(
+        "app.services.ops.scheduler.load_job_run_meta", return_value=None
     ):
         rows = {r["job_id"]: r for r in list_scheduler_jobs(db)}
     assert rows["collect_quotes"]["job_kind"] == "process"

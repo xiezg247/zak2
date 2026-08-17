@@ -9,13 +9,12 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.schemas.screener import ConditionRunRequest, HardFilterPrefs, RecipeRunRequest
+from app.services import recipe_weights as recipe_weights_svc
+from app.services import stock_industry, tushare_screener
 from app.services.hard_filters import apply_hard_filters, resolve_hard_filter
 from app.services.presets import get_builtin_recipe, get_preset
 from app.services.quotes import QuoteRow, QuoteStore, get_quote_store
-from app.services import recipe_weights as recipe_weights_svc
-from app.services import stock_industry
 from app.services.suspend import load_suspended_vt_symbols
-from app.services import tushare_screener
 
 
 def _industry_dist(rows: list[QuoteRow]) -> list[dict[str, Any]]:

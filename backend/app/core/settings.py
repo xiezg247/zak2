@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEFAULT_JWT_SECRET = "change-me-in-production-min-32-chars!!"
 
 
 class Settings(BaseSettings):
@@ -12,8 +15,10 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    environment: str = "development"
+    log_level: str = "INFO"
     database_url: str = "postgresql+psycopg://zak2:zak2@localhost:5432/zak2"
-    jwt_secret: str = "change-me-in-production-min-32-chars!!"
+    jwt_secret: str = _DEFAULT_JWT_SECRET
     jwt_expire_days: int = 7
     redis_url: str = "redis://127.0.0.1:6379/0"
     arq_queue_name: str = "zak2:arq"
@@ -45,6 +50,12 @@ class Settings(BaseSettings):
     quote_collect_interval_sec: int = 30
     quote_provider: str = "tickflow"
     tickflow_api_key: str = ""
+
+    @model_validator(mode="after")
+    def _validate_production_secret(self) -> Settings:
+        if self.environment == "production" and self.jwt_secret == _DEFAULT_JWT_SECRET:
+            raise ValueError("生产环境必须设置 JWT_SECRET，禁止使用默认值")
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:

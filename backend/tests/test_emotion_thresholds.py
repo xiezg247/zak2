@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
-from app.services.emotion_cycle import DEFAULT_THRESHOLDS, Thresholds
 from app.services import emotion_thresholds as et
+from app.services.emotion_cycle import DEFAULT_THRESHOLDS, Thresholds
 
 
 def test_thresholds_fields_match_dataclass() -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from app.schemas.market import RadarCardOut
-from app.services import ops_warm_radar as warm
+from app.services.ops import warm_radar as warm
 
 
 def test_warm_upserts_cards() -> None:
@@ -26,8 +26,8 @@ def test_warm_upserts_cards() -> None:
             empty_message="",
         ),
     ]
-    with patch("app.services.ops_warm_radar.build_synthesized_cards", return_value=cards), patch(
-        "app.services.ops_warm_radar.save_job_run_meta"
+    with patch("app.services.ops.warm_radar.build_synthesized_cards", return_value=cards), patch(
+        "app.services.ops.warm_radar.save_job_run_meta"
     ):
         out = warm.warm_radar_card_snapshots(db)
     assert out["success"] is True

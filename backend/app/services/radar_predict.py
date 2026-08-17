@@ -9,8 +9,8 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.schemas.market import RadarPredictOut, RadarPredictRow
 from app.repositories.watchlist import resolve_symbol_pair
+from app.schemas.market import RadarPredictOut, RadarPredictRow
 
 MODEL_LABEL = "rules_v1"
 VARIANT = "default"

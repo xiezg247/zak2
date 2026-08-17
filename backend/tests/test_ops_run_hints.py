@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from app.services import ops_scheduler
+from app.services.ops import scheduler as ops_scheduler
 
 
 def test_run_hints_have_no_zak_cli() -> None:

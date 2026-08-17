@@ -1,10 +1,11 @@
+from psycopg.types.json import Json
+
 from app.services.zak_import import (
     DEFAULT_COPY_TABLES,
     SERIAL_ID_TABLES,
     adapt_row_for_insert,
     tables_for_import,
 )
-from psycopg.types.json import Json
 
 
 def test_default_skips_bars() -> None:

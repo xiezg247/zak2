@@ -3,9 +3,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from app.schemas.screener import HardFilterPrefs
+from app.services import suspend as sus
 from app.services.hard_filters import apply_hard_filters
 from app.services.quotes import QuoteRow
-from app.services import suspend as sus
 
 
 def _row(tf: str, name: str = "x") -> QuoteRow:

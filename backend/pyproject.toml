@@ -41,6 +41,11 @@ markers = [
 line-length = 120
 target-version = "py310"
 
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+# 行长度交给 formatter 处理（长 SQL / 长 docstring / 测试数据字面量不强制拆行）
+ignore = ["E501"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

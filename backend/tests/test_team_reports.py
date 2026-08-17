@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.services.team_reports import should_persist_report
 from app.services.team_orchestrator import _fallback_report, stream_team_analysis_with_persist
+from app.services.team_reports import should_persist_report
 
 
 def test_should_persist_requires_section() -> None:
