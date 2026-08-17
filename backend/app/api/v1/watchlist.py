@@ -156,7 +156,7 @@ def get_notify_log(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[NotifyLogOut]:
-    return ApiResponse(data=NotifyLogOut(**notify_log.list_notify_log(db, str(user.id), limit=limit)))
+    return ApiResponse(data=notify_log.list_notify_log(db, str(user.id), limit=limit))
 
 
 @router.put("/watchlist/trading-risk", response_model=ApiResponse[TradingRiskPrefsOut])
@@ -482,7 +482,7 @@ def get_item_fundamentals(
     db: Session = Depends(get_db),
 ) -> ApiResponse[FundamentalsOut]:
     _ = user
-    return ApiResponse(data=FundamentalsOut(**fundamentals_svc.get_fundamentals(db, vt_symbol)))
+    return ApiResponse(data=fundamentals_svc.get_fundamentals(db, vt_symbol))
 
 
 @router.get("/bars/{vt_symbol}", response_model=ApiResponse[BarsResponse])

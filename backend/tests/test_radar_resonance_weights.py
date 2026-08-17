@@ -113,10 +113,10 @@ def test_compute_resonance_custom_weights() -> None:
 def test_weights_payload_items_only_editable() -> None:
     merged = rr.merge_weights({"leader_pick": 2})
     payload = rr.weights_payload(merged)
-    ids = {i["card_id"] for i in payload["items"]}
+    ids = {i.card_id for i in payload.items}
     assert "leader_pick" in ids
     assert "sector_flow_hot" not in ids
-    assert payload["weights"]["leader_pick"] == 2.0
+    assert payload.weights["leader_pick"] == 2.0
 
 
 def test_meta_key() -> None:

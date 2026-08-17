@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.notify import NotifyDeliveryLog
+from app.schemas.watchlist import NotifyLogItem, NotifyLogOut
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 100
@@ -33,7 +34,7 @@ def parse_payload(payload_json: str) -> dict:
         return {"_raw": payload_json}
 
 
-def list_notify_log(db: Session, user_id: str, *, limit: int | None = None) -> dict:
+def list_notify_log(db: Session, user_id: str, *, limit: int | None = None) -> NotifyLogOut:
     lim = clamp_limit(limit)
     rows = db.scalars(
         select(NotifyDeliveryLog)
@@ -42,19 +43,19 @@ def list_notify_log(db: Session, user_id: str, *, limit: int | None = None) -> d
         .limit(lim)
     )
 
-    items = []
+    items: list[NotifyLogItem] = []
     for row in rows:
         payload_text = str(row.payload_json or "")
         items.append(
-            {
-                "id": str(row.id),
-                "event_type": str(row.event_type),
-                "channel": str(row.channel),
-                "status": str(row.status),
-                "error": str(row.error or ""),
-                "created_at": str(row.created_at),
-                "payload": parse_payload(payload_text),
-            }
+            NotifyLogItem(
+                id=str(row.id),
+                event_type=str(row.event_type),
+                channel=str(row.channel),
+                status=str(row.status),
+                error=str(row.error or ""),
+                created_at=str(row.created_at),
+                payload=parse_payload(payload_text),
+            )
         )
 
-    return {"items": items, "limit": lim, "count": len(items)}
+    return NotifyLogOut(items=items, limit=lim, count=len(items))

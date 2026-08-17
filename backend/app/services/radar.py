@@ -70,29 +70,29 @@ def _synth_limit_ladder(db: Session) -> RadarCardOut:
             empty_message="暂无连板梯队数据",
         )
     rows: list[dict[str, Any]] = []
-    if emotion.get("max_board_vt_symbol"):
+    if emotion.max_board_vt_symbol:
         rows.append(
             {
-                "vt_symbol": emotion["max_board_vt_symbol"],
-                "limit_times": emotion["max_limit_times"],
+                "vt_symbol": emotion.max_board_vt_symbol,
+                "limit_times": emotion.max_limit_times,
                 "role": "最高板",
             }
         )
-    for vt in emotion.get("linked_board_vt_symbols") or []:
-        if vt == emotion.get("max_board_vt_symbol"):
+    for vt in emotion.linked_board_vt_symbols:
+        if vt == emotion.max_board_vt_symbol:
             continue
         rows.append({"vt_symbol": vt, "role": "关联"})
     if rows:
         from app.services.limit_list_store import attach_first_time_fields, load_first_time_map
 
-        trade_date = str(emotion.get("trade_date") or "") or None
+        trade_date = str(emotion.trade_date or "") or None
         attach_first_time_fields(rows, load_first_time_map(db, trade_date))
     return RadarCardOut(
         card_id="discovery_limit_ladder",
         title="发现·连板梯队",
-        subtitle=str(emotion.get("trade_date") or ""),
+        subtitle=str(emotion.trade_date or ""),
         source="synthesized",
-        computed_at=str(emotion.get("updated_at") or ""),
+        computed_at=str(emotion.updated_at or ""),
         rows=rows[:40],
     )
 

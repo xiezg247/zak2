@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.market import EmotionLimitLadderDaily
-from app.schemas.market import MarketOverview, RankRow
+from app.schemas.market import EmotionSnapshot, MarketOverview, RankRow
 from app.services import emotion_cycle as emotion_cycle_svc
 from app.services.quotes import get_quote_store
 from app.services.symbols import to_vt_symbol
@@ -26,7 +25,7 @@ RANK_FIELDS = (
 )
 
 
-def load_emotion(db: Session) -> dict[str, Any] | None:
+def load_emotion(db: Session) -> EmotionSnapshot | None:
     row = db.scalar(select(EmotionLimitLadderDaily).order_by(EmotionLimitLadderDaily.trade_date.desc()).limit(1))
     if not row:
         return None
@@ -37,14 +36,14 @@ def load_emotion(db: Session) -> dict[str, Any] | None:
             linked = [str(x) for x in parsed]
     except json.JSONDecodeError:
         linked = []
-    return {
-        "trade_date": row.trade_date,
-        "max_limit_times": row.max_limit_times,
-        "max_board_vt_symbol": row.max_board_vt_symbol,
-        "linked_board_count": len(linked),
-        "linked_board_vt_symbols": linked[:30],
-        "updated_at": row.updated_at,
-    }
+    return EmotionSnapshot(
+        trade_date=row.trade_date,
+        max_limit_times=row.max_limit_times,
+        max_board_vt_symbol=row.max_board_vt_symbol,
+        linked_board_count=len(linked),
+        linked_board_vt_symbols=linked[:30],
+        updated_at=row.updated_at,
+    )
 
 
 def market_overview(db: Session) -> MarketOverview:

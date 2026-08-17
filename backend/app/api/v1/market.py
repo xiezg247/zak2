@@ -174,7 +174,7 @@ def get_resonance_weights(
     db: Session = Depends(get_db),
 ) -> ApiResponse[RadarResonanceWeightsOut]:
     merged = resonance_svc.load_user_weights(db, str(user.id))
-    return ApiResponse(data=RadarResonanceWeightsOut(**resonance_svc.weights_payload(merged)))
+    return ApiResponse(data=resonance_svc.weights_payload(merged))
 
 
 @router.put("/radar/resonance/weights", response_model=ApiResponse[RadarResonanceWeightsOut])
@@ -187,7 +187,7 @@ def put_resonance_weights(
         merged = resonance_svc.save_user_weights(db, str(user.id), dict(body.weights or {}))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ApiResponse(data=RadarResonanceWeightsOut(**resonance_svc.weights_payload(merged)))
+    return ApiResponse(data=resonance_svc.weights_payload(merged))
 
 
 @router.get("/radar/resonance", response_model=ApiResponse[RadarResonanceOut])

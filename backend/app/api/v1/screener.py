@@ -218,7 +218,7 @@ def get_recipe_weights(
     if recipe_id not in recipe_weights_svc.EDITABLE_RECIPES:
         raise HTTPException(status_code=400, detail=f"未知或不可编辑的配方：{recipe_id}")
     merged = recipe_weights_svc.load_recipe_weights(db, str(user.id), recipe_id)
-    return ApiResponse(data=RecipeWeightsOut(**recipe_weights_svc.weights_payload(recipe_id, merged)))
+    return ApiResponse(data=recipe_weights_svc.weights_payload(recipe_id, merged))
 
 
 @router.put("/recipes/{recipe_id}/weights", response_model=ApiResponse[RecipeWeightsOut])
@@ -234,7 +234,7 @@ def put_recipe_weights(
         merged = recipe_weights_svc.save_recipe_weights(db, str(user.id), recipe_id, dict(body.weights or {}))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ApiResponse(data=RecipeWeightsOut(**recipe_weights_svc.weights_payload(recipe_id, merged)))
+    return ApiResponse(data=recipe_weights_svc.weights_payload(recipe_id, merged))
 
 
 @router.post("/runs/condition", response_model=ApiResponse[JobAccepted])

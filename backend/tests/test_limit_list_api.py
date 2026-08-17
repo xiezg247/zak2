@@ -13,7 +13,7 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.schemas.market import LimitListOut
+from app.schemas.market import EmotionSnapshot, LimitListOut
 from app.services.limit_list_store import list_limit_list
 from app.services.radar import _synth_limit_ladder
 
@@ -123,13 +123,14 @@ def test_get_limit_list_api_empty() -> None:
 
 def test_synth_limit_ladder_attaches_seal_fields() -> None:
     db = MagicMock()
-    emotion = {
-        "trade_date": "20240805",
-        "max_limit_times": 3,
-        "max_board_vt_symbol": "600519.SSE",
-        "linked_board_vt_symbols": ["SZSE.000001"],
-        "updated_at": "2024-08-05T10:00:00",
-    }
+    emotion = EmotionSnapshot(
+        trade_date="20240805",
+        max_limit_times=3,
+        max_board_vt_symbol="600519.SSE",
+        linked_board_count=1,
+        linked_board_vt_symbols=["SZSE.000001"],
+        updated_at="2024-08-05T10:00:00",
+    )
     with (
         patch("app.services.radar.market_svc.load_emotion", return_value=emotion),
         patch(

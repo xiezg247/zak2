@@ -9,6 +9,8 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.screener import RecipeWeightItem, RecipeWeightsOut
+
 EDITABLE_RECIPES = frozenset({"intraday_multi", "post_close_multi", "ultra_short_unified"})
 
 DEFAULT_WEIGHTS: dict[str, dict[str, float]] = {
@@ -195,22 +197,22 @@ def save_recipe_weights(
     return normalized
 
 
-def weights_payload(recipe_id: str, merged: dict[str, float]) -> dict[str, Any]:
+def weights_payload(recipe_id: str, merged: dict[str, float]) -> RecipeWeightsOut:
     if recipe_id not in EDITABLE_RECIPES:
         raise ValueError(f"未知或不可编辑的配方：{recipe_id}")
     factors = DEFAULT_WEIGHTS[recipe_id]
     labels = FACTOR_LABELS[recipe_id]
     items = [
-        {
-            "key": factor_key,
-            "label": labels[factor_key],
-            "weight": merged[factor_key],
-            "default_weight": factors[factor_key],
-        }
+        RecipeWeightItem(
+            key=factor_key,
+            label=labels[factor_key],
+            weight=merged[factor_key],
+            default_weight=factors[factor_key],
+        )
         for factor_key in factors
     ]
-    return {
-        "recipe_id": recipe_id,
-        "items": items,
-        "weights": {factor_key: merged[factor_key] for factor_key in factors},
-    }
+    return RecipeWeightsOut(
+        recipe_id=recipe_id,
+        items=items,
+        weights={factor_key: merged[factor_key] for factor_key in factors},
+    )

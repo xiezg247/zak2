@@ -124,7 +124,9 @@ def compute_snapshots(ts_code: str, reports_by_type: dict[str, list[dict[str, An
         prior_income = (income_i.get(prior or "") or {}).get("fields") or {}
         prior_revenue = _field_float(prior_income, "total_revenue", "revenue")
         prior_net = _field_float(prior_income, "n_income_attr_p", "n_income")
-        ocf_to_profit = round(ocf / net_income, 2) if ocf is not None and net_income not in (None, 0) else None
+        ocf_to_profit = (
+            round(ocf / net_income, 2) if ocf is not None and net_income is not None and net_income != 0 else None
+        )
         snapshots.append(
             {
                 "ts_code": ts_code,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.repositories import (
@@ -66,8 +67,8 @@ def get_market_emotion(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     emotion = market.load_emotion(db)
     overview = market.market_overview(db)
     return {
-        "emotion": emotion,
-        "overview": overview.model_dump() if hasattr(overview, "model_dump") else overview,
+        "emotion": emotion.model_dump() if isinstance(emotion, BaseModel) else emotion,
+        "overview": overview.model_dump() if isinstance(overview, BaseModel) else overview,
     }
 
 

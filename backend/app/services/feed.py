@@ -15,6 +15,7 @@ from app.integrations.bilibili.client import BilibiliApiError, BilibiliClient
 from app.integrations.bilibili.user import get_user_profile, search_users
 from app.models.content import FeedItem, FeedItemRead, FeedSubscription, TradingPlan, TradingPlanSymbol
 from app.repositories.pagination import Page, paginate
+from app.schemas.common import OkOut
 from app.schemas.content import FeedItemOut, FeedSubOut, PlanOut
 from app.services.ops.sync_bilibili_feed import SOURCE_TYPE, sync_one_subscription
 from app.services.symbols import to_vt_symbol
@@ -253,7 +254,7 @@ def list_feed_items_page(
     return result.map(lambda r: _feed_item_out(r, r.id in reads or bool(r.read_at)))
 
 
-def mark_feed_read(db: Session, user_id: str, item_id: str) -> dict:
+def mark_feed_read(db: Session, user_id: str, item_id: str) -> OkOut:
     item = db.scalar(select(FeedItem).where(FeedItem.id == item_id))
     if not item:
         raise HTTPException(status_code=404, detail="动态不存在")
@@ -270,7 +271,7 @@ def mark_feed_read(db: Session, user_id: str, item_id: str) -> dict:
     if not existing:
         db.add(FeedItemRead(user_id=user_id, item_id=item_id, read_at=_now()))
         db.commit()
-    return {"ok": True}
+    return OkOut()
 
 
 def plan_to_out(plan: TradingPlan, symbols: list[TradingPlanSymbol]) -> PlanOut:

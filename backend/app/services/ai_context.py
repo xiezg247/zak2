@@ -26,8 +26,8 @@ def build_context_brief(db: Session, user_id: str) -> str:
     emotion = market_svc.load_emotion(db)
     if emotion:
         parts.append(
-            f"连板情绪 {emotion.get('trade_date')}：最高 {emotion.get('max_limit_times')} 板，"
-            f"龙头 {emotion.get('max_board_vt_symbol')}，关联 {emotion.get('linked_board_count')} 只"
+            f"连板情绪 {emotion.trade_date}：最高 {emotion.max_limit_times} 板，"
+            f"龙头 {emotion.max_board_vt_symbol}，关联 {emotion.linked_board_count} 只"
         )
 
     run = db.scalar(

@@ -54,7 +54,7 @@ def resolve_emotion_stage(db: Session | None) -> tuple[str | None, EmotionCycleO
     # 仅有空 inputs 时再用高度粗推
     inputs = cycle.inputs
     if int(inputs.sample_size or 0) == 0 and int(inputs.max_limit_times or 0) == 0:
-        mx = int(emotion.get("max_limit_times") or 0)
+        mx = int(emotion.max_limit_times or 0)
         if mx <= 0:
             return "ice", cycle
         if mx == 1:

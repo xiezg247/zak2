@@ -154,7 +154,7 @@ def get_scheduler_jobs(
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[SchedulerJobOut]]:
     _ = user
-    return ApiResponse(data=[SchedulerJobOut(**row) for row in ops_scheduler.list_scheduler_jobs(db)])
+    return ApiResponse(data=ops_scheduler.list_scheduler_jobs(db))
 
 
 @router.patch("/scheduler/jobs/{job_id}", response_model=ApiResponse[SchedulerJobOut])
@@ -176,8 +176,8 @@ def patch_scheduler_job(
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="未知任务") from exc
     for row in ops_scheduler.list_scheduler_jobs(db):
-        if row["job_id"] == job_id:
-            return ApiResponse(data=SchedulerJobOut(**row))
+        if row.job_id == job_id:
+            return ApiResponse(data=row)
     raise HTTPException(status_code=404, detail="未知任务")
 
 

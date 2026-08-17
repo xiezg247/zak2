@@ -83,11 +83,11 @@ def test_empty_db_returns_nulls() -> None:
     disc.mappings.return_value.all.return_value = []
     db.execute.side_effect = [snap, meta, disc]
     out = fund.get_fundamentals(db, "600519.SSE")
-    assert out["vt_symbol"] == "600519.SSE"
-    assert out["ts_code"] == "600519.SH"
-    assert out["snapshot"] is None
-    assert out["sync"] is None
-    assert out["disclosures"] == []
+    assert out.vt_symbol == "600519.SSE"
+    assert out.ts_code == "600519.SH"
+    assert out.snapshot is None
+    assert out.sync is None
+    assert out.disclosures == []
 
 
 def test_snapshot_and_disclosures_mapped() -> None:
@@ -122,8 +122,8 @@ def test_snapshot_and_disclosures_mapped() -> None:
     disc.mappings.return_value.all.return_value = disc_rows[:3]
     db.execute.side_effect = [snap, meta, disc]
     out = fund.get_fundamentals(db, "600519.SSE")
-    assert out["snapshot"]["end_date"] == "20251231"
-    assert out["snapshot"]["roe"] == 0.15
-    assert out["sync"]["periods_count"] == 4
-    assert len(out["disclosures"]) == 3
-    assert out["disclosures"][0]["end_date"] == "20251231"
+    assert out.snapshot.end_date == "20251231"
+    assert out.snapshot.roe == 0.15
+    assert out.sync.periods_count == 4
+    assert len(out.disclosures) == 3
+    assert out.disclosures[0].end_date == "20251231"

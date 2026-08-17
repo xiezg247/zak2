@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.watchlist import DisclosureOut, FinancialSnapshotOut, FinancialSyncOut, FundamentalsOut
 from app.services.bar_download import to_ts_code
 from app.services.symbols import parse_flexible_symbol, to_vt_symbol
 
 DISCLOSURE_LIMIT = 3
 
 
-def get_fundamentals(db: Session, vt_symbol: str) -> dict[str, Any]:
+def get_fundamentals(db: Session, vt_symbol: str) -> FundamentalsOut:
     raw = (vt_symbol or "").strip()
     if not raw:
         raise HTTPException(status_code=400, detail="代码为空")
@@ -74,10 +73,10 @@ def get_fundamentals(db: Session, vt_symbol: str) -> dict[str, Any]:
         .all()
     )
 
-    return {
-        "vt_symbol": vt,
-        "ts_code": ts,
-        "snapshot": dict(snap) if snap else None,
-        "sync": dict(sync) if sync else None,
-        "disclosures": [dict(r) for r in discs],
-    }
+    return FundamentalsOut(
+        vt_symbol=vt,
+        ts_code=ts,
+        snapshot=FinancialSnapshotOut(**dict(snap)) if snap else None,
+        sync=FinancialSyncOut(**dict(sync)) if sync else None,
+        disclosures=[DisclosureOut(**dict(r)) for r in discs],
+    )

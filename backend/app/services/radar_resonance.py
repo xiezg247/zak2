@@ -10,7 +10,13 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.schemas.market import RadarCardOut, RadarResonanceEntry, RadarResonanceOut
+from app.schemas.market import (
+    RadarCardOut,
+    RadarResonanceEntry,
+    RadarResonanceOut,
+    RadarResonanceWeightItem,
+    RadarResonanceWeightsOut,
+)
 from app.services.limit_list_store import lookup_first_time
 from app.services.quotes import _to_vt_symbol
 from app.services.radar import list_radar_cards
@@ -137,20 +143,20 @@ def save_user_weights(db: Session, user_id: str, weights: dict) -> dict[str, flo
     return merge_weights(payload)
 
 
-def weights_payload(merged: dict[str, float]) -> dict[str, Any]:
+def weights_payload(merged: dict[str, float]) -> RadarResonanceWeightsOut:
     items = [
-        {
-            "card_id": card_id,
-            "title": CARD_TITLES.get(card_id, card_id),
-            "weight": merged[card_id],
-            "default_weight": CARD_WEIGHTS[card_id],
-        }
+        RadarResonanceWeightItem(
+            card_id=card_id,
+            title=CARD_TITLES.get(card_id, card_id),
+            weight=merged[card_id],
+            default_weight=CARD_WEIGHTS[card_id],
+        )
         for card_id in editable_card_ids()
     ]
-    return {
-        "items": items,
-        "weights": {card_id: merged[card_id] for card_id in editable_card_ids()},
-    }
+    return RadarResonanceWeightsOut(
+        items=items,
+        weights={card_id: merged[card_id] for card_id in editable_card_ids()},
+    )
 
 
 def _row_vt_symbol(row: dict[str, Any]) -> str:

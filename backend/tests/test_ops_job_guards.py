@@ -11,6 +11,7 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
+from app.schemas.ops import SchedulerJobOut
 
 
 def _make_user() -> User:
@@ -41,22 +42,22 @@ def _api_client(user: User | None = None) -> TestClient:
     return TestClient(app)
 
 
-def _planned_job_row(*, enabled: bool = False) -> dict[str, object]:
-    return {
-        "job_id": "purge_stale_cache",
-        "name": "清理过期缓存",
-        "description": "删除 cache schema 中过期 LLM/雷达 hint 与过旧策略缓存",
-        "job_kind": "planned",
-        "runnable": False,
-        "run_hint": "未实现：见 docs/product-roadmap.md",
-        "status_label": "未实现",
-        "enabled": enabled,
-        "cron_hour": None,
-        "cron_minute": None,
-        "cron_day_of_week": None,
-        "interval_seconds": None,
-        "last_run": None,
-    }
+def _planned_job_row(*, enabled: bool = False) -> SchedulerJobOut:
+    return SchedulerJobOut(
+        job_id="purge_stale_cache",
+        name="清理过期缓存",
+        description="删除 cache schema 中过期 LLM/雷达 hint 与过旧策略缓存",
+        job_kind="planned",
+        runnable=False,
+        run_hint="未实现：见 docs/product-roadmap.md",
+        status_label="未实现",
+        enabled=enabled,
+        cron_hour=None,
+        cron_minute=None,
+        cron_day_of_week=None,
+        interval_seconds=None,
+        last_run=None,
+    )
 
 
 def test_patch_planned_job_enabled_true_returns_400() -> None:

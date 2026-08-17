@@ -69,9 +69,9 @@ def test_list_empty() -> None:
     db = MagicMock()
     db.scalars.return_value = []
     out = list_notify_log(db, "u1", limit=50)
-    assert out["items"] == []
-    assert out["count"] == 0
-    assert out["limit"] == 50
+    assert out.items == []
+    assert out.count == 0
+    assert out.limit == 50
 
 
 def test_list_maps_payload() -> None:
@@ -88,8 +88,8 @@ def test_list_maps_payload() -> None:
         )
     ]
     out = list_notify_log(db, "u1", limit=10)
-    assert out["items"][0]["payload"] == {"x": 1}
-    assert out["items"][0]["event_type"] == "test"
+    assert out.items[0].payload == {"x": 1}
+    assert out.items[0].event_type == "test"
 
 
 def test_api_notify_log_ok() -> None:

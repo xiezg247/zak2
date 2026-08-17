@@ -31,12 +31,12 @@ def test_list_jobs_includes_job_kind() -> None:
         patch("app.services.ops.scheduler.load_scheduler_config", return_value={"config": {}}),
         patch("app.services.ops.scheduler.load_job_run_meta", return_value=None),
     ):
-        rows = {r["job_id"]: r for r in list_scheduler_jobs(db)}
-    assert rows["collect_quotes"]["job_kind"] == "process"
-    assert rows["purge_stale_cache"]["job_kind"] == "runnable"
-    assert rows["enrich_market_quotes"]["job_kind"] == "runnable"
-    assert rows["sync_suspend_daily"]["job_kind"] == "runnable"
-    assert rows["prefetch_moneyflow"]["job_kind"] == "runnable"
-    assert rows["sync_watchlist_financials"]["job_kind"] == "runnable"
-    assert rows["prefetch_concept_board"]["job_kind"] == "runnable"
-    assert rows["fill_focus_pool_minute"]["job_kind"] == "runnable"
+        rows = {r.job_id: r for r in list_scheduler_jobs(db)}
+    assert rows["collect_quotes"].job_kind == "process"
+    assert rows["purge_stale_cache"].job_kind == "runnable"
+    assert rows["enrich_market_quotes"].job_kind == "runnable"
+    assert rows["sync_suspend_daily"].job_kind == "runnable"
+    assert rows["prefetch_moneyflow"].job_kind == "runnable"
+    assert rows["sync_watchlist_financials"].job_kind == "runnable"
+    assert rows["prefetch_concept_board"].job_kind == "runnable"
+    assert rows["fill_focus_pool_minute"].job_kind == "runnable"

@@ -319,4 +319,4 @@ def post_feed_read(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[OkOut]:
-    return ApiResponse(data=OkOut(**feed_svc.mark_feed_read(db, str(user.id), item_id)))
+    return ApiResponse(data=feed_svc.mark_feed_read(db, str(user.id), item_id))

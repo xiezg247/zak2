@@ -165,10 +165,10 @@ def test_load_recipe_weights_from_meta() -> None:
 def test_weights_payload() -> None:
     merged = rw.DEFAULT_WEIGHTS["post_close_multi"]
     payload = rw.weights_payload("post_close_multi", merged)
-    assert payload["recipe_id"] == "post_close_multi"
-    assert len(payload["items"]) == 4
-    assert payload["items"][0]["label"] == "资金"
-    assert payload["weights"] == merged
+    assert payload.recipe_id == "post_close_multi"
+    assert len(payload.items) == 4
+    assert payload.items[0].label == "资金"
+    assert payload.weights == merged
 
 
 def test_normalize_last_key_compensation_sums_exactly_one() -> None:
