@@ -1,0 +1,14 @@
+## Commit Message Rules
+
+- **语言**：subject 与 body 必须使用简体中文（禁止整句英文 subject）。
+- **格式**：`<type>(<scope>): <简述>`
+- **简述**：写动机/影响，不堆文件名。
+- **专有名词**可保留英文：SubFlow、CLIP、API、Docker 等。
+
+示例：
+
+```
+refactor(ui): 前端目录迁入 ui/workbench 与 ui/admin
+
+与 backend 并列，统一 UI 工程布局。
+```
