@@ -31,6 +31,15 @@ class BacktestRunOut(BaseModel):
     params: dict[str, Any] = Field(default_factory=dict)
 
 
+class BacktestBatchOut(BaseModel):
+    batch_id: str
+    strategy: str
+    start_date: str
+    end_date: str
+    created_at: str
+    count: int = 0
+
+
 class BacktestRunRequest(BaseModel):
     vt_symbol: str = Field(description="如 600519.SSE")
     strategy: str = "double_ma"

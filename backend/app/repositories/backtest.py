@@ -12,7 +12,7 @@ from app.models.backtest import BacktestRun
 from app.repositories.base import BaseRepository
 from app.repositories.pagination import Page, paginate
 from app.repositories.watchlist import resolve_symbol_pair
-from app.schemas.backtest import BacktestRunOut, BacktestRunRequest, OptimizeSummaryOut
+from app.schemas.backtest import BacktestBatchOut, BacktestRunOut, BacktestRunRequest, OptimizeSummaryOut
 from app.services.backtest_bars import Bar, bars_to_records, load_bars
 from app.services.backtest_optimize import pick_best
 from app.services.backtest_settings import build_strategy_setting, min_bars_for_request
@@ -62,7 +62,7 @@ class BacktestRepository(BaseRepository[BacktestRun]):
             return None
         return self.to_out(row, detail=True)
 
-    def list_batches(self, *, limit: int = 30) -> list[dict[str, Any]]:
+    def list_batches(self, *, limit: int = 30) -> list[BacktestBatchOut]:
         rows = list(
             self.db.scalars(
                 select(BacktestRun)
@@ -71,24 +71,24 @@ class BacktestRepository(BaseRepository[BacktestRun]):
                 .limit(500)
             )
         )
-        batches: dict[str, dict[str, Any]] = {}
+        batches: dict[str, BacktestBatchOut] = {}
         for r in rows:
             bid = r.batch_id or ""
             if not bid:
                 continue
             item = batches.get(bid)
             if not item:
-                item = {
-                    "batch_id": bid,
-                    "strategy": r.strategy,
-                    "start_date": r.start_date,
-                    "end_date": r.end_date,
-                    "created_at": r.created_at,
-                    "count": 0,
-                }
+                item = BacktestBatchOut(
+                    batch_id=bid,
+                    strategy=r.strategy,
+                    start_date=r.start_date,
+                    end_date=r.end_date,
+                    created_at=r.created_at,
+                    count=0,
+                )
                 batches[bid] = item
-            item["count"] += 1
-        out = sorted(batches.values(), key=lambda x: x["created_at"], reverse=True)
+            item.count += 1
+        out = sorted(batches.values(), key=lambda x: x.created_at, reverse=True)
         return out[:limit]
 
     # ---- 写 ----

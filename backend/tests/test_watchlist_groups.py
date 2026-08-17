@@ -91,11 +91,11 @@ def test_batch_add_counts() -> None:
     ):
         db.scalar.side_effect = [g, item, None]
         out = repo.WatchlistGroupMemberRepository(db, "u1").batch_group_members("g1", ["600519.SSE"], "add")
-    assert out["ok"] is True
-    assert out["action"] == "add"
-    assert out["added"] == 1
-    assert out["skipped"] == 0
-    assert out["errors"] == []
+    assert out.ok is True
+    assert out.action == "add"
+    assert out.added == 1
+    assert out.skipped == 0
+    assert out.errors == []
     db.commit.assert_called()
     db.add.assert_called()
 
@@ -106,9 +106,9 @@ def test_batch_add_not_in_watchlist_error() -> None:
     db.scalar.side_effect = [g, None]
     with patch.object(repo, "parse_flexible_symbol", return_value=("600519", "SSE")):
         out = repo.WatchlistGroupMemberRepository(db, "u1").batch_group_members("g1", ["600519.SSE"], "add")
-    assert out["added"] == 0
-    assert len(out["errors"]) == 1
-    assert "自选" in out["errors"][0]["detail"]
+    assert out.added == 0
+    assert len(out.errors) == 1
+    assert "自选" in out.errors[0].detail
 
 
 def test_batch_remove_skips_missing() -> None:
@@ -117,8 +117,8 @@ def test_batch_remove_skips_missing() -> None:
     db.scalar.side_effect = [g, None]
     with patch.object(repo, "parse_flexible_symbol", return_value=("600519", "SSE")):
         out = repo.WatchlistGroupMemberRepository(db, "u1").batch_group_members("g1", ["600519.SSE"], "remove")
-    assert out["removed"] == 0
-    assert out["skipped"] == 1
+    assert out.removed == 0
+    assert out.skipped == 1
     db.commit.assert_called()
 
 

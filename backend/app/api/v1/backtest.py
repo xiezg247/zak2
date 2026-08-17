@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,6 +10,7 @@ from app.core.db import get_db
 from app.models.user import User
 from app.repositories import backtest as repo
 from app.schemas.backtest import (
+    BacktestBatchOut,
     BacktestRunOut,
     BacktestRunRequest,
     BatchBacktestRequest,
@@ -79,10 +79,10 @@ def get_run(
     return ApiResponse(data=row)
 
 
-@router.get("/batches", response_model=ApiResponse[list[dict[str, Any]]])
+@router.get("/batches", response_model=ApiResponse[list[BacktestBatchOut]])
 def get_batches(
     user: User = Depends(get_current_user), db: Session = Depends(get_db)
-) -> ApiResponse[list[dict[str, Any]]]:
+) -> ApiResponse[list[BacktestBatchOut]]:
     return ApiResponse(data=repo.BacktestRepository(db, str(user.id)).list_batches())
 
 

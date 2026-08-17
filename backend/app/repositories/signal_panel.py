@@ -14,6 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.repositories.watchlist import resolve_symbol_pair
+from app.schemas.watchlist import SignalPanelOut
 from app.services.symbols import to_vt_symbol
 
 NAMESPACE = "watchlist"
@@ -122,10 +123,10 @@ class SignalPanelRepository:
             raise HTTPException(status_code=404, detail="不在信号名单中")
         return self.save_symbols([s for s in current if s != vt])
 
-    def panel_payload(self) -> dict[str, Any]:
+    def panel_payload(self) -> SignalPanelOut:
         symbols = self.load_symbols()
-        return {
-            "symbols": symbols,
-            "max_symbols": SIGNAL_PANEL_MAX_SYMBOLS,
-            "count": len(symbols),
-        }
+        return SignalPanelOut(
+            symbols=symbols,
+            max_symbols=SIGNAL_PANEL_MAX_SYMBOLS,
+            count=len(symbols),
+        )

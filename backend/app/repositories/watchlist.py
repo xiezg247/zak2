@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import HTTPException
@@ -7,6 +8,7 @@ from sqlalchemy import delete, select
 
 from app.models.watchlist import WatchlistGroup, WatchlistGroupMember, WatchlistItem
 from app.repositories.base import BaseRepository
+from app.schemas.watchlist import GroupMembersBatchError, GroupMembersBatchOut
 from app.services.symbols import (
     normalize_exchange,
     parse_flexible_symbol,
@@ -271,20 +273,20 @@ class WatchlistGroupMemberRepository(BaseRepository[WatchlistGroupMember]):
         self,
         group_id: str,
         symbols: list[str],
-        action: str,
-    ) -> dict:
+        action: Literal["add", "remove"],
+    ) -> GroupMembersBatchOut:
         self._group(group_id)
 
         added = 0
         removed = 0
         skipped = 0
-        errors: list[dict[str, str]] = []
+        errors: list[GroupMembersBatchError] = []
 
         for raw in symbols:
             try:
                 symbol, exch = parse_flexible_symbol(raw)
             except Exception:
-                errors.append({"symbol": raw, "detail": "无法解析代码"})
+                errors.append(GroupMembersBatchError(symbol=raw, detail="无法解析代码"))
                 continue
 
             if action == "add":
@@ -296,7 +298,7 @@ class WatchlistGroupMemberRepository(BaseRepository[WatchlistGroupMember]):
                     )
                 )
                 if not in_wl:
-                    errors.append({"symbol": raw, "detail": "请先加入自选池"})
+                    errors.append(GroupMembersBatchError(symbol=raw, detail="请先加入自选池"))
                     continue
                 existing = self.db.scalar(
                     select(WatchlistGroupMember).where(
@@ -326,11 +328,11 @@ class WatchlistGroupMemberRepository(BaseRepository[WatchlistGroupMember]):
                 removed += 1
 
         self.db.commit()
-        return {
-            "ok": True,
-            "action": action,
-            "added": added,
-            "removed": removed,
-            "skipped": skipped,
-            "errors": errors,
-        }
+        return GroupMembersBatchOut(
+            ok=True,
+            action=action,
+            added=added,
+            removed=removed,
+            skipped=skipped,
+            errors=errors,
+        )

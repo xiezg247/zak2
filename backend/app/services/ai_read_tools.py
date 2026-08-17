@@ -162,7 +162,8 @@ def get_positions(db: Session, user_id: str, args: dict[str, Any]) -> Any:
 
 def get_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     _ = args
-    return signal_panel_repo.SignalPanelRepository(db, user_id).panel_payload()
+    payload = signal_panel_repo.SignalPanelRepository(db, user_id).panel_payload()
+    return payload.model_dump() if isinstance(payload, BaseModel) else payload
 
 
 def get_trading_risk(db: Session, user_id: str, args: dict[str, Any]) -> Any:

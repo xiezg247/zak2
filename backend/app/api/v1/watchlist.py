@@ -181,7 +181,7 @@ def get_signal_panel(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[SignalPanelOut]:
-    return ApiResponse(data=SignalPanelOut(**signal_panel_repo.SignalPanelRepository(db, str(user.id)).panel_payload()))
+    return ApiResponse(data=signal_panel_repo.SignalPanelRepository(db, str(user.id)).panel_payload())
 
 
 @router.put("/watchlist/signal-panel", response_model=ApiResponse[SignalPanelOut])
@@ -386,7 +386,7 @@ def post_group_members_batch(
     db: Session = Depends(get_db),
 ) -> ApiResponse[GroupMembersBatchOut]:
     raw = repo.WatchlistGroupMemberRepository(db, str(user.id)).batch_group_members(group_id, body.symbols, body.action)
-    return ApiResponse(data=GroupMembersBatchOut(**raw))
+    return ApiResponse(data=raw)
 
 
 @router.delete("/watchlist/groups/{group_id}/members/{vt_symbol}", response_model=ApiResponse[OkOut])
