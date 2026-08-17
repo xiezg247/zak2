@@ -7,6 +7,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.models.content import StockNoteEntry, StockNoteMemo
+from app.repositories.pagination import Page, paginate
 from app.repositories.watchlist import resolve_symbol_pair
 from app.schemas.content import NoteEntryOut, NoteMemoOut, NoteSymbolOut
 from app.services.symbols import to_vt_symbol
@@ -94,6 +95,17 @@ def upsert_memo(db: Session, user_id: str, raw: str, body: str) -> NoteMemoOut:
     )
 
 
+def _entry_out(r: StockNoteEntry) -> NoteEntryOut:
+    return NoteEntryOut(
+        id=int(r.id),
+        symbol=r.symbol,
+        exchange=r.exchange,
+        vt_symbol=to_vt_symbol(r.symbol, r.exchange),
+        body=r.body,
+        created_at=r.created_at,
+    )
+
+
 def list_entries(db: Session, user_id: str, raw: str, *, limit: int = 100) -> list[NoteEntryOut]:
     symbol, exchange = resolve_symbol_pair(raw)
     rows = db.scalars(
@@ -106,17 +118,34 @@ def list_entries(db: Session, user_id: str, raw: str, *, limit: int = 100) -> li
         .order_by(desc(StockNoteEntry.created_at), desc(StockNoteEntry.id))
         .limit(limit)
     )
-    return [
-        NoteEntryOut(
-            id=int(r.id),
-            symbol=r.symbol,
-            exchange=r.exchange,
-            vt_symbol=to_vt_symbol(r.symbol, r.exchange),
-            body=r.body,
-            created_at=r.created_at,
+    return [_entry_out(r) for r in rows]
+
+
+def list_entries_page(
+    db: Session,
+    user_id: str,
+    raw: str,
+    *,
+    page: int = 1,
+    page_size: int = 50,
+) -> Page[NoteEntryOut]:
+    symbol, exchange = resolve_symbol_pair(raw)
+    stmt = (
+        select(StockNoteEntry)
+        .where(
+            StockNoteEntry.user_id == user_id,
+            StockNoteEntry.symbol == symbol,
+            StockNoteEntry.exchange == exchange,
         )
-        for r in rows
-    ]
+        .order_by(desc(StockNoteEntry.created_at), desc(StockNoteEntry.id))
+    )
+    result = paginate(db, stmt, page=page, page_size=page_size)
+    return Page(
+        items=[_entry_out(r) for r in result.items],
+        total=result.total,
+        page=result.page,
+        page_size=result.page_size,
+    )
 
 
 def add_entry(db: Session, user_id: str, raw: str, body: str) -> NoteEntryOut:

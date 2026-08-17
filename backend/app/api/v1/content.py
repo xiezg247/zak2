@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.models.user import User
-from app.schemas.common import ApiResponse, OkOut
+from app.schemas.common import ApiResponse, OkOut, PageOut
 from app.schemas.content import (
     BilibiliSearchOut,
     DisciplineCheckOut,
@@ -169,6 +169,29 @@ def list_team_reports(
     return ApiResponse(data=[TeamReportListItem(**r) for r in rows])
 
 
+@router.get("/notes/{vt_symbol}/reports/page", response_model=ApiResponse[PageOut[TeamReportListItem]])
+def list_team_reports_page(
+    vt_symbol: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[PageOut[TeamReportListItem]]:
+    try:
+        result = team_reports.list_reports_page(db, str(user.id), vt_symbol, page=page, page_size=page_size)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ApiResponse(
+        data=PageOut(
+            items=[TeamReportListItem(**r) for r in result.items],
+            total=result.total,
+            page=result.page,
+            page_size=result.page_size,
+            pages=result.pages,
+        )
+    )
+
+
 @router.get("/notes/{vt_symbol}/memo", response_model=ApiResponse[NoteMemoOut])
 def get_note_memo(
     vt_symbol: str,
@@ -195,6 +218,26 @@ def get_note_entries(
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[NoteEntryOut]]:
     return ApiResponse(data=notes_svc.list_entries(db, str(user.id), vt_symbol))
+
+
+@router.get("/notes/{vt_symbol}/entries/page", response_model=ApiResponse[PageOut[NoteEntryOut]])
+def get_note_entries_page(
+    vt_symbol: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=200),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[PageOut[NoteEntryOut]]:
+    result = notes_svc.list_entries_page(db, str(user.id), vt_symbol, page=page, page_size=page_size)
+    return ApiResponse(
+        data=PageOut(
+            items=result.items,
+            total=result.total,
+            page=result.page,
+            page_size=result.page_size,
+            pages=result.pages,
+        )
+    )
 
 
 @router.post("/notes/{vt_symbol}/entries", response_model=ApiResponse[NoteEntryOut])
@@ -273,6 +316,28 @@ def get_feed_items(
 ) -> ApiResponse[list[FeedItemOut]]:
     return ApiResponse(
         data=feed_svc.list_feed_items(db, str(user.id), subscription_id=subscription_id, limit=limit)
+    )
+
+
+@router.get("/feed/items/page", response_model=ApiResponse[PageOut[FeedItemOut]])
+def get_feed_items_page(
+    subscription_id: str | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[PageOut[FeedItemOut]]:
+    result = feed_svc.list_feed_items_page(
+        db, str(user.id), subscription_id=subscription_id, page=page, page_size=page_size
+    )
+    return ApiResponse(
+        data=PageOut(
+            items=result.items,
+            total=result.total,
+            page=result.page,
+            page_size=result.page_size,
+            pages=result.pages,
+        )
     )
 
 

@@ -14,3 +14,5 @@ ARQ_JOBS_RECENT_ZSET = f"{KEY_PREFIX}:arq:jobs:recent"
 ARQ_JOBS_META_KEY_FMT = f"{KEY_PREFIX}:arq:jobs:meta:{{job_id}}"
 ARQ_JOBS_RECENT_MAX = 100
 ARQ_BARS_LOCK_KEY = f"{KEY_PREFIX}:arq:lock:bars"
+AUTH_FAIL_USER_KEY_FMT = f"{KEY_PREFIX}:auth:fail:user:{{username}}"
+AUTH_FAIL_IP_KEY_FMT = f"{KEY_PREFIX}:auth:fail:ip:{{ip}}"

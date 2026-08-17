@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.report import WebTeamReport
+from app.repositories.pagination import Page, paginate
 from app.services.symbols import parse_flexible_symbol, to_vt_symbol
 
 _logger = logging.getLogger(__name__)
@@ -93,6 +94,17 @@ def persist_team_report(
     }
 
 
+def _report_list_item(r: WebTeamReport, symbol: str, exchange: str) -> dict[str, Any]:
+    return {
+        "id": int(r.id),
+        "title": str(r.title or ""),
+        "summary": str(r.summary or ""),
+        "mode": str(r.mode or ""),
+        "created_at": str(r.created_at or ""),
+        "vt_symbol": str(r.vt_symbol or to_vt_symbol(symbol, exchange)),
+    }
+
+
 def list_reports(db: Session, user_id: str, vt_symbol: str, *, limit: int = 50) -> list[dict[str, Any]]:
     try:
         symbol, exchange = parse_flexible_symbol(vt_symbol)
@@ -109,17 +121,37 @@ def list_reports(db: Session, user_id: str, vt_symbol: str, *, limit: int = 50) 
         .order_by(WebTeamReport.created_at.desc(), WebTeamReport.id.desc())
         .limit(limit)
     )
-    return [
-        {
-            "id": int(r.id),
-            "title": str(r.title or ""),
-            "summary": str(r.summary or ""),
-            "mode": str(r.mode or ""),
-            "created_at": str(r.created_at or ""),
-            "vt_symbol": str(r.vt_symbol or to_vt_symbol(symbol, exchange)),
-        }
-        for r in rows
-    ]
+    return [_report_list_item(r, symbol, exchange) for r in rows]
+
+
+def list_reports_page(
+    db: Session,
+    user_id: str,
+    vt_symbol: str,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+) -> Page[dict[str, Any]]:
+    try:
+        symbol, exchange = parse_flexible_symbol(vt_symbol)
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
+    stmt = (
+        select(WebTeamReport)
+        .where(
+            WebTeamReport.user_id == user_id,
+            WebTeamReport.symbol == symbol,
+            WebTeamReport.exchange == exchange,
+        )
+        .order_by(WebTeamReport.created_at.desc(), WebTeamReport.id.desc())
+    )
+    result = paginate(db, stmt, page=page, page_size=page_size)
+    return Page(
+        items=[_report_list_item(r, symbol, exchange) for r in result.items],
+        total=result.total,
+        page=result.page,
+        page_size=result.page_size,
+    )
 
 
 def get_report(db: Session, user_id: str, report_id: int) -> dict[str, Any] | None:

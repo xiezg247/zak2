@@ -14,6 +14,7 @@ from app.core.settings import get_settings
 from app.integrations.bilibili.client import BilibiliApiError, BilibiliClient
 from app.integrations.bilibili.user import get_user_profile, search_users
 from app.models.content import FeedItem, FeedItemRead, FeedSubscription, TradingPlan, TradingPlanSymbol
+from app.repositories.pagination import Page, paginate
 from app.schemas.content import FeedItemOut, FeedSubOut, PlanOut
 from app.services.ops.sync_bilibili_feed import SOURCE_TYPE, sync_one_subscription
 from app.services.symbols import to_vt_symbol
@@ -174,6 +175,31 @@ def delete_subscription(db: Session, user_id: str, sub_id: str) -> None:
     db.commit()
 
 
+def _resolve_feed_sub_ids(db: Session, user_id: str, subscription_id: str | None) -> set[str]:
+    """解析可见订阅 id 集合；显式传入 subscription_id 时校验归属。"""
+    subs = list_subscriptions(db, user_id)
+    if subscription_id:
+        if subscription_id not in {s.id for s in subs}:
+            raise HTTPException(status_code=404, detail="订阅不存在")
+        return {subscription_id}
+    return {s.id for s in subs if s.enabled}
+
+
+def _feed_item_out(r: FeedItem, is_read: bool) -> FeedItemOut:
+    return FeedItemOut(
+        id=r.id,
+        subscription_id=r.subscription_id,
+        source_type=r.source_type,
+        item_type=r.item_type,
+        title=r.title or "",
+        summary=r.summary or "",
+        url=r.url,
+        author_name=r.author_name or "",
+        published_at=r.published_at,
+        is_read=is_read,
+    )
+
+
 def list_feed_items(
     db: Session,
     user_id: str,
@@ -181,12 +207,7 @@ def list_feed_items(
     subscription_id: str | None = None,
     limit: int = 50,
 ) -> list[FeedItemOut]:
-    subs = list_subscriptions(db, user_id)
-    sub_ids = {s.id for s in subs if s.enabled or subscription_id}
-    if subscription_id:
-        if subscription_id not in {s.id for s in subs}:
-            raise HTTPException(status_code=404, detail="订阅不存在")
-        sub_ids = {subscription_id}
+    sub_ids = _resolve_feed_sub_ids(db, user_id, subscription_id)
     if not sub_ids:
         return []
 
@@ -207,21 +228,39 @@ def list_feed_items(
             )
         )
     }
-    return [
-        FeedItemOut(
-            id=r.id,
-            subscription_id=r.subscription_id,
-            source_type=r.source_type,
-            item_type=r.item_type,
-            title=r.title or "",
-            summary=r.summary or "",
-            url=r.url,
-            author_name=r.author_name or "",
-            published_at=r.published_at,
-            is_read=r.id in reads or bool(r.read_at),
+    return [_feed_item_out(r, r.id in reads or bool(r.read_at)) for r in rows]
+
+
+def list_feed_items_page(
+    db: Session,
+    user_id: str,
+    *,
+    subscription_id: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> Page[FeedItemOut]:
+    sub_ids = _resolve_feed_sub_ids(db, user_id, subscription_id)
+    if not sub_ids:
+        return Page(items=[], total=0, page=max(1, int(page)), page_size=max(1, int(page_size)))
+
+    stmt = (
+        select(FeedItem)
+        .where(FeedItem.subscription_id.in_(sub_ids))
+        .order_by(desc(FeedItem.published_at), desc(FeedItem.created_at))
+    )
+    result = paginate(db, stmt, page=page, page_size=page_size)
+    rows = result.items
+    reads = {
+        r.item_id
+        for r in db.scalars(
+            select(FeedItemRead).where(
+                FeedItemRead.user_id == user_id,
+                FeedItemRead.item_id.in_([x.id for x in rows]),
+            )
         )
-        for r in rows
-    ]
+    }
+    items = [_feed_item_out(r, r.id in reads or bool(r.read_at)) for r in rows]
+    return Page(items=items, total=result.total, page=result.page, page_size=result.page_size)
 
 
 def mark_feed_read(db: Session, user_id: str, item_id: str) -> dict:

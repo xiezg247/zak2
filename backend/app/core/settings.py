@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://zak2:zak2@localhost:5432/zak2"
     jwt_secret: str = _DEFAULT_JWT_SECRET
     jwt_expire_days: int = 7
+    login_max_failures: int = 5
+    login_lock_window_seconds: int = 900
     redis_url: str = "redis://127.0.0.1:6379/0"
     arq_queue_name: str = "zak2:arq"
     arq_backtest_queue_name: str = "zak2:arq:backtest"
