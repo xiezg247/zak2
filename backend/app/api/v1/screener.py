@@ -312,15 +312,7 @@ def get_runs_page(
     db: Session = Depends(get_db),
 ) -> ApiResponse[PageOut[RunSummary]]:
     result = repo.ScreenerRunRepository(db, str(user.id)).list_runs_page(page=page, page_size=page_size)
-    return ApiResponse(
-        data=PageOut(
-            items=[_run_summary(r) for r in result.items],
-            total=result.total,
-            page=result.page,
-            page_size=result.page_size,
-            pages=result.pages,
-        )
-    )
+    return ApiResponse(data=PageOut.from_page(result.map(_run_summary)))
 
 
 @router.get("/runs/{run_id}", response_model=ApiResponse[RunDetail])

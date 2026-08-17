@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, pageQuery, type Page } from './client'
 
 export type User = {
   id: string
@@ -152,7 +152,8 @@ export const screenerApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  runs: () => api<RunSummary[]>('/api/v1/screener/runs'),
+  runsPage: (page = 1, pageSize = 20) =>
+    api<Page<RunSummary>>(`/api/v1/screener/runs/page?${pageQuery(page, pageSize)}`),
   run: (id: string) => api<RunDetail>(`/api/v1/screener/runs/${id}`),
   exportCsvUrl: (id: string) => `/api/v1/screener/runs/${id}/export.csv`,
   recipeWeights: (recipeId: string) =>

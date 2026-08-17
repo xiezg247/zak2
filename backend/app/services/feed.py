@@ -249,18 +249,16 @@ def list_feed_items_page(
         .order_by(desc(FeedItem.published_at), desc(FeedItem.created_at))
     )
     result = paginate(db, stmt, page=page, page_size=page_size)
-    rows = result.items
     reads = {
         r.item_id
         for r in db.scalars(
             select(FeedItemRead).where(
                 FeedItemRead.user_id == user_id,
-                FeedItemRead.item_id.in_([x.id for x in rows]),
+                FeedItemRead.item_id.in_([x.id for x in result.items]),
             )
         )
     }
-    items = [_feed_item_out(r, r.id in reads or bool(r.read_at)) for r in rows]
-    return Page(items=items, total=result.total, page=result.page, page_size=result.page_size)
+    return result.map(lambda r: _feed_item_out(r, r.id in reads or bool(r.read_at)))
 
 
 def mark_feed_read(db: Session, user_id: str, item_id: str) -> dict:

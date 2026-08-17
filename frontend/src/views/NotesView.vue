@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import MarkdownView from '../components/MarkdownView.vue'
+import PagerBar from '../components/PagerBar.vue'
 import { confirmDialog } from '../lib/dialog'
 import {
   contentApi,
@@ -20,6 +21,12 @@ const selected = ref('')
 const memo = ref<NoteMemo | null>(null)
 const entries = ref<NoteEntry[]>([])
 const reports = ref<TeamReportListItem[]>([])
+const entriesPage = ref(1)
+const entriesPages = ref(0)
+const entriesTotal = ref(0)
+const reportsPage = ref(1)
+const reportsPages = ref(0)
+const reportsTotal = ref(0)
 const activeReport = ref<TeamReport | null>(null)
 const draftMemo = ref('')
 const draftEntry = ref('')
@@ -61,19 +68,20 @@ async function loadDetail() {
     memo.value = null
     entries.value = []
     reports.value = []
+    entriesTotal.value = 0
+    entriesPages.value = 0
+    reportsTotal.value = 0
+    reportsPages.value = 0
     activeReport.value = null
     draftMemo.value = ''
     return
   }
-  const [m, e, r] = await Promise.all([
-    contentApi.memo(selected.value),
-    contentApi.entries(selected.value),
-    contentApi.teamReports(selected.value).catch(() => [] as TeamReportListItem[]),
-  ])
+  const m = await contentApi.memo(selected.value)
   memo.value = m
-  entries.value = e
-  reports.value = r
   draftMemo.value = m.body
+  entriesPage.value = 1
+  reportsPage.value = 1
+  await Promise.all([loadEntries(), loadReports()])
 
   const qReport = Number(route.query.report || 0)
   if (qReport) {
@@ -82,6 +90,48 @@ async function loadDetail() {
   } else if (!reports.value.some((x) => x.id === activeReport.value?.id)) {
     activeReport.value = null
   }
+}
+
+async function loadEntries() {
+  if (!selected.value) {
+    entries.value = []
+    entriesTotal.value = 0
+    entriesPages.value = 0
+    return
+  }
+  const p = await contentApi.entriesPage(selected.value, entriesPage.value, 50)
+  entries.value = p.items
+  entriesTotal.value = p.total
+  entriesPages.value = p.pages
+}
+
+async function loadReports() {
+  if (!selected.value) {
+    reports.value = []
+    reportsTotal.value = 0
+    reportsPages.value = 0
+    return
+  }
+  try {
+    const p = await contentApi.teamReportsPage(selected.value, reportsPage.value, 20)
+    reports.value = p.items
+    reportsTotal.value = p.total
+    reportsPages.value = p.pages
+  } catch {
+    reports.value = []
+    reportsTotal.value = 0
+    reportsPages.value = 0
+  }
+}
+
+async function goEntriesPage(p: number) {
+  entriesPage.value = p
+  await loadEntries()
+}
+
+async function goReportsPage(p: number) {
+  reportsPage.value = p
+  await loadReports()
 }
 
 async function openReport(id: number) {
@@ -217,6 +267,12 @@ onMounted(async () => {
               <div>{{ e.body }}</div>
               <button class="link" type="button" @click="removeEntry(e.id)">删</button>
             </div>
+            <PagerBar
+              :page="entriesPage"
+              :pages="entriesPages"
+              :total="entriesTotal"
+              @change="goEntriesPage"
+            />
           </template>
 
           <template v-else>
@@ -239,6 +295,12 @@ onMounted(async () => {
                 <div class="muted tiny">{{ r.created_at }} · {{ r.mode }}</div>
                 <div class="preview muted">{{ r.summary }}</div>
               </button>
+              <PagerBar
+                :page="reportsPage"
+                :pages="reportsPages"
+                :total="reportsTotal"
+                @change="goReportsPage"
+              />
             </template>
             <article v-if="activeReport" class="report-body">
               <h3>{{ activeReport.title }}</h3>

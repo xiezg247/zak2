@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, pageQuery, type Page } from './client'
 
 export type BacktestRun = {
   id: string
@@ -64,6 +64,8 @@ export const backtestApi = {
     const q = batchId ? `?batch_id=${encodeURIComponent(batchId)}` : ''
     return api<BacktestRun[]>(`/api/v1/backtest/runs${q}`)
   },
+  runsPage: (page = 1, pageSize = 20) =>
+    api<Page<BacktestRun>>(`/api/v1/backtest/runs/page?${pageQuery(page, pageSize)}`),
   run: (id: string) => api<BacktestRun>(`/api/v1/backtest/runs/${encodeURIComponent(id)}`),
   batches: () => api<BatchInfo[]>('/api/v1/backtest/batches'),
   start: (body: Record<string, unknown>) =>

@@ -54,12 +54,8 @@ class BacktestRepository(BaseRepository[BacktestRun]):
         stmt = select(BacktestRun).where(BacktestRun.user_id == self.user_id)
         if batch_id:
             stmt = stmt.where(BacktestRun.batch_id == batch_id)
-        result = paginate(self.db, stmt.order_by(desc(BacktestRun.created_at)), page=page, page_size=page_size)
-        return Page(
-            items=[self.to_out(r) for r in result.items],
-            total=result.total,
-            page=result.page,
-            page_size=result.page_size,
+        return paginate(self.db, stmt.order_by(desc(BacktestRun.created_at)), page=page, page_size=page_size).map(
+            self.to_out
         )
 
     def get_run(self, run_id: str) -> BacktestRunOut | None:

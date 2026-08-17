@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
+import PagerBar from '../components/PagerBar.vue'
 import { getToken } from '../api/client'
 import {
   jobsApi,
@@ -47,6 +48,9 @@ const statusText = ref('')
 const error = ref('')
 const current = ref<RunDetail | null>(null)
 const history = ref<RunSummary[]>([])
+const historyPage = ref(1)
+const historyPages = ref(0)
+const historyTotal = ref(0)
 const historyBusy = ref(false)
 const runBusy = ref(false)
 const historyErr = ref('')
@@ -424,12 +428,20 @@ async function loadHistory() {
   historyBusy.value = true
   historyErr.value = ''
   try {
-    history.value = await screenerApi.runs()
+    const p = await screenerApi.runsPage(historyPage.value, 20)
+    history.value = p.items
+    historyTotal.value = p.total
+    historyPages.value = p.pages
   } catch (e) {
     historyErr.value = e instanceof Error ? e.message : '加载历史失败'
   } finally {
     historyBusy.value = false
   }
+}
+
+async function goHistoryPage(p: number) {
+  historyPage.value = p
+  await loadHistory()
 }
 
 async function pollJob(jobId: string) {
@@ -912,6 +924,13 @@ onMounted(async () => {
             <span>{{ h.condition }}</span>
             <span class="muted">{{ h.row_count }} 只 · {{ h.created_at }}</span>
           </button>
+          <PagerBar
+            :page="historyPage"
+            :pages="historyPages"
+            :total="historyTotal"
+            :disabled="historyBusy"
+            @change="goHistoryPage"
+          />
         </div>
       </section>
 

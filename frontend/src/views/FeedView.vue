@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import AppShell from '../components/AppShell.vue'
+import PagerBar from '../components/PagerBar.vue'
 import { confirmDialog } from '../lib/dialog'
 import { contentApi, type BilibiliUserHit, type FeedItem, type FeedSub } from '../api/content'
 
 const subs = ref<FeedSub[]>([])
 const subId = ref('')
 const items = ref<FeedItem[]>([])
+const itemsPage = ref(1)
+const itemsPages = ref(0)
+const itemsTotal = ref(0)
 const newMid = ref('')
 const syncOnAdd = ref(false)
 const adding = ref(false)
@@ -21,7 +25,7 @@ const unreadOnly = ref(false)
 const subFilter = ref('')
 const enabledOnly = ref(false)
 
-const subtitle = computed(() => `${subs.value.length} 订阅 · ${items.value.length} 条`)
+const subtitle = computed(() => `${subs.value.length} 订阅 · ${itemsTotal.value} 条`)
 
 const displayedSubs = computed(() => {
   let list = subs.value
@@ -57,14 +61,30 @@ const displayedItems = computed(() => {
 async function load() {
   loading.value = true
   error.value = ''
+  itemsPage.value = 1
   try {
-    subs.value = await contentApi.feedSubs()
-    items.value = await contentApi.feedItems(subId.value || undefined)
+    await Promise.all([loadSubs(), loadItems()])
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败'
   } finally {
     loading.value = false
   }
+}
+
+async function loadSubs() {
+  subs.value = await contentApi.feedSubs()
+}
+
+async function loadItems() {
+  const p = await contentApi.feedItemsPage(subId.value || undefined, itemsPage.value, 20)
+  items.value = p.items
+  itemsTotal.value = p.total
+  itemsPages.value = p.pages
+}
+
+async function goItemsPage(p: number) {
+  itemsPage.value = p
+  await loadItems()
 }
 
 async function toggleSub(s: FeedSub) {
@@ -257,6 +277,12 @@ onMounted(() => {
               <h3>{{ item.title || '(无标题)' }}</h3>
               <p class="summary">{{ item.summary }}</p>
             </article>
+            <PagerBar
+              :page="itemsPage"
+              :pages="itemsPages"
+              :total="itemsTotal"
+              @change="goItemsPage"
+            />
           </template>
         </section>
       </div>

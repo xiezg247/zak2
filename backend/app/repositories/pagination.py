@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import Callable, Generic, TypeVar
 
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
 T = TypeVar("T")
+U = TypeVar("U")
 
 
 @dataclass
@@ -34,6 +35,15 @@ class Page(Generic[T]):
     @property
     def has_prev(self) -> bool:
         return self.page > 1
+
+    def map(self, fn: Callable[[T], U]) -> "Page[U]":
+        """把 items 逐项映射为新类型，保留分页元信息。"""
+        return Page(
+            items=[fn(x) for x in self.items],
+            total=self.total,
+            page=self.page,
+            page_size=self.page_size,
+        )
 
 
 def count_rows(db: Session, stmt: Select) -> int:

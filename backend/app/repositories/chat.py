@@ -47,13 +47,7 @@ class ChatRepository(BaseRepository[ChatSession]):
         return [_session_out(r) for r in rows]
 
     def list_sessions_page(self, *, page: int = 1, page_size: int = 20) -> Page[SessionOut]:
-        result = self.paginate(page=page, page_size=page_size)
-        return Page(
-            items=[_session_out(r) for r in result.items],
-            total=result.total,
-            page=result.page,
-            page_size=result.page_size,
-        )
+        return self.paginate(page=page, page_size=page_size).map(_session_out)
 
     def create_session(self, *, title: str = "", scene: str = "general") -> SessionOut:
         now = _now()

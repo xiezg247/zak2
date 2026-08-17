@@ -181,15 +181,7 @@ def list_team_reports_page(
         result = team_reports.list_reports_page(db, str(user.id), vt_symbol, page=page, page_size=page_size)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ApiResponse(
-        data=PageOut(
-            items=[TeamReportListItem(**r) for r in result.items],
-            total=result.total,
-            page=result.page,
-            page_size=result.page_size,
-            pages=result.pages,
-        )
-    )
+    return ApiResponse(data=PageOut.from_page(result.map(lambda r: TeamReportListItem(**r))))
 
 
 @router.get("/notes/{vt_symbol}/memo", response_model=ApiResponse[NoteMemoOut])
@@ -229,15 +221,7 @@ def get_note_entries_page(
     db: Session = Depends(get_db),
 ) -> ApiResponse[PageOut[NoteEntryOut]]:
     result = notes_svc.list_entries_page(db, str(user.id), vt_symbol, page=page, page_size=page_size)
-    return ApiResponse(
-        data=PageOut(
-            items=result.items,
-            total=result.total,
-            page=result.page,
-            page_size=result.page_size,
-            pages=result.pages,
-        )
-    )
+    return ApiResponse(data=PageOut.from_page(result))
 
 
 @router.post("/notes/{vt_symbol}/entries", response_model=ApiResponse[NoteEntryOut])
@@ -330,15 +314,7 @@ def get_feed_items_page(
     result = feed_svc.list_feed_items_page(
         db, str(user.id), subscription_id=subscription_id, page=page, page_size=page_size
     )
-    return ApiResponse(
-        data=PageOut(
-            items=result.items,
-            total=result.total,
-            page=result.page,
-            page_size=result.page_size,
-            pages=result.pages,
-        )
-    )
+    return ApiResponse(data=PageOut.from_page(result))
 
 
 @router.post("/feed/items/{item_id}/read", response_model=ApiResponse[OkOut])

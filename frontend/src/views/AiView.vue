@@ -2,12 +2,16 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
+import PagerBar from '../components/PagerBar.vue'
 import { aiApi, type ChatMessage, type ConfirmProposal, type LlmStatus, type Session } from '../api/ai'
 
 const route = useRoute()
 const router = useRouter()
 const status = ref<LlmStatus | null>(null)
 const sessions = ref<Session[]>([])
+const sessionsPage = ref(1)
+const sessionsPages = ref(0)
+const sessionsTotal = ref(0)
 const sessionId = ref('')
 const messages = ref<ChatMessage[]>([])
 const draft = ref('')
@@ -67,10 +71,18 @@ const subtitle = computed(() => {
 })
 
 async function refreshSessions() {
-  sessions.value = await aiApi.sessions()
+  const p = await aiApi.sessionsPage(sessionsPage.value, 20)
+  sessions.value = p.items
+  sessionsTotal.value = p.total
+  sessionsPages.value = p.pages
   if (!sessionId.value && sessions.value.length) {
     sessionId.value = sessions.value[0].id
   }
+}
+
+async function goSessionsPage(p: number) {
+  sessionsPage.value = p
+  await refreshSessions()
 }
 
 async function loadMessages() {
@@ -363,6 +375,12 @@ onMounted(async () => {
             <span class="muted">{{ s.updated_at }}</span>
             <span class="del" @click.stop="removeSession(s.id)">删</span>
           </button>
+          <PagerBar
+            :page="sessionsPage"
+            :pages="sessionsPages"
+            :total="sessionsTotal"
+            @change="goSessionsPage"
+          />
         </aside>
 
         <section class="right">

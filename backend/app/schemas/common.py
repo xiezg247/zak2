@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -25,6 +25,17 @@ class PageOut(BaseModel, Generic[T]):
     page: int
     page_size: int
     pages: int
+
+    @classmethod
+    def from_page(cls, page: Any) -> "PageOut[T]":
+        """从 repositories.pagination.Page 结果对象构造（duck-typing，避免 schema→repo 依赖）。"""
+        return cls(
+            items=page.items,
+            total=page.total,
+            page=page.page,
+            page_size=page.page_size,
+            pages=page.pages,
+        )
 
 
 class OkOut(BaseModel):

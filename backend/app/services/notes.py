@@ -140,12 +140,7 @@ def list_entries_page(
         .order_by(desc(StockNoteEntry.created_at), desc(StockNoteEntry.id))
     )
     result = paginate(db, stmt, page=page, page_size=page_size)
-    return Page(
-        items=[_entry_out(r) for r in result.items],
-        total=result.total,
-        page=result.page,
-        page_size=result.page_size,
-    )
+    return result.map(_entry_out)
 
 
 def add_entry(db: Session, user_id: str, raw: str, body: str) -> NoteEntryOut:

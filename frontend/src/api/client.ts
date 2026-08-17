@@ -2,6 +2,26 @@ const TOKEN_KEY = 'zak_access_token'
 
 export type ApiError = { detail?: string }
 
+export type Page<T> = {
+  items: T[]
+  total: number
+  page: number
+  page_size: number
+  pages: number
+}
+
+export function pageQuery(page: number, pageSize: number, extra?: Record<string, string>): string {
+  const params = new URLSearchParams()
+  params.set('page', String(page))
+  params.set('page_size', String(pageSize))
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      if (value != null && value !== '') params.set(key, value)
+    }
+  }
+  return params.toString()
+}
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }

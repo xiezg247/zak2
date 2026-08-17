@@ -64,15 +64,7 @@ def get_runs_page(
     db: Session = Depends(get_db),
 ) -> ApiResponse[PageOut[BacktestRunOut]]:
     result = repo.BacktestRepository(db, str(user.id)).list_runs_page(page=page, page_size=page_size, batch_id=batch_id)
-    return ApiResponse(
-        data=PageOut(
-            items=result.items,
-            total=result.total,
-            page=result.page,
-            page_size=result.page_size,
-            pages=result.pages,
-        )
-    )
+    return ApiResponse(data=PageOut.from_page(result))
 
 
 @router.get("/runs/{run_id}", response_model=ApiResponse[BacktestRunOut])

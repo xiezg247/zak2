@@ -49,15 +49,7 @@ def get_sessions_page(
     db: Session = Depends(get_db),
 ) -> ApiResponse[PageOut[SessionOut]]:
     result = repo.ChatRepository(db, str(user.id)).list_sessions_page(page=page, page_size=page_size)
-    return ApiResponse(
-        data=PageOut(
-            items=result.items,
-            total=result.total,
-            page=result.page,
-            page_size=result.page_size,
-            pages=result.pages,
-        )
-    )
+    return ApiResponse(data=PageOut.from_page(result))
 
 
 @router.post("/sessions", response_model=ApiResponse[SessionOut])

@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, pageQuery, type Page } from './client'
 
 export type PlaybookSection = {
   section_id: string
@@ -159,7 +159,10 @@ export const contentApi = {
       method: 'PUT',
       body: JSON.stringify({ body }),
     }),
-  entries: (vt: string) => api<NoteEntry[]>(`/api/v1/notes/${encodeURIComponent(vt)}/entries`),
+  entriesPage: (vt: string, page = 1, pageSize = 50) =>
+    api<Page<NoteEntry>>(
+      `/api/v1/notes/${encodeURIComponent(vt)}/entries/page?${pageQuery(page, pageSize)}`,
+    ),
   addEntry: (vt: string, body: string) =>
     api<NoteEntry>(`/api/v1/notes/${encodeURIComponent(vt)}/entries`, {
       method: 'POST',
@@ -167,8 +170,10 @@ export const contentApi = {
     }),
   deleteEntry: (id: number) =>
     api<{ ok: boolean }>(`/api/v1/notes/entries/${id}`, { method: 'DELETE' }),
-  teamReports: (vt: string) =>
-    api<TeamReportListItem[]>(`/api/v1/notes/${encodeURIComponent(vt)}/reports`),
+  teamReportsPage: (vt: string, page = 1, pageSize = 20) =>
+    api<Page<TeamReportListItem>>(
+      `/api/v1/notes/${encodeURIComponent(vt)}/reports/page?${pageQuery(page, pageSize)}`,
+    ),
   teamReport: (id: number) => api<TeamReport>(`/api/v1/notes/reports/${id}`),
   feedSubs: () => api<FeedSub[]>('/api/v1/feed/subscriptions'),
   searchBilibiliUps: (q: string, limit = 8) =>
@@ -185,10 +190,14 @@ export const contentApi = {
     api<FeedSub>(`/api/v1/feed/subscriptions/${encodeURIComponent(id)}?enabled=${enabled}`, {
       method: 'PATCH',
     }),
-  feedItems: (subscriptionId?: string) => {
-    const q = subscriptionId ? `?subscription_id=${encodeURIComponent(subscriptionId)}` : ''
-    return api<FeedItem[]>(`/api/v1/feed/items${q}`)
-  },
+  feedItemsPage: (subscriptionId: string | undefined, page = 1, pageSize = 20) =>
+    api<Page<FeedItem>>(
+      `/api/v1/feed/items/page?${pageQuery(
+        page,
+        pageSize,
+        subscriptionId ? { subscription_id: subscriptionId } : undefined,
+      )}`,
+    ),
   markRead: (id: string) =>
     api<{ ok: boolean }>(`/api/v1/feed/items/${encodeURIComponent(id)}/read`, { method: 'POST' }),
 }

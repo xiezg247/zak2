@@ -1,4 +1,4 @@
-import { api, getToken } from './client'
+import { api, getToken, pageQuery, type Page } from './client'
 
 export type Session = {
   id: string
@@ -69,7 +69,8 @@ export type TeamHandlers = {
 
 export const aiApi = {
   status: () => api<LlmStatus>('/api/v1/ai/status'),
-  sessions: () => api<Session[]>('/api/v1/ai/sessions'),
+  sessionsPage: (page = 1, pageSize = 20) =>
+    api<Page<Session>>(`/api/v1/ai/sessions/page?${pageQuery(page, pageSize)}`),
   createSession: (title = '', scene = 'general') =>
     api<Session>('/api/v1/ai/sessions', {
       method: 'POST',

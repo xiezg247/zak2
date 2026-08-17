@@ -146,12 +146,7 @@ def list_reports_page(
         .order_by(WebTeamReport.created_at.desc(), WebTeamReport.id.desc())
     )
     result = paginate(db, stmt, page=page, page_size=page_size)
-    return Page(
-        items=[_report_list_item(r, symbol, exchange) for r in result.items],
-        total=result.total,
-        page=result.page,
-        page_size=result.page_size,
-    )
+    return result.map(lambda r: _report_list_item(r, symbol, exchange))
 
 
 def get_report(db: Session, user_id: str, report_id: int) -> dict[str, Any] | None:

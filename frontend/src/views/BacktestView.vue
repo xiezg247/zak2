@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
+import PagerBar from '../components/PagerBar.vue'
 import { jobsApi } from '../api/screener'
 import {
   backtestApi,
@@ -17,6 +18,9 @@ const route = useRoute()
 const strategies = ref<StrategyInfo[]>([])
 const profiles = ref<StrategyProfile[]>([])
 const runs = ref<BacktestRun[]>([])
+const runsPage = ref(1)
+const runsPages = ref(0)
+const runsTotal = ref(0)
 const batches = ref<BatchInfo[]>([])
 const selected = ref<BacktestRun | null>(null)
 const compare = ref<BacktestRun[]>([])
@@ -52,7 +56,7 @@ const loading = ref(false)
 const activeProfileId = ref('')
 
 const subtitle = computed(
-  () => `vnpy CTA · ${runs.value.length} 条历史 · 策略画像 ${profiles.value.length}`,
+  () => `vnpy CTA · ${runsTotal.value} 条历史 · 策略画像 ${profiles.value.length}`,
 )
 
 function feePayload() {
@@ -111,7 +115,7 @@ const displayedRuns = computed(() => {
       return vt.includes(q) || st.includes(q)
     })
   }
-  return list.slice(0, 30)
+  return list
 })
 
 const displayedBatches = computed(() => {
@@ -140,16 +144,27 @@ const spark = computed(() => {
 
 async function refresh() {
   error.value = ''
-  const [s, p, r, b] = await Promise.all([
+  const [s, p, b] = await Promise.all([
     backtestApi.strategies(),
     backtestApi.profiles(),
-    backtestApi.runs(),
     backtestApi.batches(),
   ])
   strategies.value = s
   profiles.value = p
-  runs.value = r
   batches.value = b
+  await loadRuns()
+}
+
+async function loadRuns() {
+  const r = await backtestApi.runsPage(runsPage.value, 20)
+  runs.value = r.items
+  runsTotal.value = r.total
+  runsPages.value = r.pages
+}
+
+async function goRunsPage(p: number) {
+  runsPage.value = p
+  await loadRuns()
 }
 
 async function pollJob(jobId: string) {
@@ -439,6 +454,12 @@ onMounted(async () => {
                 · {{ r.created_at }}
               </span>
             </button>
+            <PagerBar
+              :page="runsPage"
+              :pages="runsPages"
+              :total="runsTotal"
+              @change="goRunsPage"
+            />
           </template>
 
           <h3 v-if="batches.length">批次对比</h3>
