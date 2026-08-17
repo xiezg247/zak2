@@ -11,6 +11,8 @@ from typing import Any
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.schemas.chat import ProposalConfirmOut, ProposalRejectOut
+
 PROPOSAL_TTL_SEC = 600
 
 _lock = threading.Lock()
@@ -84,7 +86,7 @@ def reject_proposal(proposal_id: str, user_id: str) -> Proposal:
     return proposal
 
 
-def confirm_proposal(db: Session, proposal_id: str, user_id: str) -> dict[str, Any]:
+def confirm_proposal(db: Session, proposal_id: str, user_id: str) -> ProposalConfirmOut:
     proposal = get_proposal(proposal_id, user_id)
     if proposal.status != "pending":
         raise HTTPException(status_code=409, detail=f"确认项状态为 {proposal.status}，无法确认")
@@ -95,20 +97,20 @@ def confirm_proposal(db: Session, proposal_id: str, user_id: str) -> dict[str, A
     if isinstance(result, dict) and result.get("error"):
         raise HTTPException(status_code=400, detail=str(result["error"]))
     proposal.status = "confirmed"
-    return {
-        "ok": True,
-        "proposal_id": proposal.id,
-        "tool": proposal.tool,
-        "summary": proposal.summary,
-        "result": result,
-    }
+    return ProposalConfirmOut(
+        ok=True,
+        proposal_id=proposal.id,
+        tool=proposal.tool,
+        summary=proposal.summary,
+        result=result,
+    )
 
 
-def proposal_public(proposal: Proposal) -> dict[str, Any]:
-    return {
-        "proposal_id": proposal.id,
-        "tool": proposal.tool,
-        "summary": proposal.summary,
-        "args": proposal.args,
-        "status": proposal.status,
-    }
+def proposal_public(proposal: Proposal) -> ProposalRejectOut:
+    return ProposalRejectOut(
+        proposal_id=proposal.id,
+        tool=proposal.tool,
+        summary=proposal.summary,
+        args=proposal.args,
+        status=proposal.status,
+    )

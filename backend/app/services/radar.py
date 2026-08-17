@@ -138,25 +138,25 @@ def _synth_limit_break(db: Session) -> RadarCardOut | None:
     from app.services.limit_list_store import list_limit_list
 
     payload = list_limit_list(db, lazy_fetch=False)
-    rows_in = list(payload.get("rows") or [])
+    rows_in = list(payload.rows or [])
     rows: list[dict[str, Any]] = []
     for item in rows_in:
         try:
-            open_times = float(item.get("open_times") or 0)
+            open_times = float(item.open_times or 0)
         except (TypeError, ValueError):
             open_times = 0.0
         if open_times <= 0:
             continue
-        vt = str(item.get("vt_symbol") or "").strip()
+        vt = str(item.vt_symbol or "").strip()
         if not vt:
             continue
         rows.append(
             {
                 "vt_symbol": vt,
-                "name": str(item.get("name") or ""),
+                "name": str(item.name or ""),
                 "open_times": open_times,
-                "limit_times": item.get("limit_times"),
-                "seal_time_label": str(item.get("seal_time_label") or ""),
+                "limit_times": item.limit_times,
+                "seal_time_label": str(item.seal_time_label or ""),
             }
         )
     rows.sort(key=lambda r: (-float(r["open_times"]), str(r["vt_symbol"])))
@@ -166,7 +166,7 @@ def _synth_limit_break(db: Session) -> RadarCardOut | None:
     return RadarCardOut(
         card_id="discovery_limit_break",
         title="发现·炸板断板",
-        subtitle=str(payload.get("trade_date") or ""),
+        subtitle=str(payload.trade_date or ""),
         source="synthesized",
         rows=rows,
     )

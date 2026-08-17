@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import math
 from dataclasses import asdict, fields
-from typing import Any
+from typing import Any, NamedTuple
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -96,27 +96,41 @@ def merge_thresholds(base: Thresholds, patch: dict) -> Thresholds:
     return Thresholds(**{**asdict(base), **updates})
 
 
-def _load_stored_blob(db: Session) -> tuple[dict[str, Any] | None, bool]:
+class StoredBlob(NamedTuple):
+    """meta 表中阈值 blob 的读取结果：值 + 是否回退默认。"""
+
+    value: dict[str, Any] | None
+    is_default: bool
+
+
+class ThresholdsLoad(NamedTuple):
+    """load_thresholds 的返回：合并后的阈值 + 是否使用默认。"""
+
+    thresholds: Thresholds
+    is_default: bool
+
+
+def _load_stored_blob(db: Session) -> StoredBlob:
     raw = db.execute(
         text("SELECT value FROM app.meta WHERE key = :k"),
         {"k": META_KEY},
     ).scalar()
     if not raw:
-        return None, True
+        return StoredBlob(None, True)
     try:
         stored = json.loads(raw)
     except (TypeError, ValueError, json.JSONDecodeError):
-        return None, True
+        return StoredBlob(None, True)
     if not isinstance(stored, dict):
-        return None, True
-    return stored, False
+        return StoredBlob(None, True)
+    return StoredBlob(stored, False)
 
 
-def load_thresholds(db: Session) -> tuple[Thresholds, bool]:
+def load_thresholds(db: Session) -> ThresholdsLoad:
     stored, is_default = _load_stored_blob(db)
     if is_default or stored is None:
-        return DEFAULT_THRESHOLDS, True
-    return merge_thresholds(DEFAULT_THRESHOLDS, stored), False
+        return ThresholdsLoad(DEFAULT_THRESHOLDS, True)
+    return ThresholdsLoad(merge_thresholds(DEFAULT_THRESHOLDS, stored), False)
 
 
 def _persist_thresholds(db: Session, t: Thresholds) -> None:

@@ -8,6 +8,7 @@ from typing import Any, Literal
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.schemas.market import EmotionCycleOut
 from app.schemas.screener import HardFilterPrefs
 from app.services import emotion_cycle as emotion_cycle_svc
 from app.services import market as market_svc
@@ -39,20 +40,20 @@ _VARIANT_LABELS = {
 FOLLOWER_MIN_SCORE = 35.0
 
 
-def resolve_emotion_stage(db: Session | None) -> tuple[str | None, dict[str, Any] | None]:
+def resolve_emotion_stage(db: Session | None) -> tuple[str | None, EmotionCycleOut | None]:
     """优先完整情绪周期；无数据时回退梯队高度近似。"""
     if db is None:
         return None, None
     cycle = emotion_cycle_svc.build_emotion_cycle(db)
-    stage = str(cycle.get("stage") or "") or None
-    if cycle.get("source") and cycle.get("source") != "empty":
+    stage = str(cycle.stage or "") or None
+    if cycle.source and cycle.source != "empty":
         return stage, cycle
     emotion = market_svc.load_emotion(db)
     if not emotion:
         return stage, cycle
     # 仅有空 inputs 时再用高度粗推
-    inputs = cycle.get("inputs") or {}
-    if int(inputs.get("sample_size") or 0) == 0 and int(inputs.get("max_limit_times") or 0) == 0:
+    inputs = cycle.inputs
+    if int(inputs.sample_size or 0) == 0 and int(inputs.max_limit_times or 0) == 0:
         mx = int(emotion.get("max_limit_times") or 0)
         if mx <= 0:
             return "ice", cycle
@@ -295,7 +296,7 @@ def run_leader_screen(
     stage, cycle = resolve_emotion_stage(db)
     emotion = market_svc.load_emotion(db) if db is not None else None
     variant_label = _VARIANT_LABELS.get(variant, variant)
-    stage_label = _STAGE_LABELS.get(stage or "", "") or (cycle or {}).get("stage_label", "")
+    stage_label = _STAGE_LABELS.get(stage or "", "") or (cycle.stage_label if cycle else "")
 
     if stage in {"ice", "recession"}:
         condition = f"雷达龙头（{stage_label or stage}·不宜新开）"
@@ -375,7 +376,7 @@ def synth_leader_pick_rows(
         return [], "", "行情快照为空，请启动 quote-collector"
 
     stage, cycle = resolve_emotion_stage(db)
-    stage_label = _STAGE_LABELS.get(stage or "", "") or str((cycle or {}).get("stage_label") or "")
+    stage_label = _STAGE_LABELS.get(stage or "", "") or str((cycle.stage_label if cycle else "") or "")
     if stage in {"ice", "recession"}:
         return [], stage_label, f"{stage_label or '退潮'}环境不宜新开龙头"
 

@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from pydantic import BaseModel
+
 from app.core.db import SessionLocal
 from app.services.bars_lock import BARS_JOBS, release_bars, try_acquire_bars
 from app.services.ops import sync_bilibili_feed as ops_sync_bilibili_feed
@@ -34,13 +36,18 @@ def _execute_sync(
     db = SessionLocal()
     try:
         if ops_job_id == ops_sync_bilibili_feed.JOB_ID:
-            return ops_sync_bilibili_feed.sync_bilibili_feed(db, force=force)
-        runner = RUNNERS[ops_job_id]
-        if needs_user_id(ops_job_id):
-            if not (user_id or "").strip():
-                raise ValueError(f"{ops_job_id} 需要 user_id")
-            return runner(db, user_id=user_id)
-        return runner(db)
+            result = ops_sync_bilibili_feed.sync_bilibili_feed(db, force=force)
+        else:
+            runner = RUNNERS[ops_job_id]
+            if needs_user_id(ops_job_id):
+                if not (user_id or "").strip():
+                    raise ValueError(f"{ops_job_id} 需要 user_id")
+                result = runner(db, user_id=user_id)
+            else:
+                result = runner(db)
+        if isinstance(result, BaseModel):
+            return result.model_dump()
+        return result
     finally:
         db.close()
         if bars_token is not None:

@@ -13,7 +13,7 @@ def test_prefetch_skips_without_token() -> None:
         patch("app.services.ops.prefetch_tushare.save_job_run_meta") as save,
     ):
         out = m.prefetch_tushare(db)
-    assert out["skipped"] is True
+    assert out.skipped is True
     save.assert_called_once()
 
 
@@ -29,8 +29,8 @@ def test_prefetch_upserts_basic() -> None:
         patch("app.services.ops.prefetch_tushare.save_job_run_meta"),
     ):
         out = m.prefetch_tushare(db)
-    assert out["success"] is True
-    assert out.get("written", 0) >= 1
+    assert out.success is True
+    assert out.extra.get("written", 0) >= 1
     assert db.execute.called
     db.commit.assert_called_once()
 
@@ -49,5 +49,5 @@ def test_prefetch_moneyflow_failure_still_success() -> None:
         patch("app.services.ops.prefetch_tushare.save_job_run_meta"),
     ):
         out = m.prefetch_tushare(db)
-    assert out["success"] is True
-    assert "moneyflow" in out.get("message", "").lower() or any("moneyflow" in n.lower() for n in out.get("notes", []))
+    assert out.success is True
+    assert "moneyflow" in out.message.lower() or any("moneyflow" in n.lower() for n in out.extra.get("notes", []))

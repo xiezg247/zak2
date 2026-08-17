@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.market import EmotionLimitLadderDaily
+from app.schemas.market import EmotionCycleOut
 from app.services import emotion_cycle_cache, emotion_hysteresis
 from app.services.quotes import get_quote_store
 
@@ -233,7 +234,7 @@ def _approx_break_rate(db: Session, today_max: int) -> float | None:
     return min(1.0, drop / prev_max)
 
 
-def build_emotion_cycle(db: Session, *, force: bool = False) -> dict[str, Any]:
+def build_emotion_cycle(db: Session, *, force: bool = False) -> EmotionCycleOut:
     """组装 inputs → classify → hysteresis → 辅助因子调整。"""
     if not force:
         hit = emotion_cycle_cache.cache_get()
@@ -378,5 +379,6 @@ def build_emotion_cycle(db: Session, *, force: bool = False) -> dict[str, Any]:
             "sample_size": int((breadth or {}).get("sample_size") or 0),
         },
     }
-    emotion_cycle_cache.cache_set(out)
-    return out
+    result = EmotionCycleOut(**out)
+    emotion_cycle_cache.cache_set(result)
+    return result

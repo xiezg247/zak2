@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.redis_keys import KEY_PREFIX
 from app.core.time import china_today
 from app.models.bars import DbBarData
+from app.schemas.ops import SyncResult
 from app.services.ops.bars_fill import list_watchlist_symbols
 from app.services.ops.scheduler import save_job_run_meta
 from app.services.quotes import get_quote_store
@@ -352,7 +353,7 @@ def _compute_pool(db: Session, config_keys: list[str]) -> tuple[int, int]:
     return computed, skipped_bars
 
 
-def warm_watchlist_strategy_cache(db: Session) -> dict[str, Any]:
+def warm_watchlist_strategy_cache(db: Session) -> SyncResult:
     config_keys = _list_config_keys(db)
     client = _redis_client()
     written_s = 0
@@ -370,12 +371,13 @@ def warm_watchlist_strategy_cache(db: Session) -> dict[str, Any]:
         f"启发式 v2 + double_ma + trend_ma 三轨 computed={computed} skipped_bars={skipped_bars}"
     )
     save_job_run_meta(db, JOB_ID, last_message=msg, last_success=True)
-    return {
-        "success": True,
-        "skipped": False,
-        "message": msg,
-        "written_signals": written_s,
-        "written_positions": written_p,
-        "computed": computed,
-        "skipped_bars": skipped_bars,
-    }
+    return SyncResult(
+        success=True,
+        message=msg,
+        extra={
+            "written_signals": written_s,
+            "written_positions": written_p,
+            "computed": computed,
+            "skipped_bars": skipped_bars,
+        },
+    )

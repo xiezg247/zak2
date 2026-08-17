@@ -18,6 +18,7 @@ from app.integrations.bilibili.client import BilibiliApiError, BilibiliClient
 from app.integrations.bilibili.dynamics import list_recent_dynamics
 from app.integrations.bilibili.normalize import normalize_dynamic
 from app.models.content import FeedItem, FeedSubscription
+from app.schemas.ops import SyncResult
 from app.services.ops.scheduler import save_job_run_meta
 
 JOB_ID = "sync_bilibili_feed"
@@ -37,7 +38,7 @@ def in_sync_window(now: datetime | None = None) -> bool:
     return _SYNC_START_HOUR <= dt.hour < _SYNC_END_HOUR
 
 
-def sync_bilibili_feed(db: Session, *, force: bool = False) -> dict[str, Any]:
+def sync_bilibili_feed(db: Session, *, force: bool = False) -> SyncResult:
     if not force and not in_sync_window():
         return _skip(db, "非 08:00–20:00 时段，已跳过 B 站订阅同步")
 
@@ -86,19 +87,15 @@ def sync_bilibili_feed(db: Session, *, force: bool = False) -> dict[str, Any]:
             message += f"；部分失败 {len(errors)} 个"
 
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=success)
-    out: dict[str, Any] = {
-        "success": success,
-        "message": message,
-        "new_items": new_items,
-    }
+    extra: dict[str, Any] = {"new_items": new_items}
     if errors:
-        out["errors"] = errors
-    return out
+        extra["errors"] = errors
+    return SyncResult(success=success, message=message, extra=extra)
 
 
-def _skip(db: Session, message: str) -> dict[str, Any]:
+def _skip(db: Session, message: str) -> SyncResult:
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
-    return {"success": True, "skipped": True, "message": message, "new_items": 0}
+    return SyncResult(success=True, skipped=True, message=message, extra={"new_items": 0})
 
 
 def _sync_one_subscription(db: Session, client: BilibiliClient, sub: FeedSubscription) -> int:

@@ -39,8 +39,8 @@ def test_sync_universe_empty() -> None:
         patch.object(svc, "save_job_run_meta"),
     ):
         out = svc.sync_universe(db)
-    assert out["success"] is False
-    assert "无有效标的" in out["message"]
+    assert out.success is False
+    assert "无有效标的" in out.message
 
 
 def test_sync_universe_no_token() -> None:
@@ -50,8 +50,8 @@ def test_sync_universe_no_token() -> None:
         patch.object(svc, "save_job_run_meta"),
     ):
         out = svc.sync_universe(db)
-    assert out["success"] is False
-    assert "未配置" in out["message"]
+    assert out.success is False
+    assert "未配置" in out.message
 
 
 def test_sync_universe_replace(monkeypatch) -> None:
@@ -64,8 +64,8 @@ def test_sync_universe_replace(monkeypatch) -> None:
     ):
         out = svc.sync_universe(db)
     q.assert_called_once()
-    assert out["success"] is True
-    assert out["count"] == 1
-    assert out["skipped"] == 0
+    assert out.success is True
+    assert out.extra["count"] == 1
+    assert out.extra["skipped"] == 0
     assert db.execute.call_count >= 2
     db.commit.assert_called()

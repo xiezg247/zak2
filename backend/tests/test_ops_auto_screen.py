@@ -7,7 +7,7 @@ from app.services.presets import get_builtin_recipe
 
 def test_screen_intraday_requires_user() -> None:
     out = screen_intraday(MagicMock(), user_id="")
-    assert out["success"] is False
+    assert out.success is False
 
 
 def test_screen_intraday_saves_run() -> None:
@@ -29,8 +29,8 @@ def test_screen_intraday_saves_run() -> None:
         patch("app.services.ops.auto_screen.save_job_run_meta"),
     ):
         out = screen_intraday(db, user_id="u1")
-    assert out["success"] is True
-    assert out["run_id"] == "run-1"
+    assert out.success is True
+    assert out.extra["run_id"] == "run-1"
     save.assert_called_once()
     assert save.call_args.kwargs["source"] == "scheduled"
 
@@ -57,20 +57,13 @@ def test_screen_post_close_saves_run() -> None:
         patch("app.services.ops.auto_screen.save_job_run_meta"),
     ):
         out = screen_post_close(db, user_id="u1")
-    assert out["success"] is True
-    assert out["run_id"] == "run-pc"
+    assert out.success is True
+    assert out.extra["run_id"] == "run-pc"
     assert run.call_args.args[0].recipe_id == "post_close_multi"
     assert run.call_args.args[0].top_n == 15
     assert run.call_args.kwargs.get("user_id") == "u1"
     assert run.call_args.kwargs.get("db") is db
-    assert (
-        "ops.screen_post_close"
-        in str(
-            # save_run result trigger checked via message
-            out["message"]
-        )
-        or out["row_count"] == 3
-    )
+    assert "ops.screen_post_close" in out.message or out.extra.get("row_count") == 3
 
 
 def test_post_close_recipe_and_runnable() -> None:

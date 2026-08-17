@@ -53,7 +53,7 @@ def get_emotion_cycle(
     db: Session = Depends(get_db),
 ) -> ApiResponse[EmotionCycleOut]:
     _ = user
-    return ApiResponse(data=EmotionCycleOut(**emotion_cycle_svc.build_emotion_cycle(db)))
+    return ApiResponse(data=emotion_cycle_svc.build_emotion_cycle(db))
 
 
 @router.get("/market/emotion-cycle/thresholds", response_model=ApiResponse[EmotionThresholdsOut])
@@ -232,7 +232,7 @@ def post_radar_plan_draft(
         top_n=body.top_n,
         trade_date=body.trade_date,
     )
-    return ApiResponse(data=PlanDraftOut(**result))
+    return ApiResponse(data=result)
 
 
 @router.get("/market/limit-list", response_model=ApiResponse[LimitListOut])
@@ -242,4 +242,4 @@ def get_limit_list(
     db: Session = Depends(get_db),
 ) -> ApiResponse[LimitListOut]:
     _ = user
-    return ApiResponse(data=LimitListOut(**list_limit_list(db, trade_date)))
+    return ApiResponse(data=list_limit_list(db, trade_date))

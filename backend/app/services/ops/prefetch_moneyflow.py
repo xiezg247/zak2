@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.ops import SyncResult
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 from app.services.tushare_screener import fetch_moneyflow_rows, latest_open_yyyymmdd
@@ -20,13 +20,13 @@ def _now_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
-def prefetch_moneyflow(db: Session) -> dict[str, Any]:
+def prefetch_moneyflow(db: Session) -> SyncResult:
     try:
         ts.require_token()
     except ts.TushareNotConfiguredError as exc:
         message = str(exc)
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "skipped": True, "message": message}
+        return SyncResult(success=False, skipped=True, message=message)
 
     trade_date = latest_open_yyyymmdd(db)
     try:
@@ -34,12 +34,12 @@ def prefetch_moneyflow(db: Session) -> dict[str, Any]:
     except Exception as exc:
         message = f"moneyflow 失败: {exc}"
         save_job_run_meta(db, JOB_ID, last_message=message[:500], last_success=False)
-        return {"success": False, "skipped": True, "message": message, "trade_date": trade_date}
+        return SyncResult(success=False, skipped=True, message=message, extra={"trade_date": trade_date})
 
     if not rows:
         message = f"无 moneyflow 数据（trade_date={trade_date}）"
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "skipped": True, "message": message, "trade_date": trade_date}
+        return SyncResult(success=False, skipped=True, message=message, extra={"trade_date": trade_date})
 
     fetched_at = _now_iso()
     db.execute(
@@ -62,10 +62,8 @@ def prefetch_moneyflow(db: Session) -> dict[str, Any]:
     db.commit()
     message = f"moneyflow 预拉 {len(rows)} 条（trade_date={trade_date}）"
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
-    return {
-        "success": True,
-        "skipped": False,
-        "message": message,
-        "trade_date": trade_date,
-        "written": 1,
-    }
+    return SyncResult(
+        success=True,
+        message=message,
+        extra={"trade_date": trade_date, "written": 1},
+    )

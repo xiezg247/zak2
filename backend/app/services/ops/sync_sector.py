@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.time import china_today
+from app.schemas.ops import SyncResult
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 
@@ -227,13 +227,13 @@ def _sync_one_day(db: Session, trade_date: str, sw_map: dict[str, str]) -> str |
     return f"{trade_date}:{'/'.join(parts)}"
 
 
-def sync_sector_flow_daily(db: Session) -> dict[str, Any]:
+def sync_sector_flow_daily(db: Session) -> SyncResult:
     try:
         ts.require_token()
     except ts.TushareNotConfiguredError as exc:
         message = str(exc)
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "message": message, "days": 0, "skipped": True}
+        return SyncResult(success=False, message=message, skipped=True, extra={"days": 0})
 
     lookback = _lookback_days()
     dates = recent_open_dates(db, lookback=lookback)
@@ -248,10 +248,10 @@ def sync_sector_flow_daily(db: Session) -> dict[str, Any]:
     if not summaries:
         message = "未同步到板块资金数据（可能非交易日、Tushare 尚未更新或权限不足）"
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "message": message, "days": 0}
+        return SyncResult(success=False, message=message, extra={"days": 0})
 
     message = "板块资金同步 " + "，".join(summaries[:8])
     if len(summaries) > 8:
         message += f" …共{len(summaries)}日"
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
-    return {"success": True, "message": message, "days": len(summaries)}
+    return SyncResult(success=True, message=message, extra={"days": len(summaries)})

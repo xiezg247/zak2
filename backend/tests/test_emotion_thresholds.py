@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
+from app.schemas.market import EmotionCycleOut
 from app.services import emotion_thresholds as et
 from app.services.emotion_cycle import DEFAULT_THRESHOLDS, Thresholds
 
@@ -126,7 +127,7 @@ def test_save_invalidates_cache(monkeypatch) -> None:
     store.available.return_value = False
     monkeypatch.setattr(c, "get_quote_store", lambda: store)
 
-    c.cache_set({"stage": "x"})
+    c.cache_set(EmotionCycleOut(stage="x", stage_label="", position_factor=0.0, position_pct_min=0.0, position_pct_max=0.0, allow_new_positions=False))
     db = MagicMock()
     db.execute.return_value.scalar.return_value = None
     et.save_thresholds(db, {"recession_limit_down": 25})
@@ -140,7 +141,7 @@ def test_reset_invalidates_cache(monkeypatch) -> None:
     store.available.return_value = False
     monkeypatch.setattr(c, "get_quote_store", lambda: store)
 
-    c.cache_set({"stage": "x"})
+    c.cache_set(EmotionCycleOut(stage="x", stage_label="", position_factor=0.0, position_pct_min=0.0, position_pct_max=0.0, allow_new_positions=False))
     db = MagicMock()
     et.reset_thresholds(db)
     assert c.cache_get() is None

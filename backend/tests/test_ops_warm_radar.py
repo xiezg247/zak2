@@ -31,7 +31,7 @@ def test_warm_upserts_cards() -> None:
         patch("app.services.ops.warm_radar.save_job_run_meta"),
     ):
         out = warm.warm_radar_card_snapshots(db)
-    assert out["success"] is True
-    assert out.get("written", 0) == 2
+    assert out.success is True
+    assert out.extra.get("written", 0) == 2
     assert db.execute.call_count == 2
     db.commit.assert_called_once()

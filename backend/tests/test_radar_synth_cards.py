@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+from app.schemas.market import LimitListOut, LimitListRow
 from app.services import radar as radar_svc
 
 
@@ -13,13 +14,13 @@ def test_synth_limit_break_filters_open_times():
         patch.object(radar_svc, "_synth_volume_surge", return_value=None),
         patch(
             "app.services.limit_list_store.list_limit_list",
-            return_value={
-                "trade_date": "20260814",
-                "rows": [
-                    {"vt_symbol": "600000.SSE", "name": "浦发", "open_times": 2},
-                    {"vt_symbol": "600519.SSE", "name": "茅台", "open_times": 0},
+            return_value=LimitListOut(
+                trade_date="20260814",
+                rows=[
+                    LimitListRow(vt_symbol="600000.SSE", name="浦发", open_times=2),
+                    LimitListRow(vt_symbol="600519.SSE", name="茅台", open_times=0),
                 ],
-            },
+            ),
         ),
     ):
         cards = radar_svc.build_synthesized_cards(db)

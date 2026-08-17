@@ -13,7 +13,7 @@ def test_disclosure_skips_without_token() -> None:
         patch("app.services.ops.sync_disclosure.save_job_run_meta"),
     ):
         out = m.sync_disclosure_calendar(db)
-    assert out["skipped"] is True
+    assert out.skipped is True
 
 
 def test_disclosure_upserts() -> None:
@@ -34,5 +34,5 @@ def test_disclosure_upserts() -> None:
         patch("app.services.ops.sync_disclosure.save_job_run_meta"),
     ):
         out = m.sync_disclosure_calendar(db)
-    assert out["success"] is True
-    assert out.get("written", 0) >= 1
+    assert out.success is True
+    assert out.extra.get("written", 0) >= 1

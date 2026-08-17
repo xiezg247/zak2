@@ -95,7 +95,7 @@ def post_draft_append(
         name=body.name,
         source=body.source,
     )
-    return ApiResponse(data=PlanDraftAppendOut(**result))
+    return ApiResponse(data=result)
 
 
 @router.patch("/playbook/plans/{plan_id}", response_model=ApiResponse[PlanOut])
@@ -151,7 +151,7 @@ def get_team_report(
     row = team_reports.get_report(db, str(user.id), report_id)
     if not row:
         raise HTTPException(status_code=404, detail="研报不存在")
-    return ApiResponse(data=TeamReportOut(**row))
+    return ApiResponse(data=row)
 
 
 @router.get("/notes/{vt_symbol}/reports", response_model=ApiResponse[list[TeamReportListItem]])
@@ -164,7 +164,7 @@ def list_team_reports(
         rows = team_reports.list_reports(db, str(user.id), vt_symbol)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ApiResponse(data=[TeamReportListItem(**r) for r in rows])
+    return ApiResponse(data=rows)
 
 
 @router.get("/notes/{vt_symbol}/reports/page", response_model=ApiResponse[PageOut[TeamReportListItem]])
@@ -179,7 +179,7 @@ def list_team_reports_page(
         result = team_reports.list_reports_page(db, str(user.id), vt_symbol, page=page, page_size=page_size)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ApiResponse(data=PageOut.from_page(result.map(lambda r: TeamReportListItem(**r))))
+    return ApiResponse(data=PageOut.from_page(result))
 
 
 @router.get("/notes/{vt_symbol}/memo", response_model=ApiResponse[NoteMemoOut])

@@ -10,6 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.schemas.market import RadarCardOut
+from app.schemas.ops import SyncResult
 from app.services.ops.scheduler import save_job_run_meta
 from app.services.radar import build_synthesized_cards
 
@@ -48,7 +49,7 @@ def _upsert_card(db: Session, *, card_id: str, payload: dict[str, Any], computed
     )
 
 
-def warm_radar_card_snapshots(db: Session) -> dict[str, Any]:
+def warm_radar_card_snapshots(db: Session) -> SyncResult:
     cards = build_synthesized_cards(db)
     computed_at = _now_iso()
     for card in cards:
@@ -57,9 +58,4 @@ def warm_radar_card_snapshots(db: Session) -> dict[str, Any]:
     db.commit()
     message = f"雷达卡片预热 {len(cards)} 张"
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
-    return {
-        "success": True,
-        "skipped": False,
-        "message": message,
-        "written": len(cards),
-    }
+    return SyncResult(success=True, message=message, extra={"written": len(cards)})

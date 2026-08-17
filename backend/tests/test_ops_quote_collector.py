@@ -16,8 +16,8 @@ def test_force_without_collector() -> None:
     client = MagicMock()
     with patch("app.services.quote_collect.control.read_heartbeat", return_value=None):
         out = force_collect(client)
-    assert out["success"] is False
-    assert "collector" in out["message"].lower() or "quote_collector" in out["message"]
+    assert out.success is False
+    assert "collector" in out.message.lower() or "quote_collector" in out.message
 
 
 def test_force_with_fresh_heartbeat() -> None:
@@ -25,5 +25,5 @@ def test_force_with_fresh_heartbeat() -> None:
     hb = {"ts": datetime.now(timezone.utc).isoformat(), "status": "idle"}
     with patch("app.services.quote_collect.control.read_heartbeat", return_value=hb):
         out = force_collect(client)
-    assert out["success"] is True
+    assert out.success is True
     client.publish.assert_called()

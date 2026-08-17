@@ -2,24 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from sqlalchemy.orm import Session
 
+from app.schemas.ops import SyncResult
 from app.services.emotion_cycle import build_emotion_cycle
 from app.services.ops.scheduler import save_job_run_meta
 
 JOB_ID = "warm_market_summary"
 
 
-def warm_market_summary(db: Session) -> dict[str, Any]:
+def warm_market_summary(db: Session) -> SyncResult:
     snap = build_emotion_cycle(db, force=True)
-    message = f"已预热情绪周期：{snap['stage_label']}"
+    message = f"已预热情绪周期：{snap.stage_label}"
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
-    return {
-        "success": True,
-        "message": message,
-        "stage": snap["stage"],
-        "stage_label": snap["stage_label"],
-        "source": snap.get("source"),
-    }
+    return SyncResult(
+        success=True,
+        message=message,
+        extra={"stage": snap.stage, "stage_label": snap.stage_label, "source": snap.source},
+    )

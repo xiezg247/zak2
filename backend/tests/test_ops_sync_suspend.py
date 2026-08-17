@@ -13,7 +13,7 @@ def test_suspend_skips_without_token() -> None:
         patch("app.services.ops.sync_suspend.save_job_run_meta") as save,
     ):
         out = m.sync_suspend_daily(db)
-    assert out["skipped"] is True
+    assert out.skipped is True
     save.assert_called_once()
 
 
@@ -27,6 +27,6 @@ def test_suspend_writes_rows() -> None:
         patch("app.services.ops.sync_suspend.save_job_run_meta"),
     ):
         out = m.sync_suspend_daily(db)
-    assert out["success"] is True
-    assert out.get("written", 0) >= 1
+    assert out.success is True
+    assert out.extra.get("written", 0) >= 1
     assert db.execute.called

@@ -11,7 +11,7 @@ def test_financials_skips_empty_watchlist() -> None:
         patch("app.services.ops.sync_watchlist_financials.save_job_run_meta") as save,
     ):
         out = m.sync_watchlist_financials(db)
-    assert out["skipped"] is True
+    assert out.skipped is True
     save.assert_called_once()
 
 
@@ -25,8 +25,8 @@ def test_financials_skips_without_token() -> None:
         patch("app.services.ops.sync_watchlist_financials.save_job_run_meta") as save,
     ):
         out = m.sync_watchlist_financials(db)
-    assert out["skipped"] is True
-    assert out["success"] is False
+    assert out.skipped is True
+    assert out.success is False
     save.assert_called_once()
 
 
@@ -76,8 +76,8 @@ def test_financials_syncs_one_symbol() -> None:
         patch("app.services.ops.sync_watchlist_financials.save_job_run_meta"),
     ):
         out = m.sync_watchlist_financials(db)
-    assert out["success"] is True
-    assert out.get("ok", 0) == 1
+    assert out.success is True
+    assert out.extra.get("ok", 0) == 1
     assert db.execute.called
     assert db.commit.called
 

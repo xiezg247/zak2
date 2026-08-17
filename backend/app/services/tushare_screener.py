@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import date, timedelta
-from typing import Any
+from typing import Any, NamedTuple
 
 from fastapi import HTTPException
 from sqlalchemy import text
@@ -16,6 +16,21 @@ from app.services.quotes import QuoteRow
 
 # daily_basic.total_mv 单位：万元；50 亿 = 500000 万
 MIN_TOTAL_MV_50YI_WAN = 500_000.0
+
+
+class LookbackFetch(NamedTuple):
+    """_fetch_with_lookback 的返回：原始行 + 命中的交易日。"""
+
+    raw: list[dict[str, Any]]
+    trade_date: str
+
+
+class QuoteScreenerResult(NamedTuple):
+    """fetch_*_quote_rows 的返回：筛选结果 + 数据日期 + 扫描原始行数。"""
+
+    rows: list[QuoteRow]
+    trade_date: str
+    scanned: int
 
 
 def ts_code_to_tf(ts_code: str) -> str:
@@ -109,7 +124,7 @@ def _fetch_with_lookback(
     *,
     max_lookback: int = 8,
     empty_detail: str,
-) -> tuple[list[dict[str, Any]], str]:
+) -> LookbackFetch:
     _require_token()
     last_error = ""
     for trade_date in _iter_trade_dates(latest_open_yyyymmdd(db), max_lookback=max_lookback):
@@ -119,7 +134,7 @@ def _fetch_with_lookback(
             last_error = str(exc.detail)
             raw = []
         if raw:
-            return raw, trade_date
+            return LookbackFetch(raw, trade_date)
     raise HTTPException(status_code=502, detail=last_error or empty_detail)
 
 
@@ -128,7 +143,7 @@ def fetch_low_pe_quote_rows(
     *,
     max_pe: float = 15.0,
     max_lookback: int = 8,
-) -> tuple[list[QuoteRow], str, int]:
+) -> QuoteScreenerResult:
     raw, trade_date = _fetch_with_lookback(
         db,
         fetch_daily_basic_rows,
@@ -146,7 +161,7 @@ def fetch_low_pe_quote_rows(
         row.__dict__["_pe_ttm"] = round(pe, 4)
         rows.append(row)
     rows.sort(key=lambda r: float(r.__dict__.get("_pe_ttm") or 99))
-    return rows, trade_date, len(raw)
+    return QuoteScreenerResult(rows, trade_date, len(raw))
 
 
 def fetch_large_cap_quote_rows(
@@ -154,7 +169,7 @@ def fetch_large_cap_quote_rows(
     *,
     min_total_mv_wan: float = MIN_TOTAL_MV_50YI_WAN,
     max_lookback: int = 8,
-) -> tuple[list[QuoteRow], str, int]:
+) -> QuoteScreenerResult:
     raw, trade_date = _fetch_with_lookback(
         db,
         fetch_daily_basic_rows,
@@ -171,14 +186,14 @@ def fetch_large_cap_quote_rows(
             continue
         rows.append(row)
     rows.sort(key=lambda r: r.total_mv or r.circ_mv, reverse=True)
-    return rows, trade_date, len(raw)
+    return QuoteScreenerResult(rows, trade_date, len(raw))
 
 
 def fetch_moneyflow_in_quote_rows(
     db: Session | None,
     *,
     max_lookback: int = 8,
-) -> tuple[list[QuoteRow], str, int]:
+) -> QuoteScreenerResult:
     """主力净流入：moneyflow.net_mf_amount > 0 降序（单位通常为万元）。"""
     raw, trade_date = _fetch_with_lookback(
         db,
@@ -203,4 +218,4 @@ def fetch_moneyflow_in_quote_rows(
         row.__dict__["_net_mf_wan"] = round(net, 2)
         rows.append(row)
     rows.sort(key=lambda r: r.net_mf_amount, reverse=True)
-    return rows, trade_date, len(raw)
+    return QuoteScreenerResult(rows, trade_date, len(raw))

@@ -117,7 +117,7 @@ def post_confirm_proposal(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[ProposalConfirmOut]:
-    return ApiResponse(data=ProposalConfirmOut(**ai_proposals.confirm_proposal(db, proposal_id, str(user.id))))
+    return ApiResponse(data=ai_proposals.confirm_proposal(db, proposal_id, str(user.id)))
 
 
 @router.post("/proposals/{proposal_id}/reject", response_model=ApiResponse[ProposalRejectOut])
@@ -126,7 +126,7 @@ def post_reject_proposal(
     user: User = Depends(get_current_user),
 ) -> ApiResponse[ProposalRejectOut]:
     proposal = ai_proposals.reject_proposal(proposal_id, str(user.id))
-    return ApiResponse(data=ProposalRejectOut(**{"ok": True, **ai_proposals.proposal_public(proposal)}))
+    return ApiResponse(data=ai_proposals.proposal_public(proposal))
 
 
 @router.post("/team/stream")

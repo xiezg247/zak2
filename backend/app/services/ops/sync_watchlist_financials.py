@@ -10,6 +10,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.ops import SyncResult
 from app.services import tushare_client as ts
 from app.services.bar_download import to_ts_code
 from app.services.ops.bars_fill import list_watchlist_symbols
@@ -300,19 +301,19 @@ def _sync_one(db: Session, *, symbol: str, exchange: str) -> None:
     db.commit()
 
 
-def sync_watchlist_financials(db: Session) -> dict[str, Any]:
+def sync_watchlist_financials(db: Session) -> SyncResult:
     try:
         ts.require_token()
     except ts.TushareNotConfiguredError as exc:
         message = str(exc)
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "skipped": True, "message": message}
+        return SyncResult(success=False, skipped=True, message=message)
 
     pool = list_watchlist_symbols(db)
     if not pool:
         message = "自选池为空"
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "skipped": True, "message": message}
+        return SyncResult(success=False, skipped=True, message=message)
 
     ok = 0
     failed = 0
@@ -349,11 +350,8 @@ def sync_watchlist_financials(db: Session) -> dict[str, Any]:
         message += "；" + "；".join(errors[:3])
     success = ok > 0
     save_job_run_meta(db, JOB_ID, last_message=message[:500], last_success=success)
-    return {
-        "success": success,
-        "skipped": False,
-        "message": message,
-        "ok": ok,
-        "failed": failed,
-        "total": len(pool),
-    }
+    return SyncResult(
+        success=success,
+        message=message,
+        extra={"ok": ok, "failed": failed, "total": len(pool)},
+    )

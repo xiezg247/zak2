@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models.report import WebTeamReport
 from app.repositories.pagination import Page, paginate
+from app.schemas.content import TeamReportListItem, TeamReportOut
 from app.services.symbols import parse_flexible_symbol, to_vt_symbol
 
 _logger = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ def persist_team_report(
     body: str,
     mode: str = "fast",
     context: dict[str, Any] | None = None,
-) -> dict[str, Any] | None:
+) -> TeamReportListItem | None:
     if not should_persist_report(body):
         return None
     try:
@@ -84,28 +85,28 @@ def persist_team_report(
     db.add(row)
     db.commit()
     db.refresh(row)
-    return {
-        "id": int(row.id),
-        "title": str(row.title or ""),
-        "vt_symbol": str(row.vt_symbol or vt),
-        "created_at": str(row.created_at or now),
-        "summary": str(row.summary or ""),
-        "mode": str(row.mode or mode),
-    }
+    return TeamReportListItem(
+        id=int(row.id),
+        title=str(row.title or ""),
+        vt_symbol=str(row.vt_symbol or vt),
+        created_at=str(row.created_at or now),
+        summary=str(row.summary or ""),
+        mode=str(row.mode or mode),
+    )
 
 
-def _report_list_item(r: WebTeamReport, symbol: str, exchange: str) -> dict[str, Any]:
-    return {
-        "id": int(r.id),
-        "title": str(r.title or ""),
-        "summary": str(r.summary or ""),
-        "mode": str(r.mode or ""),
-        "created_at": str(r.created_at or ""),
-        "vt_symbol": str(r.vt_symbol or to_vt_symbol(symbol, exchange)),
-    }
+def _report_list_item(r: WebTeamReport, symbol: str, exchange: str) -> TeamReportListItem:
+    return TeamReportListItem(
+        id=int(r.id),
+        title=str(r.title or ""),
+        summary=str(r.summary or ""),
+        mode=str(r.mode or ""),
+        created_at=str(r.created_at or ""),
+        vt_symbol=str(r.vt_symbol or to_vt_symbol(symbol, exchange)),
+    )
 
 
-def list_reports(db: Session, user_id: str, vt_symbol: str, *, limit: int = 50) -> list[dict[str, Any]]:
+def list_reports(db: Session, user_id: str, vt_symbol: str, *, limit: int = 50) -> list[TeamReportListItem]:
     try:
         symbol, exchange = parse_flexible_symbol(vt_symbol)
     except ValueError as exc:
@@ -131,7 +132,7 @@ def list_reports_page(
     *,
     page: int = 1,
     page_size: int = 20,
-) -> Page[dict[str, Any]]:
+) -> Page[TeamReportListItem]:
     try:
         symbol, exchange = parse_flexible_symbol(vt_symbol)
     except ValueError as exc:
@@ -149,7 +150,7 @@ def list_reports_page(
     return result.map(lambda r: _report_list_item(r, symbol, exchange))
 
 
-def get_report(db: Session, user_id: str, report_id: int) -> dict[str, Any] | None:
+def get_report(db: Session, user_id: str, report_id: int) -> TeamReportOut | None:
     row = db.scalar(
         select(WebTeamReport).where(
             WebTeamReport.id == int(report_id),
@@ -158,15 +159,15 @@ def get_report(db: Session, user_id: str, report_id: int) -> dict[str, Any] | No
     )
     if not row:
         return None
-    return {
-        "id": int(row.id),
-        "symbol": str(row.symbol),
-        "exchange": str(row.exchange),
-        "vt_symbol": str(row.vt_symbol or ""),
-        "title": str(row.title or ""),
-        "body": str(row.body or ""),
-        "summary": str(row.summary or ""),
-        "mode": str(row.mode or ""),
-        "context_json": str(row.context_json or ""),
-        "created_at": str(row.created_at or ""),
-    }
+    return TeamReportOut(
+        id=int(row.id),
+        symbol=str(row.symbol),
+        exchange=str(row.exchange),
+        vt_symbol=str(row.vt_symbol or ""),
+        title=str(row.title or ""),
+        body=str(row.body or ""),
+        summary=str(row.summary or ""),
+        mode=str(row.mode or ""),
+        context_json=str(row.context_json or ""),
+        created_at=str(row.created_at or ""),
+    )

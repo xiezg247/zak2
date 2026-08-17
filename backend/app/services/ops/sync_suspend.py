@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.ops import SyncResult
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 from app.services.tushare_screener import latest_open_yyyymmdd, ts_code_to_tf
@@ -29,13 +28,13 @@ def _tf_to_symbol_exchange(tf: str) -> tuple[str, str] | None:
     return sym, mapping.get(exch, exch)
 
 
-def sync_suspend_daily(db: Session) -> dict[str, Any]:
+def sync_suspend_daily(db: Session) -> SyncResult:
     try:
         ts.require_token()
     except ts.TushareNotConfiguredError as exc:
         message = str(exc)
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "skipped": True, "message": message}
+        return SyncResult(success=False, skipped=True, message=message)
 
     trade_date = latest_open_yyyymmdd(db)
     try:
@@ -47,7 +46,7 @@ def sync_suspend_daily(db: Session) -> dict[str, Any]:
     except Exception as exc:
         message = f"suspend_d 失败: {exc}"
         save_job_run_meta(db, JOB_ID, last_message=message[:500], last_success=False)
-        return {"success": False, "skipped": True, "message": message, "trade_date": trade_date}
+        return SyncResult(success=False, skipped=True, message=message, extra={"trade_date": trade_date})
 
     cal_date = _yyyymmdd_to_iso(trade_date)
     payload: list[dict[str, str]] = []
@@ -69,7 +68,7 @@ def sync_suspend_daily(db: Session) -> dict[str, Any]:
     if not payload:
         message = f"无停牌数据（trade_date={trade_date}）"
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "skipped": True, "message": message, "trade_date": trade_date}
+        return SyncResult(success=False, skipped=True, message=message, extra={"trade_date": trade_date})
 
     db.execute(text("DELETE FROM app.symbol_suspend_days WHERE cal_date = :d"), {"d": cal_date})
     db.execute(
@@ -86,4 +85,4 @@ def sync_suspend_daily(db: Session) -> dict[str, Any]:
     db.commit()
     message = f"停牌同步 {len(payload)} 条（cal_date={cal_date}）"
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
-    return {"success": True, "skipped": False, "message": message, "written": len(payload), "trade_date": trade_date}
+    return SyncResult(success=True, message=message, extra={"written": len(payload), "trade_date": trade_date})

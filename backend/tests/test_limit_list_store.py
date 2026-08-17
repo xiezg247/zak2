@@ -120,9 +120,9 @@ def test_sync_limit_list_without_token() -> None:
         patch("app.services.ops.sync_limit_list.save_job_run_meta") as meta,
     ):
         out = sync_limit_list(db)
-    assert out["success"] is False
-    assert "TUSHARE_TOKEN" in out["message"]
-    assert out.get("skipped") is True
+    assert out.success is False
+    assert "TUSHARE_TOKEN" in out.message
+    assert out.skipped is True
     meta.assert_called_once()
     assert meta.call_args.args[1] == JOB_ID
 
@@ -149,8 +149,8 @@ def test_sync_limit_list_upserts() -> None:
         patch("app.services.ops.sync_limit_list.save_job_run_meta") as meta,
     ):
         out = sync_limit_list(db)
-    assert out["success"] is True
-    assert out["rows"] == 1
+    assert out.success is True
+    assert out.extra["rows"] == 1
     assert any("INSERT INTO app.limit_list_daily" in str(c.args[0]) for c in db.execute.call_args_list)
     meta.assert_called_once()
     assert meta.call_args.kwargs["last_success"] is True

@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.ops import SyncResult
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 from app.services.tushare_screener import (
@@ -51,13 +52,13 @@ def _upsert_dataset(
     )
 
 
-def prefetch_tushare(db: Session) -> dict[str, Any]:
+def prefetch_tushare(db: Session) -> SyncResult:
     try:
         ts.require_token()
     except ts.TushareNotConfiguredError as exc:
         message = str(exc)
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "skipped": True, "message": message}
+        return SyncResult(success=False, skipped=True, message=message)
 
     trade_date = latest_open_yyyymmdd(db)
     notes: list[str] = []
@@ -67,12 +68,12 @@ def prefetch_tushare(db: Session) -> dict[str, Any]:
     except Exception as exc:
         message = f"daily_basic 失败: {exc}"
         save_job_run_meta(db, JOB_ID, last_message=message[:500], last_success=False)
-        return {"success": False, "skipped": True, "message": message, "trade_date": trade_date}
+        return SyncResult(success=False, skipped=True, message=message, extra={"trade_date": trade_date})
 
     if not basic_rows:
         message = f"无 daily_basic 数据（trade_date={trade_date}）"
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "skipped": True, "message": message, "trade_date": trade_date}
+        return SyncResult(success=False, skipped=True, message=message, extra={"trade_date": trade_date})
 
     fetched_at = _now_iso()
     _upsert_dataset(db, dataset="daily_basic", trade_date=trade_date, rows=basic_rows, fetched_at=fetched_at)
@@ -91,11 +92,8 @@ def prefetch_tushare(db: Session) -> dict[str, Any]:
     if notes:
         message += "；" + "；".join(notes)
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
-    return {
-        "success": True,
-        "skipped": False,
-        "message": message,
-        "trade_date": trade_date,
-        "written": written,
-        "notes": notes,
-    }
+    return SyncResult(
+        success=True,
+        message=message,
+        extra={"trade_date": trade_date, "written": written, "notes": notes},
+    )

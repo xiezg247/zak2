@@ -13,8 +13,8 @@ def test_moneyflow_skips_without_token() -> None:
         patch("app.services.ops.prefetch_moneyflow.save_job_run_meta") as save,
     ):
         out = m.prefetch_moneyflow(db)
-    assert out["skipped"] is True
-    assert out["success"] is False
+    assert out.skipped is True
+    assert out.success is False
     save.assert_called_once()
 
 
@@ -28,7 +28,7 @@ def test_moneyflow_upserts() -> None:
         patch("app.services.ops.prefetch_moneyflow.save_job_run_meta"),
     ):
         out = m.prefetch_moneyflow(db)
-    assert out["success"] is True
-    assert out.get("written", 0) == 1
+    assert out.success is True
+    assert out.extra.get("written", 0) == 1
     assert db.execute.called
     assert db.commit.called

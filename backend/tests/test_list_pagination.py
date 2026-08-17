@@ -83,8 +83,8 @@ def test_reports_page_wraps() -> None:
         out = team_reports.list_reports_page(db, "u1", "600519.SSE", page=1, page_size=20)
     pg.assert_called_once()
     assert out.total == 1
-    assert out.items[0]["id"] == 9
-    assert out.items[0]["vt_symbol"] == "600519.SSE"
+    assert out.items[0].id == 9
+    assert out.items[0].vt_symbol == "600519.SSE"
 
 
 def test_reports_page_bad_symbol() -> None:

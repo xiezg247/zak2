@@ -7,6 +7,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.schemas.ops import SyncResult
 from app.services.ops import (
     auto_screen as ops_auto_screen,
 )
@@ -74,12 +75,13 @@ from app.services.ops import (
 SCREEN_JOB_IDS = frozenset({"screen_intraday", "screen_post_close"})
 
 
-def _run_sync_bilibili_feed(db: Session, **_kwargs: Any) -> dict:
+def _run_sync_bilibili_feed(db: Session, **_kwargs: Any) -> SyncResult:
     """Ops 手动跑：force=True，绕过时段窗口。定时走 embedded_scheduler（force=False）。"""
     return ops_sync_bilibili_feed.sync_bilibili_feed(db, force=True)
 
 
-RUNNERS: dict[str, Callable[..., dict]] = {
+RUNNERS: dict[str, Callable[..., Any]] = {
+    # 各 runner 统一返回 SyncResult（Pydantic model），worker 层 model_dump 后入库。
     "purge_stale_cache": ops_purge.purge_stale_cache,
     "sync_trade_calendar": ops_sync_calendar.sync_trade_calendar,
     "sync_sector_flow_daily": ops_sync_sector.sync_sector_flow_daily,

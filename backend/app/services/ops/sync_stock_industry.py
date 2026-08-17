@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.ops import SyncResult
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 from app.services.ops.sync_universe import parse_ts_code
@@ -83,12 +84,12 @@ def rows_from_stock_basic_industry(raw: list[dict]) -> tuple[list[dict], int]:
     return rows, skipped
 
 
-def _fail(db: Session, message: str, *, skipped: int = 0) -> dict[str, Any]:
+def _fail(db: Session, message: str, *, skipped: int = 0) -> SyncResult:
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-    return {"success": False, "message": message, "count": 0, "skipped": skipped}
+    return SyncResult(success=False, message=message, extra={"count": 0, "skipped": skipped})
 
 
-def sync_stock_industry(db: Session) -> dict[str, Any]:
+def sync_stock_industry(db: Session) -> SyncResult:
     try:
         ts.require_token()
     except ts.TushareNotConfiguredError as exc:
@@ -156,13 +157,11 @@ def sync_stock_industry(db: Session) -> dict[str, Any]:
         if skipped:
             message += f"（跳过 {skipped}）"
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
-        return {
-            "success": True,
-            "message": message,
-            "count": count,
-            "skipped": skipped,
-            "source": source,
-        }
+        return SyncResult(
+            success=True,
+            message=message,
+            extra={"count": count, "skipped": skipped, "source": source},
+        )
     except HTTPException as exc:
         db.rollback()
         detail = exc.detail

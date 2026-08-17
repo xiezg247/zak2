@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.time import china_today
+from app.schemas.ops import SyncResult
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 
@@ -36,7 +37,7 @@ def _normalize_cal_date(raw: Any) -> str:
     return text_v[:10]
 
 
-def sync_trade_calendar(db: Session, *, start: date | None = None, end: date | None = None) -> dict[str, Any]:
+def sync_trade_calendar(db: Session, *, start: date | None = None, end: date | None = None) -> SyncResult:
     start = start or DEFAULT_START
     end = end or _calendar_end()
     try:
@@ -44,7 +45,7 @@ def sync_trade_calendar(db: Session, *, start: date | None = None, end: date | N
     except ts.TushareNotConfiguredError as exc:
         message = str(exc)
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"count": 0, "message": message, "success": False, "skipped": True}
+        return SyncResult(success=False, message=message, skipped=True, extra={"count": 0})
 
     rows = ts.query(
         "trade_cal",
@@ -58,7 +59,7 @@ def sync_trade_calendar(db: Session, *, start: date | None = None, end: date | N
     if not rows:
         message = "交易日历同步失败（无数据）"
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"count": 0, "message": message, "success": False}
+        return SyncResult(success=False, message=message, extra={"count": 0})
 
     count = 0
     for row in rows:
@@ -97,4 +98,8 @@ def sync_trade_calendar(db: Session, *, start: date | None = None, end: date | N
 
     message = f"已同步交易日历 {count} 条（{_fmt(start)} ~ {_fmt(end)}）"
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
-    return {"count": count, "message": message, "success": True, "start": _fmt(start), "end": _fmt(end)}
+    return SyncResult(
+        success=True,
+        message=message,
+        extra={"count": count, "start": _fmt(start), "end": _fmt(end)},
+    )

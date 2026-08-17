@@ -13,6 +13,7 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
+from app.schemas.market import LimitListOut
 from app.services.limit_list_store import list_limit_list
 from app.services.radar import _synth_limit_ladder
 
@@ -54,9 +55,9 @@ def test_list_limit_list_empty_no_raise() -> None:
         ),
     ):
         out = list_limit_list(db, "20240805", lazy_fetch=True)
-    assert out["trade_date"] == "20240805"
-    assert out["total"] == 0
-    assert out["rows"] == []
+    assert out.trade_date == "20240805"
+    assert out.total == 0
+    assert out.rows == []
 
 
 def test_list_limit_list_returns_rows() -> None:
@@ -88,10 +89,10 @@ def test_list_limit_list_returns_rows() -> None:
 
     db.execute.side_effect = _execute
     out = list_limit_list(db, "20240805", lazy_fetch=False)
-    assert out["total"] == 1
-    assert out["rows"][0]["vt_symbol"] == "SHSE.600519"
-    assert out["rows"][0]["seal_time_label"] == "09:35 封板"
-    assert out["rows"][0]["seal_time_score"] == 1.0
+    assert out.total == 1
+    assert out.rows[0].vt_symbol == "SHSE.600519"
+    assert out.rows[0].seal_time_label == "09:35 封板"
+    assert out.rows[0].seal_time_score == 1.0
 
 
 def test_get_limit_list_api_empty() -> None:
@@ -110,7 +111,7 @@ def test_get_limit_list_api_empty() -> None:
 
     with patch(
         "app.api.v1.market.list_limit_list",
-        return_value={"trade_date": "20240805", "total": 0, "rows": []},
+        return_value=LimitListOut(trade_date="20240805"),
     ):
         resp = client.get("/api/v1/market/limit-list?trade_date=20240805")
     assert resp.status_code == 200

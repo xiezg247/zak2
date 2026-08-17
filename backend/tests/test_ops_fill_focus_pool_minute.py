@@ -12,9 +12,9 @@ def test_minute_skips_without_token() -> None:
         patch("app.services.ops.fill_focus_pool_minute.save_job_run_meta") as save,
     ):
         out = m.fill_focus_pool_minute(db)
-    assert out["skipped"] is True
-    assert out["success"] is False
-    assert "未接入" not in out["message"]
+    assert out.skipped is True
+    assert out.success is False
+    assert "未接入" not in out.message
     assert save.call_args.kwargs["last_success"] is False
 
 
@@ -34,11 +34,11 @@ def test_minute_downloads() -> None:
         patch("app.services.ops.fill_focus_pool_minute.save_job_run_meta") as save,
     ):
         out = m.fill_focus_pool_minute(db)
-    assert out["success"] is True
-    assert out["skipped"] is False
-    assert out["downloaded"] == 1
-    assert out["bars_added"] == 100
-    assert "未接入" not in out["message"]
+    assert out.success is True
+    assert out.skipped is False
+    assert out.extra["downloaded"] == 1
+    assert out.extra["bars_added"] == 100
+    assert "未接入" not in out.message
     dl.assert_called_once()
     assert save.call_args.kwargs["last_success"] is True
 
@@ -53,7 +53,7 @@ def test_minute_empty_pool_ok() -> None:
         patch("app.services.ops.fill_focus_pool_minute.save_job_run_meta"),
     ):
         out = m.fill_focus_pool_minute(db)
-    assert out["success"] is True
-    assert out["pool_size"] == 0
-    assert out["downloaded"] == 0
-    assert "未接入" not in out["message"]
+    assert out.success is True
+    assert out.extra["pool_size"] == 0
+    assert out.extra["downloaded"] == 0
+    assert "未接入" not in out.message

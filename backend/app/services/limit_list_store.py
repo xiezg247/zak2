@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.market import LimitListOut, LimitListRow
 from app.services import tushare_client as ts
 from app.services.ops.sync_limit_list import sync_one_day
 from app.services.seal_time import format_seal_time_label, seal_time_score
@@ -118,13 +117,13 @@ def list_limit_list(
     trade_date: str | None = None,
     *,
     lazy_fetch: bool = True,
-) -> dict[str, Any]:
+) -> LimitListOut:
     """当日涨停列表摘要；无数据返回空 rows，不抛错。"""
     td = _normalize_trade_date(trade_date) if trade_date else latest_open_yyyymmdd(db)
     if not td:
-        return {"trade_date": "", "total": 0, "rows": []}
+        return LimitListOut()
 
-    def _read_rows() -> list[dict[str, Any]]:
+    def _read_rows() -> list[LimitListRow]:
         rows = db.execute(
             text(
                 """
@@ -137,14 +136,14 @@ def list_limit_list(
             ),
             {"td": td},
         ).mappings()
-        out: list[dict[str, Any]] = []
+        out: list[LimitListRow] = []
         for row in rows:
             item = dict(row)
             first_time = str(item.get("first_time") or "").strip()
             item["first_time"] = first_time
             item["seal_time_score"] = seal_time_score(first_time)
             item["seal_time_label"] = format_seal_time_label(first_time)
-            out.append(item)
+            out.append(LimitListRow(**item))
         return out
 
     try:
@@ -156,7 +155,7 @@ def list_limit_list(
         try:
             ts.require_token()
         except ts.TushareNotConfiguredError:
-            return {"trade_date": td, "total": 0, "rows": []}
+            return LimitListOut(trade_date=td, total=0)
         try:
             sync_one_day(db, td)
             db.commit()
@@ -164,4 +163,4 @@ def list_limit_list(
         except Exception:
             result_rows = []
 
-    return {"trade_date": td, "total": len(result_rows), "rows": result_rows}
+    return LimitListOut(trade_date=td, total=len(result_rows), rows=result_rows)

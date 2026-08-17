@@ -63,8 +63,7 @@ def collector_force(user: User = Depends(get_current_user)) -> ApiResponse[SyncR
     _ = user
     from app.services.quote_collect.control import force_collect_from_settings
 
-    result = force_collect_from_settings()
-    return ApiResponse(data=SyncResult(success=bool(result.get("success")), message=str(result.get("message") or "")))
+    return ApiResponse(data=force_collect_from_settings())
 
 
 @router.get("/mcp/tools", response_model=ApiResponse[McpToolsOut])
@@ -203,14 +202,7 @@ def post_screen_intraday(
     db: Session = Depends(get_db),
 ) -> ApiResponse[SyncResult]:
     result = ops_auto_screen.screen_intraday(db, user_id=str(user.id))
-    return ApiResponse(
-        data=SyncResult(
-            success=bool(result.get("success")),
-            message=str(result.get("message") or ""),
-            skipped=bool(result.get("skipped")),
-            extra={k: v for k, v in result.items() if k not in {"success", "message", "skipped"}},
-        )
-    )
+    return ApiResponse(data=result)
 
 
 @router.post("/sync/screen-post-close", response_model=ApiResponse[SyncResult])
@@ -219,14 +211,7 @@ def post_screen_post_close(
     db: Session = Depends(get_db),
 ) -> ApiResponse[SyncResult]:
     result = ops_auto_screen.screen_post_close(db, user_id=str(user.id))
-    return ApiResponse(
-        data=SyncResult(
-            success=bool(result.get("success")),
-            message=str(result.get("message") or ""),
-            skipped=bool(result.get("skipped")),
-            extra={k: v for k, v in result.items() if k not in {"success", "message", "skipped"}},
-        )
-    )
+    return ApiResponse(data=result)
 
 
 @router.post("/cache/purge", response_model=ApiResponse[PurgeResult])
@@ -245,14 +230,7 @@ def post_sync_calendar(
 ) -> ApiResponse[SyncResult]:
     _ = user
     result = ops_sync_calendar.sync_trade_calendar(db)
-    return ApiResponse(
-        data=SyncResult(
-            success=bool(result.get("success")),
-            message=str(result.get("message") or ""),
-            skipped=bool(result.get("skipped")),
-            extra={k: v for k, v in result.items() if k not in {"success", "message", "skipped"}},
-        )
-    )
+    return ApiResponse(data=result)
 
 
 @router.post("/sync/sector-flow", response_model=ApiResponse[SyncResult])
@@ -262,14 +240,7 @@ def post_sync_sector(
 ) -> ApiResponse[SyncResult]:
     _ = user
     result = ops_sync_sector.sync_sector_flow_daily(db)
-    return ApiResponse(
-        data=SyncResult(
-            success=bool(result.get("success")),
-            message=str(result.get("message") or ""),
-            skipped=bool(result.get("skipped")),
-            extra={k: v for k, v in result.items() if k not in {"success", "message", "skipped"}},
-        )
-    )
+    return ApiResponse(data=result)
 
 
 @router.get("/jobs/recent", response_model=ApiResponse[list[JobOut]])

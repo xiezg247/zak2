@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.time import china_today
+from app.schemas.ops import SyncResult
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 
@@ -42,13 +43,13 @@ def _date_field(value: Any) -> str:
     return s.replace("-", "")[:8] if s else ""
 
 
-def sync_disclosure_calendar(db: Session) -> dict[str, Any]:
+def sync_disclosure_calendar(db: Session) -> SyncResult:
     try:
         ts.require_token()
     except ts.TushareNotConfiguredError as exc:
         message = str(exc)
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "skipped": True, "message": message}
+        return SyncResult(success=False, skipped=True, message=message)
 
     end_date = latest_report_end_yyyymmdd()
     try:
@@ -56,7 +57,7 @@ def sync_disclosure_calendar(db: Session) -> dict[str, Any]:
     except Exception as exc:
         message = f"disclosure_date 失败: {exc}"
         save_job_run_meta(db, JOB_ID, last_message=message[:500], last_success=False)
-        return {"success": False, "skipped": True, "message": message, "end_date": end_date}
+        return SyncResult(success=False, skipped=True, message=message, extra={"end_date": end_date})
 
     fetched_at = _now_iso()
     payload: list[dict[str, str]] = []
@@ -78,7 +79,7 @@ def sync_disclosure_calendar(db: Session) -> dict[str, Any]:
     if not payload:
         message = f"无披露数据（end_date={end_date}）"
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=False)
-        return {"success": False, "skipped": True, "message": message, "end_date": end_date}
+        return SyncResult(success=False, skipped=True, message=message, extra={"end_date": end_date})
 
     db.execute(
         text(
@@ -99,10 +100,8 @@ def sync_disclosure_calendar(db: Session) -> dict[str, Any]:
     db.commit()
     message = f"披露日历同步 {len(payload)} 条（end_date={end_date}）"
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
-    return {
-        "success": True,
-        "skipped": False,
-        "message": message,
-        "written": len(payload),
-        "end_date": end_date,
-    }
+    return SyncResult(
+        success=True,
+        message=message,
+        extra={"written": len(payload), "end_date": end_date},
+    )

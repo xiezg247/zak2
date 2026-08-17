@@ -5,11 +5,11 @@ from __future__ import annotations
 import os
 import time
 from datetime import date
-from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.ops import SyncResult
 from app.services import bar_download as bars
 from app.services import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
@@ -69,21 +69,23 @@ def _fill_one(db: Session, *, symbol: str, exchange: str, as_of: date) -> tuple[
         return "fail", 0
 
 
-def _run_pool(db: Session, pool: list[tuple[str, str]], *, job_id: str) -> dict[str, Any]:
+def _run_pool(db: Session, pool: list[tuple[str, str]], *, job_id: str) -> SyncResult:
     try:
         ts.require_token()
     except ts.TushareNotConfiguredError as exc:
-        out: dict[str, Any] = {
-            "success": False,
-            "message": str(exc),
-            "attempted": 0,
-            "success_count": 0,
-            "failed": [],
-            "bars_added": 0,
-            "up_to_date": 0,
-        }
-        save_job_run_meta(db, job_id, last_message=out["message"], last_success=False)
-        return out
+        message = str(exc)
+        save_job_run_meta(db, job_id, last_message=message, last_success=False)
+        return SyncResult(
+            success=False,
+            message=message,
+            extra={
+                "attempted": 0,
+                "success_count": 0,
+                "failed": [],
+                "bars_added": 0,
+                "up_to_date": 0,
+            },
+        )
 
     as_of = bars.as_of_trade_date(db)
     sleep_sec = _sleep_sec()
@@ -113,29 +115,31 @@ def _run_pool(db: Session, pool: list[tuple[str, str]], *, job_id: str) -> dict[
         message = (
             f"补全完成：成功 {success_count}/{attempted}，新增 {bars_added} 根，已最新 {up_to_date}，失败 {len(failed)}"
         )
-    out = {
-        "success": len(failed) == 0 or success_count > 0 or up_to_date == attempted,
-        "message": message,
-        "attempted": attempted,
-        "success_count": success_count,
-        "failed": failed[:50],
-        "bars_added": bars_added,
-        "up_to_date": up_to_date,
-        "as_of": as_of.isoformat(),
-    }
+    success = len(failed) == 0 or success_count > 0 or up_to_date == attempted
     # 全失败且有 attempted → success False
     if attempted and success_count == 0 and up_to_date == 0 and failed:
-        out["success"] = False
-    save_job_run_meta(db, job_id, last_message=message[:500], last_success=bool(out["success"]))
-    return out
+        success = False
+    save_job_run_meta(db, job_id, last_message=message[:500], last_success=success)
+    return SyncResult(
+        success=success,
+        message=message,
+        extra={
+            "attempted": attempted,
+            "success_count": success_count,
+            "failed": failed[:50],
+            "bars_added": bars_added,
+            "up_to_date": up_to_date,
+            "as_of": as_of.isoformat(),
+        },
+    )
 
 
-def fill_watchlist_bars(db: Session) -> dict[str, Any]:
+def fill_watchlist_bars(db: Session) -> SyncResult:
     pool = list_watchlist_symbols(db)
     return _run_pool(db, pool, job_id=JOB_WATCHLIST)
 
 
-def batch_fill_stale(db: Session) -> dict[str, Any]:
+def batch_fill_stale(db: Session) -> SyncResult:
     as_of = bars.as_of_trade_date(db)
     stale = bars.list_stale_overviews(db, as_of=as_of, limit=_max_symbols())
     pool = [(s, e) for s, e, _ in stale]
@@ -183,37 +187,41 @@ def _download_universe_one(
         return "fail", 0
 
 
-def batch_download_universe(db: Session) -> dict[str, Any]:
+def batch_download_universe(db: Session) -> SyncResult:
     try:
         ts.require_token()
     except ts.TushareNotConfiguredError as exc:
-        out: dict[str, Any] = {
-            "success": False,
-            "message": str(exc),
-            "attempted": 0,
-            "success_count": 0,
-            "failed": [],
-            "bars_added": 0,
-            "up_to_date": 0,
-            "skipped_covered": 0,
-        }
-        save_job_run_meta(db, JOB_UNIVERSE, last_message=out["message"], last_success=False)
-        return out
+        message = str(exc)
+        save_job_run_meta(db, JOB_UNIVERSE, last_message=message, last_success=False)
+        return SyncResult(
+            success=False,
+            message=message,
+            extra={
+                "attempted": 0,
+                "success_count": 0,
+                "failed": [],
+                "bars_added": 0,
+                "up_to_date": 0,
+                "skipped_covered": 0,
+            },
+        )
 
     universe = bars.list_universe_symbols(db)
     if not universe:
-        out = {
-            "success": False,
-            "message": "全 A 股列表为空，请先同步 A 股列表",
-            "attempted": 0,
-            "success_count": 0,
-            "failed": [],
-            "bars_added": 0,
-            "up_to_date": 0,
-            "skipped_covered": 0,
-        }
-        save_job_run_meta(db, JOB_UNIVERSE, last_message=out["message"], last_success=False)
-        return out
+        message = "全 A 股列表为空，请先同步 A 股列表"
+        save_job_run_meta(db, JOB_UNIVERSE, last_message=message, last_success=False)
+        return SyncResult(
+            success=False,
+            message=message,
+            extra={
+                "attempted": 0,
+                "success_count": 0,
+                "failed": [],
+                "bars_added": 0,
+                "up_to_date": 0,
+                "skipped_covered": 0,
+            },
+        )
 
     unified = bars.parse_universe_start(None)
     as_of = bars.as_of_trade_date(db)
@@ -257,18 +265,20 @@ def batch_download_universe(db: Session) -> dict[str, Any]:
         )
         if remaining > 0:
             message += f"；尚余 {remaining} 只下次继续"
-    out = {
-        "success": len(failed) == 0 or success_count > 0 or no_data == attempted,
-        "message": message,
-        "attempted": attempted,
-        "success_count": success_count,
-        "failed": failed[:50],
-        "bars_added": bars_added,
-        "up_to_date": skipped_covered,
-        "skipped_covered": skipped_covered,
-        "as_of": as_of.isoformat(),
-    }
+    success = len(failed) == 0 or success_count > 0 or no_data == attempted
     if attempted and success_count == 0 and no_data == 0 and failed:
-        out["success"] = False
-    save_job_run_meta(db, JOB_UNIVERSE, last_message=message[:500], last_success=bool(out["success"]))
-    return out
+        success = False
+    save_job_run_meta(db, JOB_UNIVERSE, last_message=message[:500], last_success=success)
+    return SyncResult(
+        success=success,
+        message=message,
+        extra={
+            "attempted": attempted,
+            "success_count": success_count,
+            "failed": failed[:50],
+            "bars_added": bars_added,
+            "up_to_date": skipped_covered,
+            "skipped_covered": skipped_covered,
+            "as_of": as_of.isoformat(),
+        },
+    )

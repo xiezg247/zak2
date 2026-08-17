@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.ops import SyncResult
 from app.services.limit_list_store import load_first_time_map
 from app.services.ops.scheduler import save_job_run_meta
 from app.services.radar import list_radar_cards
@@ -74,7 +75,7 @@ def _upsert_horizon(
     )
 
 
-def scan_horizon_outlook(db: Session) -> dict[str, Any]:
+def scan_horizon_outlook(db: Session) -> SyncResult:
     computed_at = _now_iso()
     cards = list_radar_cards(db)
     ft = load_first_time_map(db)
@@ -135,16 +136,16 @@ def scan_horizon_outlook(db: Session) -> dict[str, Any]:
         parts.append(f"predict_error={predict_error}")
     message = "；".join(parts)
 
-    out = {
-        "success": True,
-        "skipped": False,
-        "message": message,
-        "written": len(rows),
-        "horizon_written": len(rows),
-        "predict_written": predict_written,
-        "predict_error": predict_error,
-        "strategy_key": STRATEGY_KEY,
-        "model_label": MODEL_LABEL,
-    }
     save_job_run_meta(db, JOB_ID, last_success=True, last_message=message)
-    return out
+    return SyncResult(
+        success=True,
+        message=message,
+        extra={
+            "written": len(rows),
+            "horizon_written": len(rows),
+            "predict_written": predict_written,
+            "predict_error": predict_error,
+            "strategy_key": STRATEGY_KEY,
+            "model_label": MODEL_LABEL,
+        },
+    )

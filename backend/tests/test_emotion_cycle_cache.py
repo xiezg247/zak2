@@ -2,6 +2,21 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+from app.schemas.market import EmotionCycleOut
+
+
+def _cycle(**kw) -> EmotionCycleOut:
+    defaults: dict = {
+        "stage": "ice",
+        "stage_label": "冰点",
+        "position_factor": 0.0,
+        "position_pct_min": 0.0,
+        "position_pct_max": 0.0,
+        "allow_new_positions": False,
+    }
+    defaults.update(kw)
+    return EmotionCycleOut(**defaults)
+
 
 def _patch_no_redis():
     store = MagicMock()
@@ -32,8 +47,10 @@ def test_mem_cache_roundtrip(monkeypatch) -> None:
 
         c.cache_invalidate()
         assert c.cache_get() is None
-        c.cache_set({"stage": "ice"})
-        assert c.cache_get()["stage"] == "ice"
+        c.cache_set(_cycle(stage="ice"))
+        hit = c.cache_get()
+        assert hit is not None
+        assert hit.stage == "ice"
         c.cache_invalidate()
         assert c.cache_get() is None
 
@@ -44,10 +61,12 @@ def test_build_uses_cache(monkeypatch) -> None:
         from app.services import emotion_cycle_cache as c
 
         c.cache_invalidate()
-        c.cache_set({"stage": "ice", "stage_label": "冰点", "cached_stub": True})
+        c.cache_set(_cycle(stage="startup", stage_label="启动"))
         db = MagicMock()
-        out = ec.build_emotion_cycle(db, force=False)
-        assert out.get("cached_stub") is True
+        with patch.object(ec, "_ladder_rows") as ladder:
+            out = ec.build_emotion_cycle(db, force=False)
+        assert out.stage == "startup"
+        ladder.assert_not_called()
 
 
 def test_build_force_bypasses_cache(monkeypatch) -> None:
@@ -55,7 +74,7 @@ def test_build_force_bypasses_cache(monkeypatch) -> None:
         from app.services import emotion_cycle as ec
         from app.services import emotion_cycle_cache as c
 
-        c.cache_set({"stage": "ice", "from_cache": True})
+        c.cache_set(_cycle(stage="ice", source="cache_stub"))
         db = MagicMock()
         with (
             patch.object(ec, "_breadth_from_redis", return_value=None),
@@ -64,8 +83,8 @@ def test_build_force_bypasses_cache(monkeypatch) -> None:
             patch("app.services.emotion_thresholds.load_thresholds", return_value=(ec.DEFAULT_THRESHOLDS, True)),
         ):
             out = ec.build_emotion_cycle(db, force=True)
-        assert out.get("from_cache") is not True
-        assert "stage" in out
+        assert out.source != "cache_stub"
+        assert out.stage
 
 
 def test_build_sets_cache_after_compute(monkeypatch) -> None:
@@ -84,4 +103,4 @@ def test_build_sets_cache_after_compute(monkeypatch) -> None:
             out = ec.build_emotion_cycle(db, force=True)
         cached = c.cache_get()
         assert cached is not None
-        assert cached["stage"] == out["stage"]
+        assert cached.stage == out.stage

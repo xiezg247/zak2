@@ -27,9 +27,9 @@ def test_skip_outside_window(monkeypatch) -> None:
     db = MagicMock()
     with patch.object(svc, "save_job_run_meta") as meta:
         out = svc.sync_bilibili_feed(db, force=False)
-    assert out.get("skipped") is True
-    assert out["success"] is True
-    assert "08:00" in out["message"]
+    assert out.skipped is True
+    assert out.success is True
+    assert "08:00" in out.message
     meta.assert_called_once()
 
 
@@ -42,9 +42,9 @@ def test_skip_no_cookies(monkeypatch) -> None:
     db = MagicMock()
     with patch.object(svc, "save_job_run_meta"):
         out = svc.sync_bilibili_feed(db, force=True)
-    assert out.get("skipped") is True
-    assert out["success"] is True
-    assert "BILIBILI_COOKIES" in out["message"]
+    assert out.skipped is True
+    assert out.success is True
+    assert "BILIBILI_COOKIES" in out.message
 
 
 def test_skip_no_subscriptions(monkeypatch) -> None:
@@ -57,8 +57,8 @@ def test_skip_no_subscriptions(monkeypatch) -> None:
     db.scalars.return_value = []
     with patch.object(svc, "save_job_run_meta"):
         out = svc.sync_bilibili_feed(db, force=True)
-    assert out.get("skipped") is True
-    assert "订阅" in out["message"]
+    assert out.skipped is True
+    assert "订阅" in out.message
 
 
 def test_insert_new_item(monkeypatch) -> None:
@@ -99,9 +99,9 @@ def test_insert_new_item(monkeypatch) -> None:
     ):
         out = svc.sync_bilibili_feed(db, force=True)
 
-    assert out["success"] is True
-    assert out["new_items"] == 1
-    assert out.get("skipped") is not True
+    assert out.success is True
+    assert out.extra["new_items"] == 1
+    assert out.skipped is not True
     list_dyn.assert_called_once()
     norm.assert_called_once()
     db.add.assert_called_once()
@@ -152,8 +152,8 @@ def test_skip_duplicate_external_id(monkeypatch) -> None:
     ):
         out = svc.sync_bilibili_feed(db, force=True)
 
-    assert out["success"] is True
-    assert out["new_items"] == 0
+    assert out.success is True
+    assert out.extra["new_items"] == 0
     db.add.assert_not_called()
     client.close.assert_called_once()
 
@@ -220,8 +220,8 @@ def test_integrity_error_on_race_does_not_explode(monkeypatch) -> None:
     ):
         out = svc.sync_bilibili_feed(db, force=True)
 
-    assert out["success"] is True
-    assert out["new_items"] == 1
+    assert out.success is True
+    assert out.extra["new_items"] == 1
     assert db.add.call_count == 2
     assert db.begin_nested.call_count == 2
     assert flush_calls["n"] == 2
@@ -258,9 +258,9 @@ def test_api_error_success_false(monkeypatch) -> None:
     ):
         out = svc.sync_bilibili_feed(db, force=True)
 
-    assert out["success"] is False
-    assert out["new_items"] == 0
-    assert out.get("errors")
-    assert "风控" in out["message"]
+    assert out.success is False
+    assert out.extra["new_items"] == 0
+    assert out.extra.get("errors")
+    assert "风控" in out.message
     meta.assert_called_once()
     client.close.assert_called_once()

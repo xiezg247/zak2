@@ -6,15 +6,16 @@ import json
 import os
 import time
 from contextlib import suppress
-from typing import Any, cast
+from typing import cast
 
 import redis
 
+from app.schemas.market import EmotionCycleOut
 from app.services.quotes import get_quote_store
 
 CACHE_KEY = "zak2:emotion_cycle:v1"
 
-_mem: tuple[float, dict[str, Any]] | None = None
+_mem: tuple[float, EmotionCycleOut] | None = None
 
 
 def cache_ttl_sec() -> int:
@@ -33,7 +34,7 @@ def _redis_client() -> redis.Redis | None:
     return store._conn()
 
 
-def cache_get() -> dict[str, Any] | None:
+def cache_get() -> EmotionCycleOut | None:
     global _mem
     client = _redis_client()
     if client is not None:
@@ -42,7 +43,7 @@ def cache_get() -> dict[str, Any] | None:
             if raw:
                 parsed = json.loads(cast(str, raw))
                 if isinstance(parsed, dict):
-                    return parsed
+                    return EmotionCycleOut(**parsed)
         except (redis.RedisError, TypeError, ValueError, json.JSONDecodeError):
             return None
         return None
@@ -55,16 +56,16 @@ def cache_get() -> dict[str, Any] | None:
     return None
 
 
-def cache_set(payload: dict) -> None:
+def cache_set(payload: EmotionCycleOut) -> None:
     global _mem
     ttl = cache_ttl_sec()
     client = _redis_client()
     if client is not None:
         with suppress(redis.RedisError):
-            client.setex(CACHE_KEY, ttl, json.dumps(payload, ensure_ascii=False))
+            client.setex(CACHE_KEY, ttl, json.dumps(payload.model_dump(mode="json"), ensure_ascii=False))
         return
 
-    _mem = (time.monotonic() + ttl, dict(payload))
+    _mem = (time.monotonic() + ttl, payload)
 
 
 def cache_invalidate() -> None:

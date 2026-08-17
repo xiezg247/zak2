@@ -5,12 +5,12 @@ from __future__ import annotations
 import os
 import time
 from datetime import date, datetime
-from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.time import china_today
+from app.schemas.ops import SyncResult
 from app.services import bar_download as bars
 from app.services import tushare_client as ts
 from app.services.bar_download import INTERVAL_1M, download_minute_bars, get_overview_row
@@ -116,24 +116,26 @@ def _empty_result(
     pool_size: int = 0,
     lookback_days: int | None = None,
     max_symbols: int | None = None,
-) -> dict[str, Any]:
-    return {
-        "success": success,
-        "skipped": skipped,
-        "pool_size": pool_size,
-        "downloaded": 0,
-        "bars_added": 0,
-        "failed": [],
-        "with_daily": 0,
-        "with_1m": 0,
-        "missing_1m": 0,
-        "lookback_days": lookback_days if lookback_days is not None else _lookback_days(),
-        "max_symbols": max_symbols if max_symbols is not None else _max_symbols(),
-        "message": message,
-    }
+) -> SyncResult:
+    return SyncResult(
+        success=success,
+        skipped=skipped,
+        message=message,
+        extra={
+            "pool_size": pool_size,
+            "downloaded": 0,
+            "bars_added": 0,
+            "failed": [],
+            "with_daily": 0,
+            "with_1m": 0,
+            "missing_1m": 0,
+            "lookback_days": lookback_days if lookback_days is not None else _lookback_days(),
+            "max_symbols": max_symbols if max_symbols is not None else _max_symbols(),
+        },
+    )
 
 
-def fill_focus_pool_minute(db: Session) -> dict[str, Any]:
+def fill_focus_pool_minute(db: Session) -> SyncResult:
     lookback = _lookback_days()
     max_n = _max_symbols()
     try:
@@ -189,17 +191,18 @@ def fill_focus_pool_minute(db: Session) -> dict[str, Any]:
         f"daily={with_daily} 1m={with_1m} missing_1m={missing_1m}"
     )
     save_job_run_meta(db, JOB_ID, last_message=msg, last_success=True)
-    return {
-        "success": True,
-        "skipped": False,
-        "pool_size": len(pool),
-        "downloaded": downloaded,
-        "bars_added": bars_added,
-        "failed": failed,
-        "with_daily": with_daily,
-        "with_1m": with_1m,
-        "missing_1m": missing_1m,
-        "lookback_days": lookback,
-        "max_symbols": max_n,
-        "message": msg,
-    }
+    return SyncResult(
+        success=True,
+        message=msg,
+        extra={
+            "pool_size": len(pool),
+            "downloaded": downloaded,
+            "bars_added": bars_added,
+            "failed": failed,
+            "with_daily": with_daily,
+            "with_1m": with_1m,
+            "missing_1m": missing_1m,
+            "lookback_days": lookback,
+            "max_symbols": max_n,
+        },
+    )

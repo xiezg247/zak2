@@ -103,8 +103,8 @@ def test_fill_watchlist_no_token() -> None:
         patch.object(ops_bars_fill, "save_job_run_meta"),
     ):
         out = ops_bars_fill.fill_watchlist_bars(db)
-    assert out["success"] is False
-    assert "未配置" in out["message"]
+    assert out.success is False
+    assert "未配置" in out.message
 
 
 def test_batch_download_universe_empty(monkeypatch) -> None:
@@ -116,8 +116,8 @@ def test_batch_download_universe_empty(monkeypatch) -> None:
         patch.object(ops_bars_fill, "save_job_run_meta"),
     ):
         out = ops_bars_fill.batch_download_universe(db)
-    assert out["success"] is False
-    assert "列表" in out["message"] or "universe" in out["message"].lower()
+    assert out.success is False
+    assert "列表" in out.message or "universe" in out.message.lower()
 
 
 def test_batch_download_universe_respects_max(monkeypatch) -> None:
@@ -143,10 +143,10 @@ def test_batch_download_universe_respects_max(monkeypatch) -> None:
         patch.object(ops_bars_fill, "save_job_run_meta"),
     ):
         out = ops_bars_fill.batch_download_universe(db)
-    assert out["attempted"] == 1
-    assert out["bars_added"] == 2
+    assert out.extra["attempted"] == 1
+    assert out.extra["bars_added"] == 2
     assert dl.call_count == 1
-    assert "尚余 1 只下次继续" in out["message"]
+    assert "尚余 1 只下次继续" in out.message
 
 
 def test_batch_download_universe_prefers_missing_over_start_late(monkeypatch) -> None:
@@ -173,7 +173,7 @@ def test_batch_download_universe_prefers_missing_over_start_late(monkeypatch) ->
         patch.object(ops_bars_fill, "save_job_run_meta"),
     ):
         out = ops_bars_fill.batch_download_universe(db)
-    assert out["attempted"] == 1
+    assert out.extra["attempted"] == 1
     dl.assert_called_once()
     assert dl.call_args.kwargs["symbol"] == "300750"
     assert dl.call_args.kwargs["exchange"] == "SZSE"
@@ -197,6 +197,6 @@ def test_batch_fill_stale_respects_max(monkeypatch) -> None:
     ):
         out = ops_bars_fill.batch_fill_stale(db)
     listed.assert_called_once()
-    assert out["attempted"] == 2
-    assert out["bars_added"] == 6
-    assert out["success"] is True
+    assert out.extra["attempted"] == 2
+    assert out.extra["bars_added"] == 6
+    assert out.success is True

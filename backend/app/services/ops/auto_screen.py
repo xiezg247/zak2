@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.repositories import screener as repo
+from app.schemas.ops import SyncResult
 from app.schemas.screener import RecipeRunRequest
 from app.services.engine import run_recipe_screen
 from app.services.ops.scheduler import load_scheduler_config, save_job_run_meta
@@ -26,13 +25,13 @@ def _run_auto_screen(
     config_attr: str,
     default_recipe: str,
     label: str,
-) -> dict[str, Any]:
+) -> SyncResult:
     """对当前用户跑配方选股并写入历史。
 
     Web「立即执行」视为 force：不校验交易时段（与桌面 force 语义接近）。
     """
     if not user_id:
-        return {"success": False, "message": "缺少用户", "skipped": False}
+        return SyncResult(success=False, message="缺少用户")
 
     cfg = (load_scheduler_config(db).get("config") or {}).get(config_attr) or {}
     if not isinstance(cfg, dict):
@@ -52,7 +51,7 @@ def _run_auto_screen(
     except HTTPException as exc:
         message = str(exc.detail)
         save_job_run_meta(db, job_id, last_message=message, last_success=False)
-        return {"success": False, "message": message}
+        return SyncResult(success=False, message=message)
 
     run = repo.ScreenerRunRepository(db, user_id).save_run(
         condition=str(result.get("condition") or label),
@@ -64,15 +63,14 @@ def _run_auto_screen(
         f"（扫描 {result.get('total_scanned')}，run={run.id}）"
     )
     save_job_run_meta(db, job_id, last_message=message, last_success=True)
-    return {
-        "success": True,
-        "message": message,
-        "run_id": run.id,
-        "row_count": result.get("row_count"),
-    }
+    return SyncResult(
+        success=True,
+        message=message,
+        extra={"run_id": run.id, "row_count": result.get("row_count")},
+    )
 
 
-def screen_intraday(db: Session, *, user_id: str) -> dict[str, Any]:
+def screen_intraday(db: Session, *, user_id: str) -> SyncResult:
     return _run_auto_screen(
         db,
         user_id=user_id,
@@ -83,7 +81,7 @@ def screen_intraday(db: Session, *, user_id: str) -> dict[str, Any]:
     )
 
 
-def screen_post_close(db: Session, *, user_id: str) -> dict[str, Any]:
+def screen_post_close(db: Session, *, user_id: str) -> SyncResult:
     return _run_auto_screen(
         db,
         user_id=user_id,

@@ -50,9 +50,9 @@ def test_sync_sw_success() -> None:
         patch.object(svc, "save_job_run_meta"),
     ):
         out = svc.sync_stock_industry(db)
-    assert out["success"] is True
-    assert out["count"] == 1
-    assert out["source"] == "sw2021_l2"
+    assert out.success is True
+    assert out.extra["count"] == 1
+    assert out.extra["source"] == "sw2021_l2"
     q.assert_called_once()
     assert db.execute.call_count >= 2
     db.commit.assert_called()
@@ -73,9 +73,9 @@ def test_sync_fallback_stock_basic() -> None:
         patch.object(svc, "save_job_run_meta"),
     ):
         out = svc.sync_stock_industry(db)
-    assert out["success"] is True
-    assert out["source"] == "stock_basic"
-    assert out["count"] == 1
+    assert out.success is True
+    assert out.extra["source"] == "stock_basic"
+    assert out.extra["count"] == 1
 
 
 def test_sync_no_token() -> None:
@@ -85,8 +85,8 @@ def test_sync_no_token() -> None:
         patch.object(svc, "save_job_run_meta"),
     ):
         out = svc.sync_stock_industry(db)
-    assert out["success"] is False
-    assert "未配置" in out["message"]
+    assert out.success is False
+    assert "未配置" in out.message
 
 
 def test_sync_empty_fail() -> None:
@@ -97,5 +97,5 @@ def test_sync_empty_fail() -> None:
         patch.object(svc, "save_job_run_meta"),
     ):
         out = svc.sync_stock_industry(db)
-    assert out["success"] is False
-    assert "无有效" in out["message"]
+    assert out.success is False
+    assert "无有效" in out.message

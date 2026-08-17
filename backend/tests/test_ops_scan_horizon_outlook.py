@@ -37,11 +37,11 @@ def test_horizon_writes_rows() -> None:
         patch.object(m, "upsert_predict") as upsert_p,
     ):
         out = m.scan_horizon_outlook(db)
-    assert out["success"] is True
-    assert out["skipped"] is False
-    assert out["written"] == 1
-    assert out["predict_written"] == 1
-    assert out["strategy_key"] == "resonance_heuristic"
+    assert out.success is True
+    assert out.skipped is False
+    assert out.extra["written"] == 1
+    assert out.extra["predict_written"] == 1
+    assert out.extra["strategy_key"] == "resonance_heuristic"
     upsert.assert_called_once()
     upsert_p.assert_called_once()
     save.assert_called_once()
@@ -66,9 +66,9 @@ def test_horizon_empty_still_success() -> None:
         patch.object(m, "upsert_predict") as upsert_p,
     ):
         out = m.scan_horizon_outlook(db)
-    assert out["success"] is True
-    assert out["skipped"] is False
-    assert out["written"] == 0
+    assert out.success is True
+    assert out.skipped is False
+    assert out.extra["written"] == 0
     upsert.assert_called_once()
     upsert_p.assert_called_once()
     assert save.call_args.kwargs["last_success"] is True
@@ -101,8 +101,8 @@ def test_horizon_predict_phase_failure_still_success() -> None:
         patch.object(m, "upsert_predict") as upsert_p,
     ):
         out = m.scan_horizon_outlook(db)
-    assert out["success"] is True
-    assert out.get("predict_error")
-    assert "predict_error" in (out.get("message") or "")
+    assert out.success is True
+    assert out.extra.get("predict_error")
+    assert "predict_error" in (out.message or "")
     upsert.assert_called_once()
     upsert_p.assert_not_called()

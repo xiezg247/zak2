@@ -2,17 +2,27 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+from app.schemas.team import (
+    AgentScore,
+    TeamBars,
+    TeamEmotion,
+    TeamFinancial,
+    TeamPrefetch,
+    TeamRisk,
+    TeamScores,
+    TeamStrategy,
+)
 from app.services import team_orchestrator
 
-_PREFETCH = {
-    "vt_symbol": "600519.SSE",
-    "name": "茅台",
-    "financial": {"pe_ttm": 20},
-    "risk": {"volatility_annualized_pct": 22, "max_drawdown_pct": 18},
-    "strategy": {"ma_alignment": "均线多头排列", "signal": "buy", "emotion_stage": "startup"},
-    "emotion": {"stage": "startup", "stage_label": "启动"},
-    "bars": {"count": 60},
-}
+_PREFETCH = TeamPrefetch(
+    vt_symbol="600519.SSE",
+    name="茅台",
+    financial=TeamFinancial(pe_ttm=20),
+    risk=TeamRisk(volatility_annualized_pct=22, max_drawdown_pct=18),
+    strategy=TeamStrategy(ma_alignment="均线多头排列", signal="buy", emotion_stage="startup"),
+    emotion=TeamEmotion(stage="startup", stage_label="启动"),
+    bars=TeamBars(count=60),
+)
 
 
 def test_stream_team_analysis_error_symbol() -> None:
@@ -103,13 +113,13 @@ def test_stream_team_deep_analyst_fallback() -> None:
 
 def test_fallback_report() -> None:
     text = team_orchestrator._fallback_report(
-        {"vt_symbol": "1.SSE", "name": "测", "emotion": {"stage_label": "启动"}},
-        {
-            "weighted": 66,
-            "financial": {"summary": "估值中性"},
-            "risk": {"summary": "波动可控"},
-            "strategy": {"summary": "偏多"},
-        },
+        TeamPrefetch(vt_symbol="1.SSE", name="测", emotion=TeamEmotion(stage_label="启动")),
+        TeamScores(
+            weighted=66,
+            financial=AgentScore(summary="估值中性"),
+            risk=AgentScore(summary="波动可控"),
+            strategy=AgentScore(summary="偏多"),
+        ),
     )
     assert "加权分" in text
     assert "启动" in text

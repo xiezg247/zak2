@@ -13,8 +13,8 @@ def test_enrich_skips_without_token() -> None:
         patch("app.services.ops.enrich_quotes.save_job_run_meta") as save_meta,
     ):
         out = m.enrich_market_quotes(db)
-    assert out["skipped"] is True
-    assert "TUSHARE" in out["message"] or "未配置" in out["message"]
+    assert out.skipped is True
+    assert "TUSHARE" in out.message or "未配置" in out.message
     save_meta.assert_called_once()
 
 
@@ -28,7 +28,7 @@ def test_enrich_skips_when_redis_unavailable() -> None:
         patch("app.services.ops.enrich_quotes.save_job_run_meta") as save_meta,
     ):
         out = m.enrich_market_quotes(db)
-    assert out["skipped"] is True
+    assert out.skipped is True
     save_meta.assert_called_once()
 
 
@@ -61,8 +61,8 @@ def test_enrich_applies_patches_from_tushare() -> None:
         patch("app.services.ops.enrich_quotes.redis.Redis.from_url", return_value=client) as from_url,
     ):
         out = m.enrich_market_quotes(db)
-    assert out["success"] is True
-    assert out.get("skipped") is not True
+    assert out.success is True
+    assert out.skipped is not True
     from_url.assert_called_once()
     assert ap.called
     assert ap.call_args.args[0] is client
@@ -87,8 +87,8 @@ def test_enrich_skips_when_tushare_empty() -> None:
         patch("app.services.ops.enrich_quotes.redis.Redis.from_url") as from_url,
     ):
         out = m.enrich_market_quotes(db)
-    assert out["skipped"] is True
-    assert "因子" in out["message"] or "Tushare" in out["message"]
+    assert out.skipped is True
+    assert "因子" in out.message or "Tushare" in out.message
     save_meta.assert_called_once()
     from_url.assert_not_called()
 
@@ -113,8 +113,8 @@ def test_enrich_skips_when_no_quote_keys() -> None:
         patch("app.services.ops.enrich_quotes.redis.Redis.from_url", return_value=client),
     ):
         out = m.enrich_market_quotes(db)
-    assert out["skipped"] is True
-    assert "行情键" in out["message"] or "collector" in out["message"]
+    assert out.skipped is True
+    assert "行情键" in out.message or "collector" in out.message
     save_meta.assert_called_once()
     client.close.assert_called_once()
 
