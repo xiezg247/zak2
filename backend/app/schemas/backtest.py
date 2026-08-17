@@ -20,6 +20,7 @@ class BacktestRunOut(BaseModel):
     trade_count: int | None = None
     source: str
     batch_id: str | None = None
+    # vnpy 回测引擎的动态输出（指标名/曲线点/成交记录随策略变化），保留开放结构。
     statistics: dict[str, Any] = Field(default_factory=dict)
     created_at: str
     equity_curve: list[dict[str, Any]] = Field(default_factory=list)

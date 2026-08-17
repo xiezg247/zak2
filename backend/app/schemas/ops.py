@@ -5,19 +5,64 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
+class HealthPostgresOut(BaseModel):
+    ok: bool
+    error: str = ""
+    url: str = ""
+
+
+class HealthRedisOut(BaseModel):
+    ok: bool
+    url: str = ""
+    updated_at: str | None = None
+    quote_count: int = 0
+
+
+class HealthLlmOut(BaseModel):
+    configured: bool
+    model: str = ""
+    api_base: str = ""
+
+
+class HealthMcpOut(BaseModel):
+    configured: bool = False
+    enabled: bool = False
+    status: str = ""
+    tool_count: int = 0
+    tools: list[str] = Field(default_factory=list)
+    error: str | None = None
+
+
+class HealthSchedulerLockOut(BaseModel):
+    ok: bool = False
+    backend: str = "redis"
+    ttl_seconds: int = 0
+    key_prefix: str = ""
+
+
+class HealthCollectorOut(BaseModel):
+    running: bool = False
+    provider: str | None = None
+    status: str | None = None
+    last_count: int = 0
+    ts: str | None = None
+    hint: str | None = None
+
+
 class HealthOut(BaseModel):
-    postgres: dict[str, Any]
-    redis: dict[str, Any]
-    llm: dict[str, Any]
+    postgres: HealthPostgresOut
+    redis: HealthRedisOut
+    llm: HealthLlmOut
     tushare_configured: bool
-    mcp: dict[str, Any] = Field(default_factory=dict)
-    scheduler_lock: dict[str, Any] = Field(default_factory=dict)
-    quote_collector: dict[str, Any] = Field(default_factory=dict)
+    mcp: HealthMcpOut = Field(default_factory=HealthMcpOut)
+    scheduler_lock: HealthSchedulerLockOut = Field(default_factory=HealthSchedulerLockOut)
+    quote_collector: HealthCollectorOut = Field(default_factory=HealthCollectorOut)
     note: str = ""
 
 
 class SchedulerConfigOut(BaseModel):
     id: str
+    # 按 job config_attr 动态分组的配置（键为 job id，值为 cron/enabled 等），结构随 job 扩展。
     config: dict[str, Any]
     updated_at: str | None = None
 
@@ -63,6 +108,7 @@ class SyncResult(BaseModel):
     success: bool = True
     message: str
     skipped: bool = False
+    # 各任务自由附加的计数/明细（written/synced/rows…），保留开放结构。
     extra: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -86,6 +132,7 @@ class McpToolOut(BaseModel):
     name: str
     agent_name: str
     description: str = ""
+    # 第三方 MCP 工具声明的 JSON Schema，结构由远端决定，保留原始对象。
     input_schema: dict[str, Any] = Field(default_factory=dict)
 
 

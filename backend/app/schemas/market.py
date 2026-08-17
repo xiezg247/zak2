@@ -5,12 +5,23 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class EmotionSnapshot(BaseModel):
+    """市场情绪快照（market.load_emotion 产出的固定结构）。"""
+
+    trade_date: str
+    max_limit_times: int
+    max_board_vt_symbol: str
+    linked_board_count: int
+    linked_board_vt_symbols: list[str] = Field(default_factory=list)
+    updated_at: str
+
+
 class MarketOverview(BaseModel):
     redis_available: bool
     quote_count: int
     updated_at: str | None = None
-    emotion: dict[str, Any] | None = None
-    emotion_cycle: dict[str, Any] | None = None
+    emotion: EmotionSnapshot | None = None
+    emotion_cycle: EmotionCycleOut | None = None
     ranks_available: list[str] = Field(default_factory=list)
 
 
@@ -49,6 +60,23 @@ class EmotionThresholdsPut(BaseModel):
     hysteresis_enabled: bool | None = None
 
 
+class EmotionCycleInputs(BaseModel):
+    """情绪周期判定输入（build_emotion_cycle 的 inputs 子结构）。"""
+
+    limit_up_count: int = 0
+    limit_down_count: int = 0
+    up_ratio: float = 0.0
+    total_amount: float = 0.0
+    max_limit_times: int = 0
+    limit_ladder_depth: int = 0
+    prev_leader_limit_down: bool = False
+    limit_break_rate: float | None = None
+    index_above_ma5: bool | None = None
+    fear_greed_index: float = 0.0
+    fear_greed_source: str = ""
+    sample_size: int = 0
+
+
 class EmotionCycleOut(BaseModel):
     stage: str
     stage_label: str
@@ -62,7 +90,7 @@ class EmotionCycleOut(BaseModel):
     source: str = ""
     trade_date: str | None = None
     raw_stage: str | None = None
-    inputs: dict[str, Any] = Field(default_factory=dict)
+    inputs: EmotionCycleInputs = Field(default_factory=EmotionCycleInputs)
 
 
 class RankRow(BaseModel):
@@ -105,6 +133,7 @@ class RadarCardOut(BaseModel):
     source: str  # cache | synthesized
     computed_at: str = ""
     empty_message: str = ""
+    # 异构卡片行：不同 card_id 行结构不同（板块/连板/涨幅榜/放量/龙头…），前端按 card_id 渲染，故保留开放结构。
     rows: list[dict[str, Any]] = Field(default_factory=list)
 
 
