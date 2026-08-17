@@ -1293,7 +1293,7 @@ onUnmounted(() => {
         <div class="summary-grid">
           <div class="pos-form risk-card">
             <h3>仓位与风控</h3>
-            <div class="risk-summary muted" v-if="riskSummary">
+            <div v-if="riskSummary" class="risk-summary muted">
               <span>实际仓位 {{ formatPctRatio(riskSummary.actual_position_pct) }}</span>
               <button
                 v-if="riskSummary.off_plan_count > 0"
@@ -1366,7 +1366,7 @@ onUnmounted(() => {
           <div class="pos-form plan-card">
             <h3>
               当日计划
-              <span class="muted" v-if="riskSummary?.active_plan_date">
+              <span v-if="riskSummary?.active_plan_date" class="muted">
                 {{ riskSummary.active_plan_date }}
               </span>
             </h3>
@@ -1390,7 +1390,7 @@ onUnmounted(() => {
 
         <div class="strategy-head">
           <h2>策略看盘</h2>
-          <span class="muted" v-if="board">
+          <span v-if="board" class="muted">
             {{ board.config_key }} · {{ board.signal_mode || signalMode }} · {{ board.source }} ·
             as_of
             {{ board.as_of || '—' }}
@@ -1435,7 +1435,7 @@ onUnmounted(() => {
         <p v-if="boardError" class="err">{{ boardError }}</p>
         <p v-else-if="board?.note" class="muted">{{ board.note }}</p>
 
-        <div class="strategy-grid" v-if="board">
+        <div v-if="board" class="strategy-grid">
           <div class="panel">
             <h3>
               信号区
@@ -1454,7 +1454,7 @@ onUnmounted(() => {
                 </button>
                 <button type="button" class="primary" @click="addToSignalPanel()">加入</button>
               </div>
-              <div class="chips" v-if="panelSymbols.length">
+              <div v-if="panelSymbols.length" class="chips">
                 <span v-for="vt in panelSymbols" :key="vt" class="chip-tag">
                   <button type="button" class="chip-link" @click="selectVt(vt)">{{ vt }}</button>
                   <button type="button" class="link" @click="removeFromSignalPanel(vt)">×</button>

@@ -47,13 +47,13 @@ async function onSubmit() {
         </div>
         <label>
           用户名
-          <input class="input-field" v-model="username" autocomplete="username" required />
+          <input v-model="username" class="input-field" autocomplete="username" required />
         </label>
         <label>
           密码
           <input
-            class="input-field"
             v-model="password"
+            class="input-field"
             type="password"
             autocomplete="current-password"
             required

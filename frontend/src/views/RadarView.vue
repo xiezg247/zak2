@@ -422,7 +422,7 @@ onMounted(() => {
         <button class="ghost" type="button" @click="sideOpen = !sideOpen">
           {{ sideOpen ? '收起共振' : '展开共振' }}
         </button>
-        <span class="muted source-hint" v-if="active"
+        <span v-if="active" class="muted source-hint"
           >来源 {{ active.source }} · {{ active.computed_at || active.subtitle || '—' }}</span
         >
       </div>
@@ -698,17 +698,17 @@ onMounted(() => {
               >
                 <div class="title">{{ c.title }}</div>
                 <div class="meta muted">{{ c.rows.length }} 行 · {{ c.source }}</div>
-                <div class="preview muted" v-if="c.empty_message && !c.rows.length">
+                <div v-if="c.empty_message && !c.rows.length" class="preview muted">
                   {{ c.empty_message }}
                 </div>
-                <div class="preview" v-else-if="c.rows[0]">{{ rowLabel(c.rows[0]) }}</div>
+                <div v-else-if="c.rows[0]" class="preview">{{ rowLabel(c.rows[0]) }}</div>
               </button>
             </div>
           </template>
 
-          <section class="detail" v-if="active">
+          <section v-if="active" class="detail">
             <h2>{{ active.title }}</h2>
-            <p class="muted" v-if="active.subtitle || active.empty_message">
+            <p v-if="active.subtitle || active.empty_message" class="muted">
               {{ active.subtitle }} {{ active.empty_message }}
             </p>
             <p v-if="detailMsg" class="detail-msg">{{ detailMsg }}</p>

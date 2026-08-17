@@ -358,7 +358,7 @@ onUnmounted(() => {
 <template>
   <AppShell title="市场" :subtitle="subtitle" active="market">
     <div class="page">
-      <section class="cards" v-if="overview">
+      <section v-if="overview" class="cards">
         <div class="card">
           <div class="k">Redis</div>
           <div class="v status-line">
@@ -367,7 +367,7 @@ onUnmounted(() => {
           </div>
           <div class="s muted">{{ overview.updated_at || '—' }}</div>
         </div>
-        <div class="card cycle-card" v-if="overview.emotion_cycle">
+        <div v-if="overview.emotion_cycle" class="card cycle-card">
           <div class="k">情绪周期</div>
           <div class="cycle-head">
             <div class="v">{{ overview.emotion_cycle.stage_label }}</div>
@@ -384,7 +384,7 @@ onUnmounted(() => {
               · {{ overview.emotion_cycle.allowed_mode_labels.join('/') }}
             </template>
           </div>
-          <div class="s warn" v-for="(w, i) in overview.emotion_cycle.warnings" :key="i">
+          <div v-for="(w, i) in overview.emotion_cycle.warnings" :key="i" class="s warn">
             {{ w }}
           </div>
           <div class="cycle-actions">
@@ -399,7 +399,7 @@ onUnmounted(() => {
               阈值
             </button>
           </div>
-          <div class="s muted" v-if="cycleInputsOpen && overview.emotion_cycle.inputs">
+          <div v-if="cycleInputsOpen && overview.emotion_cycle.inputs" class="s muted">
             涨停 {{ overview.emotion_cycle.inputs.limit_up_count ?? '—' }} · 跌停
             {{ overview.emotion_cycle.inputs.limit_down_count ?? '—' }} · 最高板
             {{ overview.emotion_cycle.inputs.max_limit_times ?? '—' }}
@@ -414,7 +414,7 @@ onUnmounted(() => {
             >
           </div>
         </div>
-        <div class="card" v-else>
+        <div v-else class="card">
           <div class="k">情绪周期</div>
           <div class="v muted">暂无数据</div>
           <p class="s muted empty-cycle-hint">
@@ -422,7 +422,7 @@ onUnmounted(() => {
             <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
           </p>
         </div>
-        <div class="card" v-if="overview.emotion">
+        <div v-if="overview.emotion" class="card">
           <div class="k">连板情绪</div>
           <div class="v">最高 {{ overview.emotion.max_limit_times }} 板</div>
           <div class="s muted">
@@ -430,7 +430,7 @@ onUnmounted(() => {
             {{ overview.emotion.linked_board_count }}
           </div>
         </div>
-        <div class="card" v-else>
+        <div v-else class="card">
           <div class="k">连板情绪</div>
           <div class="v muted">暂无数据</div>
         </div>
@@ -573,7 +573,7 @@ onUnmounted(() => {
           </table>
         </div>
 
-        <aside class="detail" v-if="selected">
+        <aside v-if="selected" class="detail">
           <div class="detail-head">
             <div class="detail-id">
               <strong>{{ selected.name || selected.vt_symbol }}</strong>

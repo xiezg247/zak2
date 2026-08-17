@@ -956,7 +956,7 @@ onMounted(async () => {
       </section>
 
       <section class="right">
-        <div class="toolbar" v-if="current">
+        <div v-if="current" class="toolbar">
           <strong>{{ current.condition }}</strong>
           <span class="muted">扫描 {{ current.total_scanned }} · 命中 {{ current.row_count }}</span>
         </div>
@@ -1145,7 +1145,7 @@ onMounted(async () => {
           </table>
         </div>
 
-        <div class="industry" v-if="industry.length">
+        <div v-if="industry.length" class="industry">
           <h3>行业分布</h3>
           <div class="chips">
             <span v-for="item in industry.slice(0, 12)" :key="item.industry" class="chip">

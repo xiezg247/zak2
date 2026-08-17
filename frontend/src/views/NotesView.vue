@@ -268,7 +268,7 @@ onMounted(async () => {
               <input v-model="draftEntry" placeholder="追加一条流水" @keyup.enter="addEntry" />
               <button class="ghost" type="button" @click="addEntry">添加</button>
             </div>
-            <div class="entry" v-for="e in entries" :key="e.id">
+            <div v-for="e in entries" :key="e.id" class="entry">
               <div class="meta muted">{{ e.created_at }}</div>
               <div>{{ e.body }}</div>
               <button class="link" type="button" @click="removeEntry(e.id)">删</button>

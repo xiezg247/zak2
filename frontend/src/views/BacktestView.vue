@@ -339,7 +339,7 @@ onMounted(async () => {
   <AppShell title="回测" :subtitle="subtitle" active="backtest">
     <div class="page">
       <p class="engine-tag muted">vnpy CTA · 日 K / 1 分钟</p>
-      <section class="profiles" v-if="profiles.length">
+      <section v-if="profiles.length" class="profiles">
         <button
           v-for="p in profiles"
           :key="p.profile_id"
@@ -403,7 +403,7 @@ onMounted(async () => {
             <label>开始<input v-model="startDate" type="date" /></label>
             <label>结束<input v-model="endDate" type="date" /></label>
           </div>
-          <div class="row2" v-if="mode !== 'optimize'">
+          <div v-if="mode !== 'optimize'" class="row2">
             <label>快均线<input v-model.number="fast" type="number" min="2" /></label>
             <label>慢均线<input v-model.number="slow" type="number" min="3" /></label>
           </div>
@@ -411,7 +411,7 @@ onMounted(async () => {
             <label>快均线候选<input v-model="optFastSpace" placeholder="3,5,8,10" /></label>
             <label>慢均线候选<input v-model="optSlowSpace" placeholder="10,20,30,60" /></label>
           </template>
-          <div class="row2" v-if="strategy === 'trend_ma' && mode !== 'optimize'">
+          <div v-if="strategy === 'trend_ma' && mode !== 'optimize'" class="row2">
             <label>ADX 周期<input v-model.number="adxPeriod" type="number" min="2" /></label>
             <label
               >ADX 阈值<input v-model.number="adxThreshold" type="number" min="0" step="0.1"
@@ -499,8 +499,8 @@ onMounted(async () => {
             <h2>
               {{ selected.vt_symbol }} · {{ selected.strategy }}
               <span class="muted"> · {{ selected.interval === '1m' ? '1m' : '日 K' }}</span>
-              <span class="muted" v-if="selected.engine"> · {{ selected.engine }}</span>
-              <span class="muted" v-if="selected.status === 'failed'"> · 失败</span>
+              <span v-if="selected.engine" class="muted"> · {{ selected.engine }}</span>
+              <span v-if="selected.status === 'failed'" class="muted"> · 失败</span>
             </h2>
             <p v-if="selected.interval === '1m'" class="hint muted">
               分钟回测：夏普/年化等仍按引擎日度统计口径，解读时注意样本跨度。
@@ -535,29 +535,29 @@ onMounted(async () => {
                 <div class="k">成交</div>
                 <div class="v">{{ selected.trade_count ?? '—' }}</div>
               </div>
-              <div class="stat" v-if="numStat('annual_return') != null">
+              <div v-if="numStat('annual_return') != null" class="stat">
                 <div class="k">年化%</div>
                 <div class="v">{{ numStat('annual_return')!.toFixed(2) }}</div>
               </div>
-              <div class="stat" v-if="numStat('return_std') != null">
+              <div v-if="numStat('return_std') != null" class="stat">
                 <div class="k">波动%</div>
                 <div class="v">{{ numStat('return_std')!.toFixed(2) }}</div>
               </div>
-              <div class="stat" v-if="numStat('win_rate') != null">
+              <div v-if="numStat('win_rate') != null" class="stat">
                 <div class="k">胜率</div>
                 <div class="v">{{ numStat('win_rate')!.toFixed(2) }}</div>
               </div>
-              <div class="stat" v-if="numStat('profit_loss_ratio') != null">
+              <div v-if="numStat('profit_loss_ratio') != null" class="stat">
                 <div class="k">盈亏比</div>
                 <div class="v">{{ numStat('profit_loss_ratio')!.toFixed(2) }}</div>
               </div>
             </div>
-            <div class="chart" v-if="spark">
+            <div v-if="spark" class="chart">
               <svg viewBox="0 0 360 120" preserveAspectRatio="none">
                 <polyline fill="none" stroke="var(--brand)" stroke-width="2" :points="spark" />
               </svg>
             </div>
-            <div class="table-wrap" v-if="selected.trades?.length">
+            <div v-if="selected.trades?.length" class="table-wrap">
               <div class="table-head">
                 <span>成交明细</span>
                 <button
@@ -620,9 +620,9 @@ onMounted(async () => {
                   <tr
                     v-for="r in compare"
                     :key="r.id"
-                    @click="openRun(r.id)"
                     class="click"
                     :class="{ on: optimizeSummary?.best?.id === r.id }"
+                    @click="openRun(r.id)"
                   >
                     <td class="mono">{{ r.vt_symbol }}</td>
                     <td>{{ r.status === 'failed' ? r.error_message || '失败' : '成功' }}</td>

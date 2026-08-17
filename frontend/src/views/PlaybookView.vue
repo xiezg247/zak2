@@ -244,7 +244,7 @@ onMounted(() => {
         </article>
       </div>
 
-      <section class="plans" v-if="livePlans.length || historyPlans.length">
+      <section v-if="livePlans.length || historyPlans.length" class="plans">
         <div class="plans-head">
           <h2>交易计划</h2>
           <span class="plans-meta muted">
@@ -275,11 +275,11 @@ onMounted(() => {
             <template v-if="editingId === p.id">
               <label class="field">
                 仓位上限 %
-                <input type="number" v-model.number="editMaxPct" min="1" max="100" step="1" />
+                <input v-model.number="editMaxPct" type="number" min="1" max="100" step="1" />
               </label>
               <label class="field">
                 备注
-                <input type="text" v-model="editNotes" />
+                <input v-model="editNotes" type="text" />
               </label>
               <div v-if="editSymbols.length" class="syms">
                 <span v-for="vt in editSymbols" :key="vt" class="chip">
@@ -344,7 +344,7 @@ onMounted(() => {
             {{ historyOpen ? '收起历史' : `历史（${historyPlans.length}）` }}
           </button>
           <template v-if="historyOpen">
-            <div class="plan history-item" v-for="p in historyPlans" :key="p.id">
+            <div v-for="p in historyPlans" :key="p.id" class="plan history-item">
               <div class="plan-head">
                 <div class="plan-title">
                   <strong class="mono">{{ p.trade_date }}</strong>

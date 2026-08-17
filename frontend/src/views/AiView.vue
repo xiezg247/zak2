@@ -388,7 +388,7 @@ onMounted(async () => {
         </aside>
 
         <section class="right">
-          <div class="msgs" ref="listEl">
+          <div ref="listEl" class="msgs">
             <div v-for="m in messages" :key="m.id" class="bubble" :class="m.role">
               <div class="role">{{ m.role === 'user' ? '我' : '助手' }}</div>
               <pre>{{ m.content }}</pre>
@@ -442,7 +442,7 @@ onMounted(async () => {
                 formatArgs(p)
               }}</pre>
               <p v-if="p.detail" class="err">{{ p.detail }}</p>
-              <div class="confirm-actions" v-if="p.status === 'pending'">
+              <div v-if="p.status === 'pending'" class="confirm-actions">
                 <button
                   type="button"
                   class="primary"

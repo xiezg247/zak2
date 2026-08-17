@@ -2,14 +2,9 @@
 import { computed } from 'vue'
 import MarkdownIt from 'markdown-it'
 
-const props = withDefaults(
-  defineProps<{
-    source: string
-  }>(),
-  {
-    source: '',
-  },
-)
+const props = withDefaults(defineProps<{ source?: string }>(), {
+  source: '',
+})
 
 const md = new MarkdownIt({
   html: false,
@@ -22,6 +17,8 @@ const rendered = computed(() => md.render(props.source || ''))
 </script>
 
 <template>
+  <!-- markdown-it 已设 html:false，原始 HTML 会被转义，无 XSS 风险 -->
+  <!-- eslint-disable-next-line vue/no-v-html -->
   <div class="markdown" v-html="rendered"></div>
 </template>
 
