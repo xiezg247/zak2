@@ -94,7 +94,12 @@ function logout() {
       </div>
 
       <nav class="side-nav" aria-label="主导航">
-        <div v-for="(group, gi) in navGroups" :key="group.title" class="nav-group" :class="{ spaced: gi > 0 }">
+        <div
+          v-for="(group, gi) in navGroups"
+          :key="group.title"
+          class="nav-group"
+          :class="{ spaced: gi > 0 }"
+        >
           <p class="nav-group-title">{{ group.title }}</p>
           <ul class="nav-list">
             <li v-for="item in group.items" :key="item.key">
@@ -102,7 +107,11 @@ function logout() {
                 class="nav-item"
                 :class="{ 'nav-item-active': active === item.key, muted: !item.enabled }"
                 :to="item.enabled ? item.to : '#'"
-                @click="(e) => { if (!item.enabled) e.preventDefault() }"
+                @click="
+                  (e) => {
+                    if (!item.enabled) e.preventDefault()
+                  }
+                "
               >
                 <span class="nav-main">
                   <NavIcon :name="item.key" />

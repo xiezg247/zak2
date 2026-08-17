@@ -289,7 +289,9 @@ function rowLabel(row: Record<string, unknown>) {
   return String(row.name || row.vt_symbol || row.tf_symbol || row.sector_id || '—')
 }
 
-function sealLabel(row: Record<string, unknown> | { seal_time_label?: string; first_time?: string }) {
+function sealLabel(
+  row: Record<string, unknown> | { seal_time_label?: string; first_time?: string },
+) {
   const label = String(row.seal_time_label || '').trim()
   if (label) return label
   const ft = String((row as { first_time?: string }).first_time || '').trim()
@@ -352,11 +354,7 @@ async function createPlanDraft() {
   }
 }
 
-async function addWatchTo(
-  vt: string,
-  name: string | undefined,
-  msg: { value: string },
-) {
+async function addWatchTo(vt: string, name: string | undefined, msg: { value: string }) {
   if (!vt || actingVt.value) return
   actingVt.value = vt
   msg.value = ''
@@ -413,26 +411,31 @@ onMounted(() => {
         <span v-if="loading" class="muted">加载中…</span>
         <button class="primary" type="button" @click="goLeaderScreen">龙头选股 → Hub</button>
         <button class="ghost" type="button" @click="goResonanceScreen">共振选股 → Hub</button>
-        <button class="ghost" type="button" :disabled="draftBusy || loading" @click="createPlanDraft">
+        <button
+          class="ghost"
+          type="button"
+          :disabled="draftBusy || loading"
+          @click="createPlanDraft"
+        >
           生成次日计划草案
         </button>
         <button class="ghost" type="button" @click="sideOpen = !sideOpen">
           {{ sideOpen ? '收起共振' : '展开共振' }}
         </button>
-        <span class="muted source-hint" v-if="active">来源 {{ active.source }} · {{ active.computed_at || active.subtitle || '—' }}</span>
+        <span class="muted source-hint" v-if="active"
+          >来源 {{ active.source }} · {{ active.computed_at || active.subtitle || '—' }}</span
+        >
       </div>
       <p v-if="error" class="err">{{ error }}</p>
       <p v-if="draftMsg" class="draft-msg">
         {{ draftMsg }}
-        <RouterLink v-if="draftMsg.startsWith('已写入')" to="/playbook" class="draft-link">去守则看计划</RouterLink>
+        <RouterLink v-if="draftMsg.startsWith('已写入')" to="/playbook" class="draft-link"
+          >去守则看计划</RouterLink
+        >
       </p>
       <p v-if="rowActionMsg" class="draft-msg">
         {{ rowActionMsg }}
-        <RouterLink
-          v-if="rowActionMsg.includes('草案')"
-          to="/playbook"
-          class="draft-link"
-        >
+        <RouterLink v-if="rowActionMsg.includes('草案')" to="/playbook" class="draft-link">
           去守则看计划
         </RouterLink>
       </p>
@@ -452,7 +455,8 @@ onMounted(() => {
           <p v-if="horizonErr" class="horizon-err">{{ horizonErr }}</p>
           <template v-else-if="horizonHasCache">
             <p v-if="horizon?.empty" class="muted">
-              上次扫描无达标共振标的（扫描 {{ horizon.scanned_total }} · 入选 {{ horizon.refined_total }}）。
+              上次扫描无达标共振标的（扫描 {{ horizon.scanned_total }} · 入选
+              {{ horizon.refined_total }}）。
             </p>
             <div v-else-if="horizon?.rows.length" class="table-wrap horizon-table">
               <table>
@@ -477,18 +481,26 @@ onMounted(() => {
                     <td class="mono">{{ row.resonance_score.toFixed(1) }}</td>
                     <td>{{ row.card_count }}</td>
                     <td class="mono muted">
-                      <template v-if="row.change_pct != null">涨幅 {{ row.change_pct.toFixed(2) }}%</template>
+                      <template v-if="row.change_pct != null"
+                        >涨幅 {{ row.change_pct.toFixed(2) }}%</template
+                      >
                       <template v-if="row.last_price != null">
                         <template v-if="row.change_pct != null"> · </template>
                         现价 {{ row.last_price.toFixed(2) }}
                       </template>
                       <template v-if="row.card_titles.length">
-                        <template v-if="row.change_pct != null || row.last_price != null"> · </template>
+                        <template v-if="row.change_pct != null || row.last_price != null">
+                          ·
+                        </template>
                         {{ row.card_titles.join(' / ') }}
                       </template>
                       <template v-if="sealLabel(row)">
                         <template
-                          v-if="row.change_pct != null || row.last_price != null || row.card_titles.length"
+                          v-if="
+                            row.change_pct != null ||
+                            row.last_price != null ||
+                            row.card_titles.length
+                          "
                         >
                           ·
                         </template>
@@ -554,7 +566,8 @@ onMounted(() => {
           <p v-if="predictErr" class="horizon-err">{{ predictErr }}</p>
           <template v-else-if="predictHasCache">
             <p v-if="predict?.empty" class="muted">
-              上次预测无入选行（候选 {{ predict.scanned_total }} · 缺日 K {{ predict.kline_missing }}）。
+              上次预测无入选行（候选 {{ predict.scanned_total }} · 缺日 K
+              {{ predict.kline_missing }}）。
             </p>
             <div v-else-if="predict?.rows.length" class="table-wrap horizon-table">
               <table>
@@ -636,7 +649,14 @@ onMounted(() => {
           <template v-else>
             <div v-if="cards.length" class="card-tools">
               <div class="chips">
-                <button type="button" class="chip" :class="{ on: !sourceChip }" @click="sourceChip = ''">全部</button>
+                <button
+                  type="button"
+                  class="chip"
+                  :class="{ on: !sourceChip }"
+                  @click="sourceChip = ''"
+                >
+                  全部
+                </button>
                 <button
                   v-for="s in sourceOptions"
                   :key="s"
@@ -650,9 +670,20 @@ onMounted(() => {
               </div>
               <div class="row filter-row">
                 <input v-model="cardFilter" placeholder="过滤标题/来源" />
-                <button type="button" class="ghost" :class="{ on: !cardSortKey }" @click="clearCardSort">默认序</button>
-                <button type="button" class="ghost" @click="toggleCardSort('title')">标题{{ cardSortMark('title') }}</button>
-                <button type="button" class="ghost" @click="toggleCardSort('rows')">行数{{ cardSortMark('rows') }}</button>
+                <button
+                  type="button"
+                  class="ghost"
+                  :class="{ on: !cardSortKey }"
+                  @click="clearCardSort"
+                >
+                  默认序
+                </button>
+                <button type="button" class="ghost" @click="toggleCardSort('title')">
+                  标题{{ cardSortMark('title') }}
+                </button>
+                <button type="button" class="ghost" @click="toggleCardSort('rows')">
+                  行数{{ cardSortMark('rows') }}
+                </button>
               </div>
             </div>
             <p v-if="cards.length && !displayedCards.length" class="muted empty-main">无匹配卡片</p>
@@ -667,7 +698,9 @@ onMounted(() => {
               >
                 <div class="title">{{ c.title }}</div>
                 <div class="meta muted">{{ c.rows.length }} 行 · {{ c.source }}</div>
-                <div class="preview muted" v-if="c.empty_message && !c.rows.length">{{ c.empty_message }}</div>
+                <div class="preview muted" v-if="c.empty_message && !c.rows.length">
+                  {{ c.empty_message }}
+                </div>
                 <div class="preview" v-else-if="c.rows[0]">{{ rowLabel(c.rows[0]) }}</div>
               </button>
             </div>
@@ -699,11 +732,17 @@ onMounted(() => {
                     <td class="mono muted">
                       <template v-if="row.leader_tier">
                         {{ row.leader_tier }} · 评分 {{ Number(row.leader_score || 0).toFixed(0) }}
-                        <template v-if="row.limit_times != null"> · {{ row.limit_times }}板</template>
+                        <template v-if="row.limit_times != null">
+                          · {{ row.limit_times }}板</template
+                        >
                         <template v-if="sealLabel(row)"> · {{ sealLabel(row) }}</template>
                       </template>
-                      <template v-else-if="row.change_pct != null">涨幅 {{ Number(row.change_pct).toFixed(2) }}%</template>
-                      <template v-else-if="row.net_flow_yi != null">净流入 {{ Number(row.net_flow_yi).toFixed(2) }} 亿</template>
+                      <template v-else-if="row.change_pct != null"
+                        >涨幅 {{ Number(row.change_pct).toFixed(2) }}%</template
+                      >
+                      <template v-else-if="row.net_flow_yi != null"
+                        >净流入 {{ Number(row.net_flow_yi).toFixed(2) }} 亿</template
+                      >
                       <template v-else-if="row.limit_times != null">
                         {{ row.limit_times }} 板
                         <template v-if="sealLabel(row)"> · {{ sealLabel(row) }}</template>
@@ -722,8 +761,12 @@ onMounted(() => {
                         >
                           加自选
                         </button>
-                        <button type="button" class="tiny-btn" @click="openInWatchlist(rowVt(row))">在自选打开</button>
-                        <button type="button" class="tiny-btn" @click="openInNotes(rowVt(row))">去笔记</button>
+                        <button type="button" class="tiny-btn" @click="openInWatchlist(rowVt(row))">
+                          在自选打开
+                        </button>
+                        <button type="button" class="tiny-btn" @click="openInNotes(rowVt(row))">
+                          去笔记
+                        </button>
                       </template>
                       <template v-else>—</template>
                     </td>
@@ -771,12 +814,16 @@ onMounted(() => {
               >
                 保存
               </button>
-              <button class="ghost" type="button" :disabled="weightBusy" @click="resetWeights">恢复默认</button>
+              <button class="ghost" type="button" :disabled="weightBusy" @click="resetWeights">
+                恢复默认
+              </button>
             </div>
           </div>
           <p v-if="sideMsg" class="side-msg">{{ sideMsg }}</p>
           <button class="primary full" type="button" @click="goLeaderScreen">龙头选股 → Hub</button>
-          <button class="ghost full" type="button" @click="goResonanceScreen">共振选股 → Hub</button>
+          <button class="ghost full" type="button" @click="goResonanceScreen">
+            共振选股 → Hub
+          </button>
           <input
             v-if="resonance.length"
             v-model="resonanceFilter"
@@ -851,7 +898,10 @@ onMounted(() => {
   padding: 7px 12px;
   font-size: 0.8125rem;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 .ghost:hover:not(:disabled) {
   background: var(--brand-light);
@@ -1021,7 +1071,10 @@ onMounted(() => {
   display: grid;
   gap: 5px;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .card:hover {
   border-color: var(--brand-soft);
@@ -1215,7 +1268,9 @@ tbody tr:hover td {
   display: grid;
   gap: 6px;
   background: var(--surface);
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 .side-row:hover {
   border-color: var(--brand-soft);

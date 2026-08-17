@@ -192,9 +192,7 @@ export type EmotionThresholds = {
   is_default: boolean
 }
 
-export type EmotionThresholdsPatch = Partial<
-  Omit<EmotionThresholds, 'is_default'>
->
+export type EmotionThresholdsPatch = Partial<Omit<EmotionThresholds, 'is_default'>>
 
 export type PlanDraftOut = {
   plan_id: string
@@ -212,7 +210,9 @@ export const marketApi = {
   ranks: (field = 'change_pct', topN = 50) =>
     api<RankRow[]>(`/api/v1/market/ranks?field=${encodeURIComponent(field)}&top_n=${topN}`),
   sectorDates: () => api<string[]>('/api/v1/sectors/dates'),
-  sectorFlow: (opts: { kind?: string; trade_date?: string; sort?: string; limit?: number } = {}) => {
+  sectorFlow: (
+    opts: { kind?: string; trade_date?: string; sort?: string; limit?: number } = {},
+  ) => {
     const q = new URLSearchParams()
     q.set('kind', opts.kind || 'industry')
     q.set('sort', opts.sort || 'net_flow_yi')

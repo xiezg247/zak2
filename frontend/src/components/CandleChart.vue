@@ -57,7 +57,11 @@ const layout = computed(() => {
   const w = props.width
   const h = props.height
   const chartH = h - volH - pad.top - pad.bottom
-  const empty = { candles: [] as CandleGeom[], labels: [] as { x: number; text: string }[], midY: pad.top + chartH }
+  const empty = {
+    candles: [] as CandleGeom[],
+    labels: [] as { x: number; text: string }[],
+    midY: pad.top + chartH,
+  }
   if (data.length === 0) return empty
 
   const maxP = Math.max(...data.map((b) => b.high))
@@ -113,7 +117,13 @@ const last = computed(() => (props.bars.length ? props.bars[props.bars.length - 
       />
       <template v-for="(c, i) in layout.candles" :key="i">
         <line :x1="c.x" :y1="c.yH" :x2="c.x" :y2="c.yL" :stroke="c.color" stroke-width="1" />
-        <rect :x="c.x - c.bodyW / 2" :y="c.bodyY" :width="c.bodyW" :height="c.bodyH" :fill="c.color" />
+        <rect
+          :x="c.x - c.bodyW / 2"
+          :y="c.bodyY"
+          :width="c.bodyW"
+          :height="c.bodyH"
+          :fill="c.color"
+        />
         <rect
           :x="c.x - c.bodyW / 2"
           :y="c.volY"

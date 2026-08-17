@@ -246,8 +246,12 @@ onMounted(async () => {
         <section v-if="selected" class="right">
           <h2 class="mono">{{ selected }}</h2>
           <div class="tabs">
-            <button type="button" :class="{ on: tab === 'memo' }" @click="tab = 'memo'">备忘/流水</button>
-            <button type="button" :class="{ on: tab === 'reports' }" @click="tab = 'reports'">研报</button>
+            <button type="button" :class="{ on: tab === 'memo' }" @click="tab = 'memo'">
+              备忘/流水
+            </button>
+            <button type="button" :class="{ on: tab === 'reports' }" @click="tab = 'reports'">
+              研报
+            </button>
           </div>
 
           <template v-if="tab === 'memo'">
@@ -255,7 +259,9 @@ onMounted(async () => {
               备忘
               <textarea v-model="draftMemo" rows="8" />
             </label>
-            <button class="primary" type="button" :disabled="saving" @click="saveMemo">保存备忘</button>
+            <button class="primary" type="button" :disabled="saving" @click="saveMemo">
+              保存备忘
+            </button>
 
             <h3>流水</h3>
             <div class="row">
@@ -278,7 +284,9 @@ onMounted(async () => {
           <template v-else>
             <p v-if="!reports.length" class="muted">
               暂无研报。
-              <RouterLink :to="{ path: '/ai', query: { symbol: selected } }">去 AI 跑投研团队</RouterLink>
+              <RouterLink :to="{ path: '/ai', query: { symbol: selected } }"
+                >去 AI 跑投研团队</RouterLink
+              >
             </p>
             <template v-else>
               <input v-model="reportFilter" class="filter" placeholder="过滤标题/摘要" />

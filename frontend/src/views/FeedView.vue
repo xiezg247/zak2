@@ -189,7 +189,8 @@ onMounted(() => {
   <AppShell title="信息流" :subtitle="subtitle" active="feed">
     <div class="page">
       <p class="hint muted">
-        左侧可 mid 直填，或关键词搜索后点选添加 UP 订阅；可选「并同步」立即拉取动态。批量同步仍可由 Ops「B站订阅同步」或内嵌定时（`sync_bilibili_feed`，需
+        左侧可 mid 直填，或关键词搜索后点选添加 UP 订阅；可选「并同步」立即拉取动态。批量同步仍可由
+        Ops「B站订阅同步」或内嵌定时（`sync_bilibili_feed`，需
         <code>BILIBILI_COOKIES</code>）。
       </p>
       <p v-if="error" class="err">{{ error }}</p>
@@ -206,7 +207,9 @@ onMounted(() => {
           </label>
           <div class="row">
             <input v-model="searchQ" placeholder="关键词搜 UP" @keyup.enter="runSearch" />
-            <button type="button" class="ghost" :disabled="searching" @click="runSearch">搜索</button>
+            <button type="button" class="ghost" :disabled="searching" @click="runSearch">
+              搜索
+            </button>
           </div>
           <div v-if="searchHits.length" class="hits">
             <div v-for="h in searchHits" :key="h.mid" class="hit-row">
@@ -216,7 +219,9 @@ onMounted(() => {
                 <div class="hit-name">{{ h.name || h.mid }}</div>
                 <div class="muted tiny-text">mid {{ h.mid }}</div>
               </div>
-              <button type="button" class="tiny" :disabled="adding" @click="addFromHit(h)">添加</button>
+              <button type="button" class="tiny" :disabled="adding" @click="addFromHit(h)">
+                添加
+              </button>
             </div>
           </div>
           <p v-else-if="searchTried && !searching" class="muted tiny-text">无搜索结果</p>
@@ -233,13 +238,17 @@ onMounted(() => {
             <input v-model="enabledOnly" type="checkbox" />
             仅启用
           </label>
-          <button type="button" class="sub" :class="{ on: !subId }" @click="subId = ''">全部</button>
+          <button type="button" class="sub" :class="{ on: !subId }" @click="subId = ''">
+            全部
+          </button>
           <p v-if="subs.length && !displayedSubs.length" class="muted tiny-text">无匹配订阅</p>
           <div v-for="s in displayedSubs" :key="s.id" class="sub-row">
             <button type="button" class="sub" :class="{ on: subId === s.id }" @click="subId = s.id">
               {{ s.display_name || s.source_id }}
             </button>
-            <button type="button" class="tiny" @click="toggleSub(s)">{{ s.enabled ? '开' : '关' }}</button>
+            <button type="button" class="tiny" @click="toggleSub(s)">
+              {{ s.enabled ? '开' : '关' }}
+            </button>
             <button type="button" class="tiny danger" @click="removeSub(s)">删</button>
           </div>
         </aside>

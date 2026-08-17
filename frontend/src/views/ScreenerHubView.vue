@@ -86,7 +86,11 @@ function rowScore(row: Record<string, unknown>): number | null {
   return null
 }
 
-function cmpNullable(a: number | null | undefined, b: number | null | undefined, dir: 'asc' | 'desc'): number {
+function cmpNullable(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  dir: 'asc' | 'desc',
+): number {
   const aMissing = a == null || Number.isNaN(a)
   const bMissing = b == null || Number.isNaN(b)
   if (aMissing && bMissing) return 0
@@ -708,9 +712,15 @@ onMounted(async () => {
     <div class="workspace">
       <section class="left">
         <div class="tabs">
-          <button :class="{ on: tab === 'condition' }" type="button" @click="tab = 'condition'">条件选股</button>
-          <button :class="{ on: tab === 'recipe' }" type="button" @click="tab = 'recipe'">多因子配方</button>
-          <button :class="{ on: tab === 'pattern' }" type="button" @click="tab = 'pattern'">形态</button>
+          <button :class="{ on: tab === 'condition' }" type="button" @click="tab = 'condition'">
+            条件选股
+          </button>
+          <button :class="{ on: tab === 'recipe' }" type="button" @click="tab = 'recipe'">
+            多因子配方
+          </button>
+          <button :class="{ on: tab === 'pattern' }" type="button" @click="tab = 'pattern'">
+            形态
+          </button>
           <button :class="{ on: tab === 'peer' }" type="button" @click="tab = 'peer'">对标</button>
         </div>
 
@@ -746,7 +756,12 @@ onMounted(async () => {
           <label>
             内置配方
             <select v-model="selectedRecipe">
-              <option v-for="r in recipes" :key="r.recipe_id" :value="r.recipe_id" :disabled="!r.implemented">
+              <option
+                v-for="r in recipes"
+                :key="r.recipe_id"
+                :value="r.recipe_id"
+                :disabled="!r.implemented"
+              >
                 {{ r.name }}
               </option>
             </select>
@@ -788,7 +803,12 @@ onMounted(async () => {
                 >
                   保存
                 </button>
-                <button class="ghost" type="button" :disabled="weightBusy" @click="resetRecipeWeights">
+                <button
+                  class="ghost"
+                  type="button"
+                  :disabled="weightBusy"
+                  @click="resetRecipeWeights"
+                >
                   恢复默认
                 </button>
               </div>
@@ -806,7 +826,10 @@ onMounted(async () => {
             </select>
           </label>
           <p class="hint muted">
-            {{ patterns.find((p) => p.pattern_id === selectedPattern)?.description || 'Redis 行情池 ∩ 日 K' }}
+            {{
+              patterns.find((p) => p.pattern_id === selectedPattern)?.description ||
+              'Redis 行情池 ∩ 日 K'
+            }}
           </p>
           <label>
             扫描上限
@@ -818,7 +841,9 @@ onMounted(async () => {
             标杆代码
             <input v-model="peerSymbol" placeholder="600519.SSE" @keyup.enter="runScreen" />
           </label>
-          <p class="hint muted">同业 30% + 估值 25% + 近5日动量 15% + 近20日动量 15% + 换手 15%（需 Tushare）</p>
+          <p class="hint muted">
+            同业 30% + 估值 25% + 近5日动量 15% + 近20日动量 15% + 换手 15%（需 Tushare）
+          </p>
         </div>
 
         <div class="block">
@@ -845,11 +870,7 @@ onMounted(async () => {
               <p v-else-if="!industryOptions.length" class="hint muted">
                 暂无行业数据，请先同步行业映射
               </p>
-              <label
-                v-for="name in industryOptions"
-                :key="name"
-                class="industry-check"
-              >
+              <label v-for="name in industryOptions" :key="name" class="industry-check">
                 <input
                   type="checkbox"
                   :checked="isIndustrySelected(name)"
@@ -991,12 +1012,7 @@ onMounted(async () => {
                 </button>
               </div>
             </div>
-            <p
-              v-if="!diff.added.length && !diff.removed.length"
-              class="muted tip"
-            >
-              无新增或移除
-            </p>
+            <p v-if="!diff.added.length && !diff.removed.length" class="muted tip">无新增或移除</p>
           </div>
         </div>
 
@@ -1016,15 +1032,23 @@ onMounted(async () => {
                 <th>代码</th>
                 <th>名称</th>
                 <th>行业</th>
-                <th class="sortable" @click="toggleSort('last_price')">现价{{ sortMark('last_price') }}</th>
-                <th class="sortable" @click="toggleSort('change_pct')">涨幅%{{ sortMark('change_pct') }}</th>
-                <th class="sortable" @click="toggleSort('turnover_rate')">换手%{{ sortMark('turnover_rate') }}</th>
+                <th class="sortable" @click="toggleSort('last_price')">
+                  现价{{ sortMark('last_price') }}
+                </th>
+                <th class="sortable" @click="toggleSort('change_pct')">
+                  涨幅%{{ sortMark('change_pct') }}
+                </th>
+                <th class="sortable" @click="toggleSort('turnover_rate')">
+                  换手%{{ sortMark('turnover_rate') }}
+                </th>
                 <th>连板</th>
                 <th>分层</th>
                 <th>PE</th>
                 <th>市值亿</th>
                 <th>净流入万</th>
-                <th class="sortable" @click="toggleSort('volume_ratio')">量比{{ sortMark('volume_ratio') }}</th>
+                <th class="sortable" @click="toggleSort('volume_ratio')">
+                  量比{{ sortMark('volume_ratio') }}
+                </th>
                 <th class="sortable" @click="toggleSort('score')">得分{{ sortMark('score') }}</th>
                 <th>形态说明</th>
                 <th></th>
@@ -1050,7 +1074,9 @@ onMounted(async () => {
                 <td>{{ Number(row.turnover_rate || 0).toFixed(2) }}</td>
                 <td>
                   {{ row.limit_times != null ? Number(row.limit_times).toFixed(0) : '—' }}
-                  <span v-if="rowSealLabel(row)" class="muted seal-tag"> · {{ rowSealLabel(row) }}</span>
+                  <span v-if="rowSealLabel(row)" class="muted seal-tag">
+                    · {{ rowSealLabel(row) }}</span
+                  >
                 </td>
                 <td>{{ row.leader_tier_label || row.leader_tier || '—' }}</td>
                 <td>{{ row.pe_ttm != null ? Number(row.pe_ttm).toFixed(2) : '—' }}</td>
@@ -1089,7 +1115,10 @@ onMounted(async () => {
                 <td
                   class="hint-cell"
                   :title="
-                    [row.pattern_hint || row.hit_reason || '', isRadarLeader ? rowSealLabel(row) : '']
+                    [
+                      row.pattern_hint || row.hit_reason || '',
+                      isRadarLeader ? rowSealLabel(row) : '',
+                    ]
                       .filter(Boolean)
                       .join(' · ') || ''
                   "
@@ -1097,7 +1126,9 @@ onMounted(async () => {
                   <template v-if="row.pattern_hint || row.hit_reason">
                     {{ row.pattern_hint || row.hit_reason }}
                   </template>
-                  <template v-else-if="isRadarLeader && rowSealLabel(row)">{{ rowSealLabel(row) }}</template>
+                  <template v-else-if="isRadarLeader && rowSealLabel(row)">{{
+                    rowSealLabel(row)
+                  }}</template>
                   <template v-else>—</template>
                 </td>
                 <td class="row-actions">
@@ -1167,7 +1198,9 @@ onMounted(async () => {
   border-radius: 0.5rem;
   padding: 8px;
   font-size: 0.8125rem;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 .tabs button:hover {
   color: var(--ink);
@@ -1291,7 +1324,9 @@ input {
   gap: 2px;
   margin-bottom: 6px;
   position: relative;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 .hist:hover {
   border-color: var(--brand-soft);

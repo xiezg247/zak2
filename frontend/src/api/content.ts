@@ -143,7 +143,10 @@ export const contentApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  patchPlan: (id: string, body: { notes?: string; max_position_pct?: number; symbols?: string[] }) =>
+  patchPlan: (
+    id: string,
+    body: { notes?: string; max_position_pct?: number; symbols?: string[] },
+  ) =>
     api<Plan>(`/api/v1/playbook/plans/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(body),

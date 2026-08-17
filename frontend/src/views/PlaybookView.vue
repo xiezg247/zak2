@@ -3,12 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import AppShell from '../components/AppShell.vue'
 import MarkdownView from '../components/MarkdownView.vue'
 import { confirmDialog } from '../lib/dialog'
-import {
-  contentApi,
-  type DisciplineCheck,
-  type Plan,
-  type PlaybookSection,
-} from '../api/content'
+import { contentApi, type DisciplineCheck, type Plan, type PlaybookSection } from '../api/content'
 
 const sections = ref<PlaybookSection[]>([])
 const activeId = ref('')
@@ -27,11 +22,15 @@ const editSymbols = ref<string[]>([])
 const symbolDraft = ref('')
 const acting = ref(false)
 
-const active = computed(() => sections.value.find((s) => s.section_id === activeId.value) || sections.value[0])
+const active = computed(
+  () => sections.value.find((s) => s.section_id === activeId.value) || sections.value[0],
+)
 const livePlans = computed(() => plans.value.filter((p) => p.status !== 'abandoned'))
 const historyPlans = computed(() => plans.value.filter((p) => p.status === 'abandoned'))
 const doneCount = computed(() => checks.value.filter((c) => c.checked).length)
-const donePct = computed(() => (checks.value.length ? Math.round((doneCount.value / checks.value.length) * 100) : 0))
+const donePct = computed(() =>
+  checks.value.length ? Math.round((doneCount.value / checks.value.length) * 100) : 0,
+)
 
 async function load() {
   error.value = ''
@@ -74,7 +73,9 @@ async function saveSection() {
   if (!active.value) return
   saving.value = true
   try {
-    const updated = await contentApi.updateSection(active.value.section_id, { body_md: draft.value })
+    const updated = await contentApi.updateSection(active.value.section_id, {
+      body_md: draft.value,
+    })
     sections.value = sections.value.map((s) => (s.section_id === updated.section_id ? updated : s))
     editing.value = false
   } catch (e) {
@@ -120,8 +121,7 @@ async function saveEdit(id: string) {
     const plan = plans.value.find((p) => p.id === id)
     const current = plan?.symbols.map((s) => s.vt_symbol) ?? []
     const next = [...editSymbols.value]
-    const symbolsChanged =
-      current.length !== next.length || current.some((vt, i) => vt !== next[i])
+    const symbolsChanged = current.length !== next.length || current.some((vt, i) => vt !== next[i])
     const pct = Math.min(100, Math.max(1, Number(editMaxPct.value) || 1))
     editMaxPct.value = pct
     const body: { notes: string; max_position_pct: number; symbols?: string[] } = {
@@ -227,7 +227,13 @@ onMounted(() => {
               <button class="ghost" type="button" @click="editing = !editing">
                 {{ editing ? '取消' : '编辑' }}
               </button>
-              <button v-if="editing" class="primary" type="button" :disabled="saving" @click="saveSection">
+              <button
+                v-if="editing"
+                class="primary"
+                type="button"
+                :disabled="saving"
+                @click="saveSection"
+              >
                 {{ saving ? '保存中…' : '保存' }}
               </button>
             </div>
@@ -242,7 +248,9 @@ onMounted(() => {
         <div class="plans-head">
           <h2>交易计划</h2>
           <span class="plans-meta muted">
-            {{ livePlans.length }} 条进行中{{ historyPlans.length ? ` · 历史 ${historyPlans.length}` : '' }}
+            {{ livePlans.length }} 条进行中{{
+              historyPlans.length ? ` · 历史 ${historyPlans.length}` : ''
+            }}
           </span>
         </div>
 
@@ -280,18 +288,28 @@ onMounted(() => {
                 </span>
               </div>
               <div class="add-row">
-                <input v-model="symbolDraft" placeholder="代码 如 600519.SSE" @keydown.enter.prevent="addSymbol" />
+                <input
+                  v-model="symbolDraft"
+                  placeholder="代码 如 600519.SSE"
+                  @keydown.enter.prevent="addSymbol"
+                />
                 <button type="button" class="ghost" @click="addSymbol">添加</button>
               </div>
               <div class="actions">
-                <button type="button" class="primary" :disabled="acting" @click="saveEdit(p.id)">保存</button>
-                <button type="button" class="ghost" :disabled="acting" @click="cancelEdit">取消</button>
+                <button type="button" class="primary" :disabled="acting" @click="saveEdit(p.id)">
+                  保存
+                </button>
+                <button type="button" class="ghost" :disabled="acting" @click="cancelEdit">
+                  取消
+                </button>
               </div>
             </template>
 
             <template v-else>
               <div v-if="p.symbols.length" class="syms">
-                <span v-for="s in p.symbols" :key="s.vt_symbol" class="chip mono">{{ s.vt_symbol }}</span>
+                <span v-for="s in p.symbols" :key="s.vt_symbol" class="chip mono">{{
+                  s.vt_symbol
+                }}</span>
               </div>
               <p v-else class="empty-hint muted">暂无标的</p>
               <p v-if="p.notes" class="notes">{{ p.notes }}</p>
@@ -305,8 +323,17 @@ onMounted(() => {
                 >
                   激活
                 </button>
-                <button type="button" class="ghost" :disabled="acting" @click="startEdit(p)">编辑</button>
-                <button type="button" class="ghost danger" :disabled="acting" @click="abandon(p.id)">废弃</button>
+                <button type="button" class="ghost" :disabled="acting" @click="startEdit(p)">
+                  编辑
+                </button>
+                <button
+                  type="button"
+                  class="ghost danger"
+                  :disabled="acting"
+                  @click="abandon(p.id)"
+                >
+                  废弃
+                </button>
               </div>
             </template>
           </div>
@@ -325,7 +352,9 @@ onMounted(() => {
                 </div>
               </div>
               <div v-if="p.symbols.length" class="syms">
-                <span v-for="s in p.symbols" :key="s.vt_symbol" class="chip mono">{{ s.vt_symbol }}</span>
+                <span v-for="s in p.symbols" :key="s.vt_symbol" class="chip mono">{{
+                  s.vt_symbol
+                }}</span>
               </div>
               <p v-if="p.notes" class="notes muted">{{ p.notes }}</p>
             </div>
@@ -451,7 +480,9 @@ onMounted(() => {
   border: 1.5px solid var(--line);
   background: var(--surface);
   position: relative;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 .check-box::after {
   content: '';
@@ -475,7 +506,9 @@ onMounted(() => {
 .check-label {
   font-size: 0.875rem;
   line-height: 1.4;
-  transition: color 0.15s ease, opacity 0.15s ease;
+  transition:
+    color 0.15s ease,
+    opacity 0.15s ease;
 }
 .check.done .check-label {
   color: var(--ink-faint);
@@ -504,7 +537,9 @@ onMounted(() => {
   color: var(--ink-muted);
   padding: 7px 12px;
   font-size: 0.8125rem;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 .tabs button:hover {
   color: var(--ink);
@@ -752,7 +787,11 @@ textarea:focus {
   padding: 7px 12px;
   font-size: 0.8125rem;
   font-weight: 500;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
 }
 .ghost {
   background: var(--surface);

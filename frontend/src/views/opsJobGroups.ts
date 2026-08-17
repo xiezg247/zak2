@@ -17,7 +17,9 @@ export function filterJobs(jobs: SchedulerJob[], filter: JobFilter): SchedulerJo
   return jobs.filter((j) => j.job_kind === filter)
 }
 
-export function groupJobs(jobs: SchedulerJob[]): { kind: JobKind; title: string; items: SchedulerJob[] }[] {
+export function groupJobs(
+  jobs: SchedulerJob[],
+): { kind: JobKind; title: string; items: SchedulerJob[] }[] {
   return KIND_ORDER.map((kind) => ({
     kind,
     title: KIND_TITLE[kind],

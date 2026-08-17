@@ -17,7 +17,11 @@ const listFilter = ref('')
 const sortKey = ref<SortKey>(null)
 const sortDir = ref<'asc' | 'desc'>('desc')
 
-function cmpNullable(a: number | null | undefined, b: number | null | undefined, dir: 'asc' | 'desc'): number {
+function cmpNullable(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  dir: 'asc' | 'desc',
+): number {
   const aMissing = a == null || Number.isNaN(a)
   const bMissing = b == null || Number.isNaN(b)
   if (aMissing && bMissing) return 0
@@ -122,15 +126,31 @@ onMounted(async () => {
         <div class="control-group">
           <span class="control-label">板块</span>
           <div class="tabs">
-            <button type="button" :class="{ on: kind === 'concept' }" @click="kind = 'concept'">概念</button>
-            <button type="button" :class="{ on: kind === 'industry' }" @click="kind = 'industry'">行业</button>
+            <button type="button" :class="{ on: kind === 'concept' }" @click="kind = 'concept'">
+              概念
+            </button>
+            <button type="button" :class="{ on: kind === 'industry' }" @click="kind = 'industry'">
+              行业
+            </button>
           </div>
         </div>
         <div class="control-group">
           <span class="control-label">排序</span>
           <div class="tabs">
-            <button type="button" :class="{ on: sort === 'net_flow_yi' }" @click="sort = 'net_flow_yi'">净流入</button>
-            <button type="button" :class="{ on: sort === 'change_pct' }" @click="sort = 'change_pct'">涨幅</button>
+            <button
+              type="button"
+              :class="{ on: sort === 'net_flow_yi' }"
+              @click="sort = 'net_flow_yi'"
+            >
+              净流入
+            </button>
+            <button
+              type="button"
+              :class="{ on: sort === 'change_pct' }"
+              @click="sort = 'change_pct'"
+            >
+              涨幅
+            </button>
           </div>
         </div>
         <div class="control-group">
@@ -146,8 +166,12 @@ onMounted(async () => {
 
       <div v-if="rows.length" class="filter-row">
         <input v-model="listFilter" placeholder="过滤名称/ID" />
-        <span v-if="sortKey" class="muted tiny">已按 {{ sortKey === 'net_flow_yi' ? '净流入' : '涨幅' }} 排序</span>
-        <button type="button" class="ghost" :class="{ on: !sortKey }" @click="clearSort">默认序</button>
+        <span v-if="sortKey" class="muted tiny"
+          >已按 {{ sortKey === 'net_flow_yi' ? '净流入' : '涨幅' }} 排序</span
+        >
+        <button type="button" class="ghost" :class="{ on: !sortKey }" @click="clearSort">
+          默认序
+        </button>
       </div>
 
       <p v-if="loading" class="muted">加载中…</p>
@@ -163,8 +187,12 @@ onMounted(async () => {
             <tr>
               <th class="col-rank">#</th>
               <th>名称</th>
-              <th class="sortable" @click="toggleSort('change_pct')">涨幅%{{ sortMark('change_pct') }}</th>
-              <th class="sortable col-flow" @click="toggleSort('net_flow_yi')">净流入(亿){{ sortMark('net_flow_yi') }}</th>
+              <th class="sortable" @click="toggleSort('change_pct')">
+                涨幅%{{ sortMark('change_pct') }}
+              </th>
+              <th class="sortable col-flow" @click="toggleSort('net_flow_yi')">
+                净流入(亿){{ sortMark('net_flow_yi') }}
+              </th>
               <th class="col-id">ID</th>
             </tr>
           </thead>
@@ -186,7 +214,9 @@ onMounted(async () => {
                       :style="{ width: flowBarWidth(r.net_flow_yi) }"
                     ></span>
                   </span>
-                  <span class="flow-value mono">{{ r.net_flow_yi > 0 ? '+' : '' }}{{ r.net_flow_yi.toFixed(2) }}</span>
+                  <span class="flow-value mono"
+                    >{{ r.net_flow_yi > 0 ? '+' : '' }}{{ r.net_flow_yi.toFixed(2) }}</span
+                  >
                 </div>
               </td>
               <td class="mono muted col-id">{{ r.sector_id }}</td>
@@ -236,7 +266,10 @@ onMounted(async () => {
   border-radius: 0.5rem;
   padding: 6px 12px;
   font-size: 0.8125rem;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 .tabs button:hover {
   color: var(--ink);

@@ -3,7 +3,13 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import PagerBar from '../components/PagerBar.vue'
-import { aiApi, type ChatMessage, type ConfirmProposal, type LlmStatus, type Session } from '../api/ai'
+import {
+  aiApi,
+  type ChatMessage,
+  type ConfirmProposal,
+  type LlmStatus,
+  type Session,
+} from '../api/ai'
 
 const route = useRoute()
 const router = useRouter()
@@ -65,9 +71,7 @@ function formatArgs(p: ConfirmProposal): string {
 
 const subtitle = computed(() => {
   if (!status.value) return ''
-  return status.value.configured
-    ? `${status.value.model} · 已配置`
-    : '未配置 LLM_API_KEY'
+  return status.value.configured ? `${status.value.model} · 已配置` : '未配置 LLM_API_KEY'
 })
 
 async function refreshSessions() {
@@ -189,7 +193,7 @@ async function send() {
             proposals.value.push(proposal)
           }
         },
-        onDone: (_msg) => {
+        onDone: () => {
           streaming.value = ''
           toolStatus.value = ''
           void refreshSessions().then(loadMessages)
@@ -393,7 +397,9 @@ onMounted(async () => {
             <p v-if="teamStatus" class="tool-status">{{ teamStatus }}</p>
             <div v-if="Object.keys(teamScores).length" class="team-scores">
               <div v-for="(block, key) in teamScores" :key="key" class="score-card">
-                <strong>{{ key === 'financial' ? '财务' : key === 'risk' ? '风险' : '策略' }}</strong>
+                <strong>{{
+                  key === 'financial' ? '财务' : key === 'risk' ? '风险' : '策略'
+                }}</strong>
                 <span>{{ block.score ?? '—' }}</span>
                 <p class="muted">{{ block.summary || '' }}</p>
                 <pre v-if="teamBodies[key]" class="agent-body">{{ teamBodies[key] }}</pre>
@@ -432,7 +438,9 @@ onMounted(async () => {
               >
                 {{ argsOpen[p.proposal_id] ? '收起参数' : '参数' }}
               </button>
-              <pre v-if="hasArgs(p) && argsOpen[p.proposal_id]" class="args-pre">{{ formatArgs(p) }}</pre>
+              <pre v-if="hasArgs(p) && argsOpen[p.proposal_id]" class="args-pre">{{
+                formatArgs(p)
+              }}</pre>
               <p v-if="p.detail" class="err">{{ p.detail }}</p>
               <div class="confirm-actions" v-if="p.status === 'pending'">
                 <button
@@ -466,7 +474,12 @@ onMounted(async () => {
               <div class="role">助手</div>
               <pre>{{ streaming }}</pre>
             </div>
-            <p v-if="!messages.length && !streaming && !toolStatus && !proposals.length && !teamReport" class="empty muted">
+            <p
+              v-if="
+                !messages.length && !streaming && !toolStatus && !proposals.length && !teamReport
+              "
+              class="empty muted"
+            >
               开始提问，或左侧输入代码点「团队分析」
             </p>
           </div>

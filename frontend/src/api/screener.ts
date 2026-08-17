@@ -116,14 +116,14 @@ export const authApi = {
 export const screenerApi = {
   presets: () => api<Preset[]>('/api/v1/screener/presets'),
   industries: () => api<{ items: string[] }>('/api/v1/screener/industries'),
-  hardFilterTemplates: () =>
-    api<HardFilterTemplate[]>('/api/v1/screener/hard-filter-templates'),
+  hardFilterTemplates: () => api<HardFilterTemplate[]>('/api/v1/screener/hard-filter-templates'),
   builtinRecipes: () => api<BuiltinRecipe[]>('/api/v1/screener/builtin-recipes'),
   patterns: () => api<PatternMeta[]>('/api/v1/screener/patterns'),
   dataStatus: () =>
-    api<{ redis: { available: boolean; quote_count: number; updated_at: string | null }; tushare_configured: boolean }>(
-      '/api/v1/screener/data-status',
-    ),
+    api<{
+      redis: { available: boolean; quote_count: number; updated_at: string | null }
+      tushare_configured: boolean
+    }>('/api/v1/screener/data-status'),
   schemes: () => api<Scheme[]>('/api/v1/screener/schemes'),
   createScheme: (name: string, config: Record<string, unknown>) =>
     api<Scheme>('/api/v1/screener/schemes', {
@@ -131,7 +131,9 @@ export const screenerApi = {
       body: JSON.stringify({ name, config }),
     }),
   deleteScheme: (id: string) =>
-    api<{ ok: boolean }>(`/api/v1/screener/schemes/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    api<{ ok: boolean }>(`/api/v1/screener/schemes/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
   runCondition: (body: Record<string, unknown>) =>
     api<{ job_id: string }>('/api/v1/screener/runs/condition', {
       method: 'POST',

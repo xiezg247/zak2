@@ -27,12 +27,7 @@ function onCancel() {
 
 <template>
   <Teleport to="body">
-    <div
-      v-if="state.current"
-      class="dialog-overlay"
-      @click.self="onCancel"
-      @keydown.esc="onCancel"
-    >
+    <div v-if="state.current" class="dialog-overlay" @click.self="onCancel" @keydown.esc="onCancel">
       <div class="dialog" role="dialog" aria-modal="true" :aria-label="state.current.title">
         <h2 class="dialog-title">{{ state.current.title }}</h2>
         <p v-if="state.current.message" class="dialog-message">{{ state.current.message }}</p>

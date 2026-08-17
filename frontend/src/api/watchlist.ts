@@ -309,7 +309,5 @@ export const watchlistApi = {
       `/api/v1/bars/${encodeURIComponent(vtSymbol)}?interval=${interval}&limit=${limit}`,
     ),
   fundamentals: (vtSymbol: string) =>
-    api<Fundamentals>(
-      `/api/v1/watchlist/items/${encodeURIComponent(vtSymbol)}/fundamentals`,
-    ),
+    api<Fundamentals>(`/api/v1/watchlist/items/${encodeURIComponent(vtSymbol)}/fundamentals`),
 }

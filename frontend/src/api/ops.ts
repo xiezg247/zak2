@@ -5,7 +5,14 @@ export type Health = {
   redis: { ok: boolean; url?: string; updated_at?: string | null; quote_count?: number }
   llm: { configured: boolean; model: string; api_base: string }
   tushare_configured: boolean
-  mcp?: { configured?: boolean; enabled?: boolean; status?: string; tool_count?: number; tools?: string[]; error?: string }
+  mcp?: {
+    configured?: boolean
+    enabled?: boolean
+    status?: string
+    tool_count?: number
+    tools?: string[]
+    error?: string
+  }
   scheduler_lock?: {
     ok?: boolean
     backend?: string
@@ -93,12 +100,8 @@ export const opsApi = {
     api<PurgeResult>('/api/v1/ops/cache/purge', {
       method: 'POST',
     }),
-  syncCalendar: () =>
-    api<SyncResult>('/api/v1/ops/sync/trade-calendar', { method: 'POST' }),
-  syncSectorFlow: () =>
-    api<SyncResult>('/api/v1/ops/sync/sector-flow', { method: 'POST' }),
-  screenIntraday: () =>
-    api<SyncResult>('/api/v1/ops/sync/screen-intraday', { method: 'POST' }),
-  screenPostClose: () =>
-    api<SyncResult>('/api/v1/ops/sync/screen-post-close', { method: 'POST' }),
+  syncCalendar: () => api<SyncResult>('/api/v1/ops/sync/trade-calendar', { method: 'POST' }),
+  syncSectorFlow: () => api<SyncResult>('/api/v1/ops/sync/sector-flow', { method: 'POST' }),
+  screenIntraday: () => api<SyncResult>('/api/v1/ops/sync/screen-intraday', { method: 'POST' }),
+  screenPostClose: () => api<SyncResult>('/api/v1/ops/sync/screen-post-close', { method: 'POST' }),
 }

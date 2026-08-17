@@ -20,7 +20,8 @@ const emit = defineEmits<{ (e: 'change', page: number): void }>()
       上一页
     </button>
     <span class="pager-meta">
-      {{ props.total != null ? `共 ${props.total} 条 · ` : '' }}第 {{ props.page }} / {{ props.pages }} 页
+      {{ props.total != null ? `共 ${props.total} 条 · ` : '' }}第 {{ props.page }} /
+      {{ props.pages }} 页
     </span>
     <button
       type="button"

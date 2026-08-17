@@ -16,10 +16,7 @@ import {
   type WatchlistItem,
 } from '../api/watchlist'
 import { backtestApi } from '../api/backtest'
-import {
-  buildAlignedBacktestQuery,
-  buildEnqueueRunBody,
-} from '../lib/boardBacktestParams'
+import { buildAlignedBacktestQuery, buildEnqueueRunBody } from '../lib/boardBacktestParams'
 import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
 
 const route = useRoute()
@@ -226,7 +223,11 @@ function formatNum2(v: number | null | undefined): string {
   return v.toFixed(2)
 }
 
-function cmpNullable(a: number | null | undefined, b: number | null | undefined, dir: 'asc' | 'desc'): number {
+function cmpNullable(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  dir: 'asc' | 'desc',
+): number {
   const aMissing = a == null || Number.isNaN(a)
   const bMissing = b == null || Number.isNaN(b)
   if (aMissing && bMissing) return 0
@@ -429,7 +430,12 @@ function fillPosForm(row: PositionItem) {
   posError.value = ''
 }
 
-function editBoardPosition(row: { vt_symbol: string; cost_price: number; volume: number; buy_date: string }) {
+function editBoardPosition(row: {
+  vt_symbol: string
+  cost_price: number
+  volume: number
+  buy_date: string
+}) {
   const full = positions.value.find((p) => p.vt_symbol === row.vt_symbol)
   if (full) {
     fillPosForm(full)
@@ -867,7 +873,8 @@ onMounted(async () => {
       try {
         await watchlistApi.add(q)
         await refresh(true, true)
-        selected.value = items.value.find((i) => i.vt_symbol.includes(q.split('.')[0])) || selected.value
+        selected.value =
+          items.value.find((i) => i.vt_symbol.includes(q.split('.')[0])) || selected.value
       } catch {
         /* ignore */
       }
@@ -930,11 +937,7 @@ onUnmounted(() => {
 
           <div class="block">
             <div class="row">
-              <input
-                v-model="addSymbol"
-                placeholder="600519.SSE / 000001"
-                @keyup.enter="onAdd"
-              />
+              <input v-model="addSymbol" placeholder="600519.SSE / 000001" @keyup.enter="onAdd" />
               <button type="button" class="primary" @click="onAdd">添加</button>
             </div>
             <label class="auto">
@@ -986,12 +989,7 @@ onUnmounted(() => {
             >
               批量加入
             </button>
-            <button
-              v-if="groupId"
-              type="button"
-              class="ghost"
-              @click="onBatchRemoveFromGroup"
-            >
+            <button v-if="groupId" type="button" class="ghost" @click="onBatchRemoveFromGroup">
               批量移出此组
             </button>
           </div>
@@ -1011,12 +1009,24 @@ onUnmounted(() => {
                   <th>代码</th>
                   <th>名称</th>
                   <th v-if="colVisible.industry">行业</th>
-                  <th class="sortable" @click="toggleSort('last_price')">现价{{ sortMark('last_price') }}</th>
-                  <th class="sortable" @click="toggleSort('change_pct')">涨幅%{{ sortMark('change_pct') }}</th>
-                  <th v-if="colVisible.turnover_rate" class="sortable" @click="toggleSort('turnover_rate')">
+                  <th class="sortable" @click="toggleSort('last_price')">
+                    现价{{ sortMark('last_price') }}
+                  </th>
+                  <th class="sortable" @click="toggleSort('change_pct')">
+                    涨幅%{{ sortMark('change_pct') }}
+                  </th>
+                  <th
+                    v-if="colVisible.turnover_rate"
+                    class="sortable"
+                    @click="toggleSort('turnover_rate')"
+                  >
                     换手%{{ sortMark('turnover_rate') }}
                   </th>
-                  <th v-if="colVisible.volume_ratio" class="sortable" @click="toggleSort('volume_ratio')">
+                  <th
+                    v-if="colVisible.volume_ratio"
+                    class="sortable"
+                    @click="toggleSort('volume_ratio')"
+                  >
                     量比{{ sortMark('volume_ratio') }}
                   </th>
                   <th v-if="colVisible.amount" class="sortable" @click="toggleSort('amount')">
@@ -1044,7 +1054,9 @@ onUnmounted(() => {
                     {{ item.name || '—' }}
                     <span v-if="item.suspended" class="suspend-tag" title="停牌">停</span>
                   </td>
-                  <td v-if="colVisible.industry">{{ item.industry?.trim() ? item.industry : '—' }}</td>
+                  <td v-if="colVisible.industry">
+                    {{ item.industry?.trim() ? item.industry : '—' }}
+                  </td>
                   <td>{{ formatNum2(item.last_price) }}</td>
                   <td
                     :class="{
@@ -1080,7 +1092,9 @@ onUnmounted(() => {
               </div>
               <div class="quote-meta">
                 <span class="mono muted">{{ selected.vt_symbol }}</span>
-                <span v-if="selected.industry?.trim()" class="muted">· {{ selected.industry }}</span>
+                <span v-if="selected.industry?.trim()" class="muted"
+                  >· {{ selected.industry }}</span
+                >
               </div>
             </div>
             <div
@@ -1090,14 +1104,34 @@ onUnmounted(() => {
                 down: (selected.change_pct || 0) < 0,
               }"
             >
-              <span class="price mono">{{ selected.last_price != null ? selected.last_price.toFixed(2) : '—' }}</span>
+              <span class="price mono">{{
+                selected.last_price != null ? selected.last_price.toFixed(2) : '—'
+              }}</span>
               <span class="change mono">
-                {{ selected.change_pct != null ? (selected.change_pct > 0 ? '+' : '') + selected.change_pct.toFixed(2) + '%' : '—' }}
+                {{
+                  selected.change_pct != null
+                    ? (selected.change_pct > 0 ? '+' : '') + selected.change_pct.toFixed(2) + '%'
+                    : '—'
+                }}
               </span>
             </div>
             <div class="limits">
-              <button type="button" class="chip" :class="{ on: barInterval === 'd' }" @click="barInterval = 'd'">日K</button>
-              <button type="button" class="chip" :class="{ on: barInterval === '1m' }" @click="barInterval = '1m'">1分</button>
+              <button
+                type="button"
+                class="chip"
+                :class="{ on: barInterval === 'd' }"
+                @click="barInterval = 'd'"
+              >
+                日K
+              </button>
+              <button
+                type="button"
+                class="chip"
+                :class="{ on: barInterval === '1m' }"
+                @click="barInterval = '1m'"
+              >
+                1分
+              </button>
             </div>
             <div class="limits">
               <button
@@ -1114,17 +1148,23 @@ onUnmounted(() => {
           </div>
           <p v-else class="muted">选择左侧标的查看 K 线</p>
           <template v-if="selected">
-            <p v-if="barsLoading" class="muted">{{ barInterval === '1m' ? '加载 1 分 K…' : '加载日 K…' }}</p>
+            <p v-if="barsLoading" class="muted">
+              {{ barInterval === '1m' ? '加载 1 分 K…' : '加载日 K…' }}
+            </p>
             <template v-else-if="barsError">
               <p class="err">
                 {{ barsError }}
-                <RouterLink to="/ops" class="draft-link">{{ barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K' }}</RouterLink>
+                <RouterLink to="/ops" class="draft-link">{{
+                  barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K'
+                }}</RouterLink>
               </p>
             </template>
             <template v-else-if="!bars.length">
               <p class="muted">
                 {{ barInterval === '1m' ? '暂无 1 分 K' : '暂无日 K' }}
-                <RouterLink to="/ops" class="draft-link">{{ barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K' }}</RouterLink>
+                <RouterLink to="/ops" class="draft-link">{{
+                  barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K'
+                }}</RouterLink>
               </p>
             </template>
             <template v-else>
@@ -1180,15 +1220,35 @@ onUnmounted(() => {
                   <template v-if="fund.snapshot">
                     <p class="muted">
                       期末 {{ formatYmd(fund.snapshot.end_date) }}
-                      <span v-if="fund.sync?.last_sync_at"> · 同步 {{ fund.sync.last_sync_at }}</span>
+                      <span v-if="fund.sync?.last_sync_at">
+                        · 同步 {{ fund.sync.last_sync_at }}</span
+                      >
                     </p>
                     <dl class="fund-grid">
-                      <div><dt>营收</dt><dd class="mono">{{ formatMoney(fund.snapshot.revenue) }}</dd></div>
-                      <div><dt>净利</dt><dd class="mono">{{ formatMoney(fund.snapshot.net_income) }}</dd></div>
-                      <div><dt>营收同比</dt><dd>{{ formatRatioPct(fund.snapshot.revenue_yoy) }}</dd></div>
-                      <div><dt>净利同比</dt><dd>{{ formatRatioPct(fund.snapshot.net_income_yoy) }}</dd></div>
-                      <div><dt>ROE</dt><dd>{{ formatRatioPct(fund.snapshot.roe) }}</dd></div>
-                      <div><dt>资产负债率</dt><dd>{{ formatRatioPct(fund.snapshot.debt_ratio) }}</dd></div>
+                      <div>
+                        <dt>营收</dt>
+                        <dd class="mono">{{ formatMoney(fund.snapshot.revenue) }}</dd>
+                      </div>
+                      <div>
+                        <dt>净利</dt>
+                        <dd class="mono">{{ formatMoney(fund.snapshot.net_income) }}</dd>
+                      </div>
+                      <div>
+                        <dt>营收同比</dt>
+                        <dd>{{ formatRatioPct(fund.snapshot.revenue_yoy) }}</dd>
+                      </div>
+                      <div>
+                        <dt>净利同比</dt>
+                        <dd>{{ formatRatioPct(fund.snapshot.net_income_yoy) }}</dd>
+                      </div>
+                      <div>
+                        <dt>ROE</dt>
+                        <dd>{{ formatRatioPct(fund.snapshot.roe) }}</dd>
+                      </div>
+                      <div>
+                        <dt>资产负债率</dt>
+                        <dd>{{ formatRatioPct(fund.snapshot.debt_ratio) }}</dd>
+                      </div>
                     </dl>
                   </template>
                   <p v-else class="muted">
@@ -1231,105 +1291,108 @@ onUnmounted(() => {
 
       <section class="strategy">
         <div class="summary-grid">
-        <div class="pos-form risk-card">
-          <h3>仓位与风控</h3>
-          <div class="risk-summary muted" v-if="riskSummary">
-            <span>实际仓位 {{ formatPctRatio(riskSummary.actual_position_pct) }}</span>
-            <button
-              v-if="riskSummary.off_plan_count > 0"
-              type="button"
-              class="link"
-              @click="toggleOffPlanChips"
-            >
-              计划外 {{ riskSummary.off_plan_count }}
-            </button>
-            <span v-else>计划外 {{ riskSummary.off_plan_count }}</span>
-            <span>计划日 {{ riskSummary.active_plan_date || '—' }}</span>
-          </div>
-          <div v-if="showOffPlanChips && riskSummary?.off_plan_symbols?.length" class="chips">
-            <span v-for="vt in riskSummary.off_plan_symbols" :key="vt" class="chip-tag">
-              <button type="button" class="chip-link mono" @click="selectVt(vt)">{{ vt }}</button>
-            </span>
-          </div>
-          <div class="pos-grid risk-grid">
-            <label>
-              总资金
-              <input
-                v-model="riskForm.total_capital"
-                type="number"
-                step="1000"
-                min="0"
-                placeholder="可选"
-                :disabled="!prefsReady || riskSaving"
-              />
-            </label>
-            <label>
-              止损%
-              <input
-                v-model="riskForm.stop_loss_pct"
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="50"
-                :disabled="!prefsReady || riskSaving"
-              />
-            </label>
-            <label>
-              浮亏警戒
-              <input
-                v-model="riskForm.caution_float_pct"
-                type="number"
-                step="0.5"
-                max="-0.1"
-                :disabled="!prefsReady || riskSaving"
-              />
-            </label>
-          </div>
-          <div class="row pos-actions">
-            <button
-              type="button"
-              class="primary"
-              :disabled="!prefsReady || riskSaving"
-              @click="saveTradingRisk"
-            >
-              {{ riskSaving ? '保存中…' : '保存风控' }}
-            </button>
-          </div>
-          <p v-if="!prefsReady" class="muted">加载风控偏好…</p>
-          <p v-else-if="riskError" class="err">{{ riskError }}</p>
-          <p v-else-if="riskMsg" class="muted">{{ riskMsg }}</p>
-          <p class="muted tip">止损按百分数填写（如 5 = 5%）；浮亏警戒为负数（如 -5）。写入用户风控偏好。</p>
-        </div>
-
-        <div class="pos-form plan-card">
-          <h3>
-            当日计划
-            <span class="muted" v-if="riskSummary?.active_plan_date">
-              {{ riskSummary.active_plan_date }}
-            </span>
-          </h3>
-          <p v-if="!planSymbols.length" class="muted">当日无 active 计划</p>
-          <ul v-else class="plan-list">
-            <li
-              v-for="row in planSymbols"
-              :key="row.vt_symbol"
-              :class="{ on: selected?.vt_symbol === row.vt_symbol }"
-              @click="selectVt(row.vt_symbol)"
-            >
-              <button type="button" class="chip-link mono" @click.stop="selectVt(row.vt_symbol)">
-                {{ row.vt_symbol }}
+          <div class="pos-form risk-card">
+            <h3>仓位与风控</h3>
+            <div class="risk-summary muted" v-if="riskSummary">
+              <span>实际仓位 {{ formatPctRatio(riskSummary.actual_position_pct) }}</span>
+              <button
+                v-if="riskSummary.off_plan_count > 0"
+                type="button"
+                class="link"
+                @click="toggleOffPlanChips"
+              >
+                计划外 {{ riskSummary.off_plan_count }}
               </button>
-              <span class="plan-name">{{ row.name || '—' }}</span>
-              <span class="plan-tag">{{ planSymbolLabel(row) }}</span>
-            </li>
-          </ul>
-        </div>
+              <span v-else>计划外 {{ riskSummary.off_plan_count }}</span>
+              <span>计划日 {{ riskSummary.active_plan_date || '—' }}</span>
+            </div>
+            <div v-if="showOffPlanChips && riskSummary?.off_plan_symbols?.length" class="chips">
+              <span v-for="vt in riskSummary.off_plan_symbols" :key="vt" class="chip-tag">
+                <button type="button" class="chip-link mono" @click="selectVt(vt)">{{ vt }}</button>
+              </span>
+            </div>
+            <div class="pos-grid risk-grid">
+              <label>
+                总资金
+                <input
+                  v-model="riskForm.total_capital"
+                  type="number"
+                  step="1000"
+                  min="0"
+                  placeholder="可选"
+                  :disabled="!prefsReady || riskSaving"
+                />
+              </label>
+              <label>
+                止损%
+                <input
+                  v-model="riskForm.stop_loss_pct"
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  max="50"
+                  :disabled="!prefsReady || riskSaving"
+                />
+              </label>
+              <label>
+                浮亏警戒
+                <input
+                  v-model="riskForm.caution_float_pct"
+                  type="number"
+                  step="0.5"
+                  max="-0.1"
+                  :disabled="!prefsReady || riskSaving"
+                />
+              </label>
+            </div>
+            <div class="row pos-actions">
+              <button
+                type="button"
+                class="primary"
+                :disabled="!prefsReady || riskSaving"
+                @click="saveTradingRisk"
+              >
+                {{ riskSaving ? '保存中…' : '保存风控' }}
+              </button>
+            </div>
+            <p v-if="!prefsReady" class="muted">加载风控偏好…</p>
+            <p v-else-if="riskError" class="err">{{ riskError }}</p>
+            <p v-else-if="riskMsg" class="muted">{{ riskMsg }}</p>
+            <p class="muted tip">
+              止损按百分数填写（如 5 = 5%）；浮亏警戒为负数（如 -5）。写入用户风控偏好。
+            </p>
+          </div>
+
+          <div class="pos-form plan-card">
+            <h3>
+              当日计划
+              <span class="muted" v-if="riskSummary?.active_plan_date">
+                {{ riskSummary.active_plan_date }}
+              </span>
+            </h3>
+            <p v-if="!planSymbols.length" class="muted">当日无 active 计划</p>
+            <ul v-else class="plan-list">
+              <li
+                v-for="row in planSymbols"
+                :key="row.vt_symbol"
+                :class="{ on: selected?.vt_symbol === row.vt_symbol }"
+                @click="selectVt(row.vt_symbol)"
+              >
+                <button type="button" class="chip-link mono" @click.stop="selectVt(row.vt_symbol)">
+                  {{ row.vt_symbol }}
+                </button>
+                <span class="plan-name">{{ row.name || '—' }}</span>
+                <span class="plan-tag">{{ planSymbolLabel(row) }}</span>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <div class="strategy-head">
           <h2>策略看盘</h2>
           <span class="muted" v-if="board">
-            {{ board.config_key }} · {{ board.signal_mode || signalMode }} · {{ board.source }} · as_of
+            {{ board.config_key }} · {{ board.signal_mode || signalMode }} · {{ board.source }} ·
+            as_of
             {{ board.as_of || '—' }}
           </span>
           <div class="mode-tabs">
@@ -1397,7 +1460,9 @@ onUnmounted(() => {
                   <button type="button" class="link" @click="removeFromSignalPanel(vt)">×</button>
                 </span>
               </div>
-              <p v-else class="muted tip">名单为空时回退「自选 ∩ 策略 cache」；上限 {{ panelMax }} 只（存 PG）。</p>
+              <p v-else class="muted tip">
+                名单为空时回退「自选 ∩ 策略 cache」；上限 {{ panelMax }} 只（存 PG）。
+              </p>
               <p v-if="signalError" class="err">{{ signalError }}</p>
               <p v-else-if="signalMsg" class="muted">{{ signalMsg }}</p>
             </div>
@@ -1455,7 +1520,9 @@ onUnmounted(() => {
                     </td>
                   </tr>
                   <tr v-if="!board.signals.length">
-                    <td colspan="7" class="empty">无信号（可先编辑名单，或确认策略 cache 已写入）</td>
+                    <td colspan="7" class="empty">
+                      无信号（可先编辑名单，或确认策略 cache 已写入）
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -1463,7 +1530,9 @@ onUnmounted(() => {
           </div>
 
           <div class="panel">
-            <h3>持仓区 <span class="muted">{{ board.positions.length }}</span></h3>
+            <h3>
+              持仓区 <span class="muted">{{ board.positions.length }}</span>
+            </h3>
             <div class="pos-form">
               <div class="pos-grid">
                 <label>
@@ -1543,8 +1612,16 @@ onUnmounted(() => {
                       {{ row.risk_tags?.length ? row.risk_tags.join(' · ') : '—' }}
                     </td>
                     <td>
-                      <button type="button" class="link" @click.stop="editBoardPosition(row)">改</button>
-                      <button type="button" class="link" @click.stop="removePosition(row.vt_symbol)">删</button>
+                      <button type="button" class="link" @click.stop="editBoardPosition(row)">
+                        改
+                      </button>
+                      <button
+                        type="button"
+                        class="link"
+                        @click.stop="removePosition(row.vt_symbol)"
+                      >
+                        删
+                      </button>
                     </td>
                   </tr>
                   <tr v-if="!board.positions.length">

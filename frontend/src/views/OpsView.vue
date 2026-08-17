@@ -182,7 +182,10 @@ onMounted(async () => {
         <div class="card" :class="{ bad: !health.redis.ok }">
           <h3>Redis 行情</h3>
           <p>{{ health.redis.ok ? '正常' : '不可用' }}</p>
-          <p class="muted">quotes {{ health.redis.quote_count ?? 0 }} · {{ health.redis.updated_at || '无更新时间' }}</p>
+          <p class="muted">
+            quotes {{ health.redis.quote_count ?? 0 }} ·
+            {{ health.redis.updated_at || '无更新时间' }}
+          </p>
         </div>
         <div class="card" :class="{ bad: !health.quote_collector?.running }">
           <h3>行情采集</h3>
@@ -210,7 +213,10 @@ onMounted(async () => {
           <p>{{ health.tushare_configured ? '已配置' : '未配置' }}</p>
           <p class="muted">日历 / 板块 / 日 K / 封板时间</p>
         </div>
-        <div class="card" :class="{ bad: Boolean(health.mcp?.enabled) && health.mcp?.status !== '已连接' }">
+        <div
+          class="card"
+          :class="{ bad: Boolean(health.mcp?.enabled) && health.mcp?.status !== '已连接' }"
+        >
           <h3>MCP</h3>
           <p>{{ health.mcp?.status || '未启用' }}</p>
           <p class="muted">
@@ -237,17 +243,32 @@ onMounted(async () => {
       <section v-if="bars" class="panel bars">
         <div class="toolbar">
           <h2>本地日 K Overview</h2>
-          <span class="muted">as of {{ bars.as_of_trade_date || '—' }} · interval={{ bars.interval }}</span>
+          <span class="muted"
+            >as of {{ bars.as_of_trade_date || '—' }} · interval={{ bars.interval }}</span
+          >
         </div>
         <div class="stat-row">
-          <div><strong>{{ bars.symbol_count }}</strong><span class="muted">标的</span></div>
-          <div><strong>{{ bars.ok_count }}</strong><span class="muted">最新</span></div>
-          <div class="warn"><strong>{{ bars.stale_count }}</strong><span class="muted">过期</span></div>
-          <div><strong>{{ bars.unknown_count }}</strong><span class="muted">未知</span></div>
+          <div>
+            <strong>{{ bars.symbol_count }}</strong
+            ><span class="muted">标的</span>
+          </div>
+          <div>
+            <strong>{{ bars.ok_count }}</strong
+            ><span class="muted">最新</span>
+          </div>
+          <div class="warn">
+            <strong>{{ bars.stale_count }}</strong
+            ><span class="muted">过期</span>
+          </div>
+          <div>
+            <strong>{{ bars.unknown_count }}</strong
+            ><span class="muted">未知</span>
+          </div>
         </div>
         <p class="muted">
           区间 {{ bars.min_start || '—' }} → {{ bars.max_end || '—' }}
-          · Web 可同步 A 股列表 / 行业映射 → app.stock_industry / 补全自选 / 过期 / 全市场首下（需 TUSHARE_TOKEN；首下另需 app.universe；起点 BARS_UNIVERSE_START）
+          · Web 可同步 A 股列表 / 行业映射 → app.stock_industry / 补全自选 / 过期 / 全市场首下（需
+          TUSHARE_TOKEN；首下另需 app.universe；起点 BARS_UNIVERSE_START）
         </p>
         <div class="actions" style="margin-top: 8px">
           <button
@@ -298,8 +319,8 @@ onMounted(async () => {
           <div>
             <h2>定时任务</h2>
             <p class="muted">
-              内嵌调度覆盖全部可跑 job；盘中/盘后选股定时需配置环境变量 SCHEDULER_SCREEN_USER_ID
-              · 预热情绪周期写入短 TTL 缓存 · B 站同步需 BILIBILI_COOKIES
+              内嵌调度覆盖全部可跑 job；盘中/盘后选股定时需配置环境变量 SCHEDULER_SCREEN_USER_ID ·
+              预热情绪周期写入短 TTL 缓存 · B 站同步需 BILIBILI_COOKIES
             </p>
           </div>
           <div class="actions">
@@ -358,7 +379,12 @@ onMounted(async () => {
             >
               {{ busy === 'sync_bilibili_feed' ? '提交中…' : 'B站订阅同步' }}
             </button>
-            <button type="button" class="primary" :disabled="!!busy" @click="runJob('purge_stale_cache', true)">
+            <button
+              type="button"
+              class="primary"
+              :disabled="!!busy"
+              @click="runJob('purge_stale_cache', true)"
+            >
               {{ busy === 'purge_stale_cache' ? '清理中…' : '清理 cache' }}
             </button>
           </div>
@@ -377,7 +403,8 @@ onMounted(async () => {
             <template v-for="g in jobGroups" :key="g.kind">
               <tr class="section">
                 <td colspan="5">
-                  <strong>{{ g.title }}</strong>· {{ g.items.length }}
+                  <strong>{{ g.title }}</strong
+                  >· {{ g.items.length }}
                 </td>
               </tr>
               <tr v-for="j in g.items" :key="j.job_id">
@@ -400,7 +427,13 @@ onMounted(async () => {
                 <td>
                   <template v-if="j.last_run">
                     <div :class="j.last_run.last_success === false ? 'err' : ''">
-                      {{ j.last_run.last_success === false ? '失败' : j.last_run.last_success ? '成功' : '—' }}
+                      {{
+                        j.last_run.last_success === false
+                          ? '失败'
+                          : j.last_run.last_success
+                            ? '成功'
+                            : '—'
+                      }}
                       · {{ j.last_run.last_run_at }}
                     </div>
                     <div class="muted">{{ j.last_run.last_message }}</div>
@@ -464,10 +497,7 @@ onMounted(async () => {
               </thead>
               <tbody>
                 <template v-for="row in notifyItems" :key="row.id">
-                  <tr
-                    :class="{ on: notifyExpandedId === row.id }"
-                    @click="toggleNotifyRow(row.id)"
-                  >
+                  <tr :class="{ on: notifyExpandedId === row.id }" @click="toggleNotifyRow(row.id)">
                     <td class="mono">{{ row.created_at || '—' }}</td>
                     <td>{{ row.event_type || '—' }}</td>
                     <td>{{ row.channel || '—' }}</td>

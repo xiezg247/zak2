@@ -301,9 +301,12 @@ onMounted(async () => {
   const q = route.query
   if (typeof q.vt_symbol === 'string' && q.vt_symbol.trim()) vtSymbol.value = q.vt_symbol.trim()
   if (typeof q.strategy === 'string' && q.strategy.trim()) strategy.value = q.strategy.trim()
-  if (typeof q.fast_window === 'string' && Number(q.fast_window) > 0) fast.value = Number(q.fast_window)
-  if (typeof q.slow_window === 'string' && Number(q.slow_window) > 0) slow.value = Number(q.slow_window)
-  if (typeof q.adx_period === 'string' && Number(q.adx_period) > 0) adxPeriod.value = Number(q.adx_period)
+  if (typeof q.fast_window === 'string' && Number(q.fast_window) > 0)
+    fast.value = Number(q.fast_window)
+  if (typeof q.slow_window === 'string' && Number(q.slow_window) > 0)
+    slow.value = Number(q.slow_window)
+  if (typeof q.adx_period === 'string' && Number(q.adx_period) > 0)
+    adxPeriod.value = Number(q.adx_period)
   if (typeof q.adx_threshold === 'string' && Number(q.adx_threshold) > 0)
     adxThreshold.value = Number(q.adx_threshold)
   if (typeof q.trailing_stop_pct === 'string' && Number(q.trailing_stop_pct) > 0)
@@ -353,9 +356,15 @@ onMounted(async () => {
       <div class="workspace">
         <aside class="left">
           <div class="tabs tabs3">
-            <button type="button" :class="{ on: mode === 'single' }" @click="mode = 'single'">单票</button>
-            <button type="button" :class="{ on: mode === 'batch' }" @click="mode = 'batch'">批量</button>
-            <button type="button" :class="{ on: mode === 'optimize' }" @click="mode = 'optimize'">优化</button>
+            <button type="button" :class="{ on: mode === 'single' }" @click="mode = 'single'">
+              单票
+            </button>
+            <button type="button" :class="{ on: mode === 'batch' }" @click="mode = 'batch'">
+              批量
+            </button>
+            <button type="button" :class="{ on: mode === 'optimize' }" @click="mode = 'optimize'">
+              优化
+            </button>
           </div>
 
           <label>
@@ -373,7 +382,8 @@ onMounted(async () => {
             </select>
           </label>
           <p v-if="interval === '1m'" class="hint muted">
-            均线窗口按分钟根计数；单次交易日默认最多 20（硬顶 60）。缺数据请先 Ops 跑 fill_focus_pool_minute。
+            均线窗口按分钟根计数；单次交易日默认最多 20（硬顶 60）。缺数据请先 Ops 跑
+            fill_focus_pool_minute。
           </p>
           <label v-if="interval === '1m'">
             最多交易日
@@ -403,7 +413,9 @@ onMounted(async () => {
           </template>
           <div class="row2" v-if="strategy === 'trend_ma' && mode !== 'optimize'">
             <label>ADX 周期<input v-model.number="adxPeriod" type="number" min="2" /></label>
-            <label>ADX 阈值<input v-model.number="adxThreshold" type="number" min="0" step="0.1" /></label>
+            <label
+              >ADX 阈值<input v-model.number="adxThreshold" type="number" min="0" step="0.1"
+            /></label>
           </div>
           <label v-if="strategy === 'trend_ma' && mode !== 'optimize'">
             追踪止损
@@ -415,9 +427,13 @@ onMounted(async () => {
             {{ showFees ? '收起费用' : '费用参数' }}
           </button>
           <div v-if="showFees" class="fees">
-            <label>佣金 rate<input v-model.number="rate" type="number" step="0.0001" min="0" /></label>
+            <label
+              >佣金 rate<input v-model.number="rate" type="number" step="0.0001" min="0"
+            /></label>
             <label>滑点<input v-model.number="slippage" type="number" step="0.01" min="0" /></label>
-            <label>印花税<input v-model.number="stampDuty" type="number" step="0.0001" min="0" /></label>
+            <label
+              >印花税<input v-model.number="stampDuty" type="number" step="0.0001" min="0"
+            /></label>
           </div>
 
           <button class="primary" type="button" :disabled="running" @click="startRun()">
@@ -426,7 +442,9 @@ onMounted(async () => {
           <p v-if="statusText" class="muted">{{ statusText }}</p>
           <p v-if="error" class="err">
             {{ error }}
-            <RouterLink v-if="showOpsLink" to="/ops" class="draft-link">{{ opsLinkLabel }}</RouterLink>
+            <RouterLink v-if="showOpsLink" to="/ops" class="draft-link">{{
+              opsLinkLabel
+            }}</RouterLink>
           </p>
 
           <h3>历史</h3>
@@ -450,16 +468,11 @@ onMounted(async () => {
             >
               <span>{{ r.vt_symbol }} · {{ r.strategy }}</span>
               <span class="muted">
-                收益 {{ r.total_return != null ? r.total_return.toFixed(2) + '%' : '—' }}
-                · {{ r.created_at }}
+                收益 {{ r.total_return != null ? r.total_return.toFixed(2) + '%' : '—' }} ·
+                {{ r.created_at }}
               </span>
             </button>
-            <PagerBar
-              :page="runsPage"
-              :pages="runsPages"
-              :total="runsTotal"
-              @change="goRunsPage"
-            />
+            <PagerBar :page="runsPage" :pages="runsPages" :total="runsTotal" @change="goRunsPage" />
           </template>
 
           <h3 v-if="batches.length">批次对比</h3>
@@ -496,17 +509,27 @@ onMounted(async () => {
             <div class="stats">
               <div class="stat">
                 <div class="k">收益%</div>
-                <div class="v" :class="{ up: (selected.total_return || 0) > 0, down: (selected.total_return || 0) < 0 }">
+                <div
+                  class="v"
+                  :class="{
+                    up: (selected.total_return || 0) > 0,
+                    down: (selected.total_return || 0) < 0,
+                  }"
+                >
                   {{ selected.total_return != null ? selected.total_return.toFixed(2) : '—' }}
                 </div>
               </div>
               <div class="stat">
                 <div class="k">最大回撤%</div>
-                <div class="v">{{ selected.max_drawdown != null ? selected.max_drawdown.toFixed(2) : '—' }}</div>
+                <div class="v">
+                  {{ selected.max_drawdown != null ? selected.max_drawdown.toFixed(2) : '—' }}
+                </div>
               </div>
               <div class="stat">
                 <div class="k">夏普</div>
-                <div class="v">{{ selected.sharpe_ratio != null ? selected.sharpe_ratio.toFixed(2) : '—' }}</div>
+                <div class="v">
+                  {{ selected.sharpe_ratio != null ? selected.sharpe_ratio.toFixed(2) : '—' }}
+                </div>
               </div>
               <div class="stat">
                 <div class="k">成交</div>
@@ -572,7 +595,9 @@ onMounted(async () => {
           <div v-if="optimizeSummary?.best" class="compare">
             <h2>
               最优（{{ optimizeSummary.objective }}）
-              <span class="muted">夏普 {{ optimizeSummary.best.sharpe_ratio?.toFixed(2) ?? '—' }}</span>
+              <span class="muted"
+                >夏普 {{ optimizeSummary.best.sharpe_ratio?.toFixed(2) ?? '—' }}</span
+              >
             </h2>
           </div>
 

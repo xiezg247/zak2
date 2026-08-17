@@ -93,19 +93,17 @@ const fields = [
 const fieldMeta = computed(() => fields.find((f) => f.id === field.value) || fields[0])
 
 type SortKey =
-  | 'last_price'
-  | 'change_pct'
-  | 'turnover_rate'
-  | 'amount'
-  | 'volume_ratio'
-  | 'limit_times'
-  | null
+  'last_price' | 'change_pct' | 'turnover_rate' | 'amount' | 'volume_ratio' | 'limit_times' | null
 
 const listFilter = ref('')
 const sortKey = ref<SortKey>(null)
 const sortDir = ref<'asc' | 'desc'>('desc')
 
-function cmpNullable(a: number | null | undefined, b: number | null | undefined, dir: 'asc' | 'desc'): number {
+function cmpNullable(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  dir: 'asc' | 'desc',
+): number {
   const aMissing = a == null || Number.isNaN(a)
   const bMissing = b == null || Number.isNaN(b)
   if (aMissing && bMissing) return 0
@@ -250,7 +248,8 @@ async function load(quiet = false) {
     try {
       ranks.value = await marketApi.ranks(field.value, 50)
       if (selected.value) {
-        selected.value = ranks.value.find((r) => r.vt_symbol === selected.value?.vt_symbol) || selected.value
+        selected.value =
+          ranks.value.find((r) => r.vt_symbol === selected.value?.vt_symbol) || selected.value
       }
     } catch (e) {
       ranks.value = []
@@ -385,11 +384,7 @@ onUnmounted(() => {
               · {{ overview.emotion_cycle.allowed_mode_labels.join('/') }}
             </template>
           </div>
-          <div
-            class="s warn"
-            v-for="(w, i) in overview.emotion_cycle.warnings"
-            :key="i"
-          >
+          <div class="s warn" v-for="(w, i) in overview.emotion_cycle.warnings" :key="i">
             {{ w }}
           </div>
           <div class="cycle-actions">
@@ -411,8 +406,12 @@ onUnmounted(() => {
             <template v-if="overview.emotion_cycle.inputs.fear_greed_index != null">
               · 恐贪≈{{ overview.emotion_cycle.inputs.fear_greed_index }}
             </template>
-            <template v-if="overview.emotion_cycle.inputs.index_above_ma5 === true"> · 站上MA5</template>
-            <template v-else-if="overview.emotion_cycle.inputs.index_above_ma5 === false"> · 跌破MA5</template>
+            <template v-if="overview.emotion_cycle.inputs.index_above_ma5 === true">
+              · 站上MA5</template
+            >
+            <template v-else-if="overview.emotion_cycle.inputs.index_above_ma5 === false">
+              · 跌破MA5</template
+            >
           </div>
         </div>
         <div class="card" v-else>
@@ -427,8 +426,8 @@ onUnmounted(() => {
           <div class="k">连板情绪</div>
           <div class="v">最高 {{ overview.emotion.max_limit_times }} 板</div>
           <div class="s muted">
-            {{ overview.emotion.trade_date }} · {{ overview.emotion.max_board_vt_symbol }} ·
-            关联 {{ overview.emotion.linked_board_count }}
+            {{ overview.emotion.trade_date }} · {{ overview.emotion.max_board_vt_symbol }} · 关联
+            {{ overview.emotion.linked_board_count }}
           </div>
         </div>
         <div class="card" v-else>
@@ -437,11 +436,7 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <section
-        v-if="overview?.emotion_cycle"
-        ref="thresholdsSectionEl"
-        class="thresholds-section"
-      >
+      <section v-if="overview?.emotion_cycle" ref="thresholdsSectionEl" class="thresholds-section">
         <div class="thresholds-head">
           <div>
             <strong>判定阈值</strong>
@@ -454,7 +449,9 @@ onUnmounted(() => {
           </button>
         </div>
         <div v-if="thresholdsOpen" class="thresholds-panel">
-          <p class="muted thresholds-hint">全局 meta 持久化；保存后失效短 TTL 缓存并刷新情绪周期。</p>
+          <p class="muted thresholds-hint">
+            全局 meta 持久化；保存后失效短 TTL 缓存并刷新情绪周期。
+          </p>
           <div v-if="thresholdsDraft" class="thresholds-grid">
             <div v-for="f in thresholdFields" :key="f.key" class="threshold-row">
               <label :for="`th-${f.key}`">{{ f.label }}</label>
@@ -522,7 +519,9 @@ onUnmounted(() => {
 
       <div v-if="ranks.length" class="filter-row">
         <input v-model="listFilter" placeholder="过滤代码/名称" />
-        <button type="button" class="ghost" :class="{ on: !sortKey }" @click="clearSort">默认序</button>
+        <button type="button" class="ghost" :class="{ on: !sortKey }" @click="clearSort">
+          默认序
+        </button>
       </div>
 
       <div class="split">
@@ -534,13 +533,13 @@ onUnmounted(() => {
                 <th>#</th>
                 <th>代码</th>
                 <th>名称</th>
-                <th class="sortable" @click="toggleSort('last_price')">现价{{ sortMark('last_price') }}</th>
-                <th class="sortable" @click="toggleSort('change_pct')">涨幅%{{ sortMark('change_pct') }}</th>
-                <th
-                  v-if="scoreSortKey"
-                  class="sortable"
-                  @click="toggleSort(scoreSortKey)"
-                >
+                <th class="sortable" @click="toggleSort('last_price')">
+                  现价{{ sortMark('last_price') }}
+                </th>
+                <th class="sortable" @click="toggleSort('change_pct')">
+                  涨幅%{{ sortMark('change_pct') }}
+                </th>
+                <th v-if="scoreSortKey" class="sortable" @click="toggleSort(scoreSortKey)">
                   {{ fieldMeta.col }}{{ sortMark(scoreSortKey) }}
                 </th>
                 <th v-else>{{ fieldMeta.col }}</th>
@@ -587,9 +586,15 @@ onUnmounted(() => {
                 down: (selected.change_pct || 0) < 0,
               }"
             >
-              <span class="price mono">{{ selected.last_price != null ? selected.last_price.toFixed(2) : '—' }}</span>
+              <span class="price mono">{{
+                selected.last_price != null ? selected.last_price.toFixed(2) : '—'
+              }}</span>
               <span class="change mono">
-                {{ selected.change_pct != null ? (selected.change_pct > 0 ? '+' : '') + selected.change_pct.toFixed(2) + '%' : '—' }}
+                {{
+                  selected.change_pct != null
+                    ? (selected.change_pct > 0 ? '+' : '') + selected.change_pct.toFixed(2) + '%'
+                    : '—'
+                }}
               </span>
             </div>
           </div>
@@ -599,8 +604,22 @@ onUnmounted(() => {
           </div>
           <div class="bar-controls">
             <div class="limits">
-              <button type="button" class="chip" :class="{ on: barInterval === 'd' }" @click="barInterval = 'd'">日K</button>
-              <button type="button" class="chip" :class="{ on: barInterval === '1m' }" @click="barInterval = '1m'">1分</button>
+              <button
+                type="button"
+                class="chip"
+                :class="{ on: barInterval === 'd' }"
+                @click="barInterval = 'd'"
+              >
+                日K
+              </button>
+              <button
+                type="button"
+                class="chip"
+                :class="{ on: barInterval === '1m' }"
+                @click="barInterval = '1m'"
+              >
+                1分
+              </button>
             </div>
             <div class="limits">
               <button
@@ -616,17 +635,23 @@ onUnmounted(() => {
             </div>
           </div>
           <p v-if="addMsg" class="muted">{{ addMsg }}</p>
-          <p v-if="barsLoading" class="muted">{{ barInterval === '1m' ? '加载 1 分 K…' : '加载日 K…' }}</p>
+          <p v-if="barsLoading" class="muted">
+            {{ barInterval === '1m' ? '加载 1 分 K…' : '加载日 K…' }}
+          </p>
           <template v-else-if="barsError">
             <p class="err">
               {{ barsError }}
-              <RouterLink to="/ops" class="draft-link">{{ barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K' }}</RouterLink>
+              <RouterLink to="/ops" class="draft-link">{{
+                barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K'
+              }}</RouterLink>
             </p>
           </template>
           <template v-else-if="!bars.length">
             <p class="muted">
               {{ barInterval === '1m' ? '暂无 1 分 K' : '暂无日 K' }}
-              <RouterLink to="/ops" class="draft-link">{{ barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K' }}</RouterLink>
+              <RouterLink to="/ops" class="draft-link">{{
+                barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K'
+              }}</RouterLink>
             </p>
           </template>
           <div v-else class="chart">
@@ -781,7 +806,10 @@ onUnmounted(() => {
   border-radius: 0.5rem;
   padding: 7px 12px;
   font-size: 0.8125rem;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 .tabs button:hover {
   color: var(--ink);
