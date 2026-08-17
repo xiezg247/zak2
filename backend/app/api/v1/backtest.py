@@ -52,7 +52,7 @@ def get_runs(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[BacktestRunOut]]:
-    return ApiResponse(data=repo.list_runs(db, str(user.id), limit=limit, batch_id=batch_id))
+    return ApiResponse(data=repo.BacktestRepository(db, str(user.id)).list_runs(limit=limit, batch_id=batch_id))
 
 
 @router.get("/runs/page", response_model=ApiResponse[PageOut[BacktestRunOut]])
@@ -63,7 +63,7 @@ def get_runs_page(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[PageOut[BacktestRunOut]]:
-    result = repo.list_runs_page(db, str(user.id), page=page, page_size=page_size, batch_id=batch_id)
+    result = repo.BacktestRepository(db, str(user.id)).list_runs_page(page=page, page_size=page_size, batch_id=batch_id)
     return ApiResponse(
         data=PageOut(
             items=result.items,
@@ -81,7 +81,7 @@ def get_run(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[BacktestRunOut]:
-    row = repo.get_run(db, str(user.id), run_id)
+    row = repo.BacktestRepository(db, str(user.id)).get_run(run_id)
     if not row:
         raise HTTPException(status_code=404, detail="回测记录不存在")
     return ApiResponse(data=row)
@@ -91,7 +91,7 @@ def get_run(
 def get_batches(
     user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> ApiResponse[list[dict[str, Any]]]:
-    return ApiResponse(data=repo.list_batches(db, str(user.id)))
+    return ApiResponse(data=repo.BacktestRepository(db, str(user.id)).list_batches())
 
 
 @router.post("/runs", response_model=ApiResponse[JobAccepted])
@@ -151,4 +151,4 @@ def get_optimize(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[OptimizeSummaryOut]:
-    return ApiResponse(data=repo.summarize_optimize(db, str(user.id), batch_id, objective=objective))
+    return ApiResponse(data=repo.BacktestRepository(db, str(user.id)).summarize_optimize(batch_id, objective=objective))

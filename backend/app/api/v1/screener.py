@@ -135,7 +135,7 @@ def data_status(user: User = Depends(get_current_user)) -> ApiResponse[dict[str,
 
 @router.get("/schemes", response_model=ApiResponse[list[SchemeOut]])
 def get_schemes(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ApiResponse[list[SchemeOut]]:
-    return ApiResponse(data=[_scheme_out(r) for r in repo.list_schemes(db, str(user.id))])
+    return ApiResponse(data=[_scheme_out(r) for r in repo.ScreenerSchemeRepository(db, str(user.id)).list_schemes()])
 
 
 @router.post("/schemes", response_model=ApiResponse[SchemeOut])
@@ -144,7 +144,7 @@ def post_scheme(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[SchemeOut]:
-    return ApiResponse(data=_scheme_out(repo.create_scheme(db, str(user.id), body)))
+    return ApiResponse(data=_scheme_out(repo.ScreenerSchemeRepository(db, str(user.id)).create_scheme(body)))
 
 
 @router.patch("/schemes/{scheme_id}", response_model=ApiResponse[SchemeOut])
@@ -154,7 +154,7 @@ def patch_scheme(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[SchemeOut]:
-    row = repo.update_scheme(db, str(user.id), scheme_id, body)
+    row = repo.ScreenerSchemeRepository(db, str(user.id)).update_scheme(scheme_id, body)
     if not row:
         raise HTTPException(status_code=404, detail="方案不存在")
     return ApiResponse(data=_scheme_out(row))
@@ -166,14 +166,14 @@ def remove_scheme(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[dict[str, Any]]:
-    if not repo.delete_scheme(db, str(user.id), scheme_id):
+    if not repo.ScreenerSchemeRepository(db, str(user.id)).delete_scheme(scheme_id):
         raise HTTPException(status_code=404, detail="方案不存在")
     return ApiResponse(data={"ok": True})
 
 
 @router.get("/recipes", response_model=ApiResponse[list[RecipeOut]])
 def get_recipes(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ApiResponse[list[RecipeOut]]:
-    return ApiResponse(data=[_recipe_out(r) for r in repo.list_recipes(db, str(user.id))])
+    return ApiResponse(data=[_recipe_out(r) for r in repo.ScreenerRecipeRepository(db, str(user.id)).list_recipes()])
 
 
 @router.post("/recipes", response_model=ApiResponse[RecipeOut])
@@ -182,7 +182,7 @@ def post_recipe(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[RecipeOut]:
-    return ApiResponse(data=_recipe_out(repo.create_recipe(db, str(user.id), body)))
+    return ApiResponse(data=_recipe_out(repo.ScreenerRecipeRepository(db, str(user.id)).create_recipe(body)))
 
 
 @router.patch("/recipes/{recipe_id}", response_model=ApiResponse[RecipeOut])
@@ -192,7 +192,7 @@ def patch_recipe(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[RecipeOut]:
-    row = repo.update_recipe(db, str(user.id), recipe_id, body)
+    row = repo.ScreenerRecipeRepository(db, str(user.id)).update_recipe(recipe_id, body)
     if not row:
         raise HTTPException(status_code=404, detail="配方不存在")
     return ApiResponse(data=_recipe_out(row))
@@ -204,7 +204,7 @@ def remove_recipe(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[dict[str, Any]]:
-    if not repo.delete_recipe(db, str(user.id), recipe_id):
+    if not repo.ScreenerRecipeRepository(db, str(user.id)).delete_recipe(recipe_id):
         raise HTTPException(status_code=404, detail="配方不存在")
     return ApiResponse(data={"ok": True})
 
@@ -301,7 +301,7 @@ async def post_reference_peer_run(
 
 @router.get("/runs", response_model=ApiResponse[list[RunSummary]])
 def get_runs(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ApiResponse[list[RunSummary]]:
-    return ApiResponse(data=[_run_summary(r) for r in repo.list_runs(db, str(user.id))])
+    return ApiResponse(data=[_run_summary(r) for r in repo.ScreenerRunRepository(db, str(user.id)).list_runs()])
 
 
 @router.get("/runs/page", response_model=ApiResponse[PageOut[RunSummary]])
@@ -311,7 +311,7 @@ def get_runs_page(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[PageOut[RunSummary]]:
-    result = repo.list_runs_page(db, str(user.id), page=page, page_size=page_size)
+    result = repo.ScreenerRunRepository(db, str(user.id)).list_runs_page(page=page, page_size=page_size)
     return ApiResponse(
         data=PageOut(
             items=[_run_summary(r) for r in result.items],
@@ -329,7 +329,7 @@ def get_run_detail(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[RunDetail]:
-    row = repo.get_run(db, str(user.id), run_id)
+    row = repo.ScreenerRunRepository(db, str(user.id)).get_run(run_id)
     if not row:
         raise HTTPException(status_code=404, detail="运行记录不存在")
     return ApiResponse(data=_run_detail(row))
@@ -341,7 +341,7 @@ def export_run_csv(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
-    row = repo.get_run(db, str(user.id), run_id)
+    row = repo.ScreenerRunRepository(db, str(user.id)).get_run(run_id)
     if not row:
         raise HTTPException(status_code=404, detail="运行记录不存在")
     result = json.loads(row.result_json or "{}")

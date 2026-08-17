@@ -60,7 +60,7 @@ def _run_single(user_id: str, payload: dict) -> dict[str, Any]:
     db = SessionLocal()
     try:
         req = BacktestRunRequest.model_validate(payload)
-        out = repo.execute_single(db, user_id, req)
+        out = repo.BacktestRepository(db, user_id).execute_single(req)
         if out.status == "failed":
             return {"success": False, "error": out.error_message or "failed", "result_ref": out.id}
         return {"success": True, "result_ref": out.id}
@@ -79,10 +79,10 @@ def _execute_with_optional_subprocess(
     source: str,
 ) -> Any:
     if not _use_subprocess() and source == "single":
-        return repo.execute_single(db, user_id, req, batch_id=batch_id, source=source)
+        return repo.BacktestRepository(db, user_id).execute_single(req, batch_id=batch_id, source=source)
 
     # batch/optimize：加载 K 线后子进程跑引擎，父进程落库
-    bars = repo._load_bars_for_request(db, req)  # noqa: SLF001
+    bars = repo.BacktestRepository(db, user_id).load_bars_for_request(req)
     setting = build_strategy_setting(req)
     params = {
         "fast_window": req.fast_window,
@@ -116,10 +116,8 @@ def _execute_with_optional_subprocess(
                 }
             )
         else:
-            result = repo._run_vnpy(req, bars)  # noqa: SLF001
-        row = repo.save_run(
-            db,
-            user_id=user_id,
+            result = repo.BacktestRepository(db, user_id).run_vnpy(req, bars)
+        row = repo.BacktestRepository(db, user_id).save_run(
             vt_symbol=req.vt_symbol,
             strategy=req.strategy,
             interval=req.interval or "d",
@@ -132,12 +130,10 @@ def _execute_with_optional_subprocess(
             params=params,
             status="success",
         )
-        return repo._to_out(row, detail=True)  # noqa: SLF001
+        return repo.BacktestRepository(db, user_id).to_out(row, detail=True)
     except Exception as exc:  # noqa: BLE001
         detail = str(exc.detail) if isinstance(exc, HTTPException) else str(exc)
-        row = repo.save_run(
-            db,
-            user_id=user_id,
+        row = repo.BacktestRepository(db, user_id).save_run(
             vt_symbol=req.vt_symbol,
             strategy=req.strategy,
             interval=req.interval or "d",
@@ -151,7 +147,7 @@ def _execute_with_optional_subprocess(
             status="failed",
             error_message=detail,
         )
-        return repo._to_out(row, detail=True)  # noqa: SLF001
+        return repo.BacktestRepository(db, user_id).to_out(row, detail=True)
 
 
 def _run_batch(user_id: str, payload: dict, batch_id: str) -> dict[str, Any]:

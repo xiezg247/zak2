@@ -38,7 +38,7 @@ def test_execute_unknown_strategy_501():
 
     req = BacktestRunRequest(vt_symbol="600519.SSE", strategy="ghost")
     with pytest.raises(HTTPException) as ei:
-        repo.execute_single(DummyDb(), "u1", req)  # type: ignore[arg-type]
+        repo.BacktestRepository(DummyDb(), "u1").execute_single(req)  # type: ignore[arg-type]
     assert ei.value.status_code == 501
 
 

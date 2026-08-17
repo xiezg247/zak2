@@ -112,9 +112,12 @@ def get_watchlist(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[WatchlistItemOut]]:
-    items = repo.list_items(db, str(user.id))
+    items = repo.WatchlistItemRepository(db, str(user.id)).list_items()
     if group_id:
-        members = {(m.symbol, m.exchange) for m in repo.list_group_members(db, str(user.id), group_id)}
+        members = {
+            (m.symbol, m.exchange)
+            for m in repo.WatchlistGroupMemberRepository(db, str(user.id)).list_group_members(group_id)
+        }
         items = [i for i in items if (i.symbol, i.exchange) in members]
     return ApiResponse(data=_enrich(items, with_quotes=enrich, db=db))
 
@@ -177,7 +180,7 @@ def get_signal_panel(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[SignalPanelOut]:
-    return ApiResponse(data=SignalPanelOut(**signal_panel_repo.panel_payload(db, str(user.id))))
+    return ApiResponse(data=SignalPanelOut(**signal_panel_repo.SignalPanelRepository(db, str(user.id)).panel_payload()))
 
 
 @router.put("/watchlist/signal-panel", response_model=ApiResponse[SignalPanelOut])
@@ -186,7 +189,7 @@ def put_signal_panel(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[SignalPanelOut]:
-    symbols = signal_panel_repo.save_symbols(db, str(user.id), body.symbols)
+    symbols = signal_panel_repo.SignalPanelRepository(db, str(user.id)).save_symbols(body.symbols)
     return ApiResponse(
         data=SignalPanelOut(
             symbols=symbols,
@@ -202,7 +205,7 @@ def post_signal_panel_member(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[SignalPanelOut]:
-    symbols = signal_panel_repo.add_symbol(db, str(user.id), body.symbol)
+    symbols = signal_panel_repo.SignalPanelRepository(db, str(user.id)).add_symbol(body.symbol)
     return ApiResponse(
         data=SignalPanelOut(
             symbols=symbols,
@@ -218,7 +221,7 @@ def delete_signal_panel_member(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[SignalPanelOut]:
-    symbols = signal_panel_repo.remove_symbol(db, str(user.id), vt_symbol)
+    symbols = signal_panel_repo.SignalPanelRepository(db, str(user.id)).remove_symbol(vt_symbol)
     return ApiResponse(
         data=SignalPanelOut(
             symbols=symbols,
@@ -233,7 +236,7 @@ def get_positions(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[PositionOut]]:
-    return ApiResponse(data=[PositionOut(**row) for row in positions_repo.list_positions(db, str(user.id))])
+    return ApiResponse(data=[PositionOut(**row) for row in positions_repo.PositionRepository(db, str(user.id)).list_positions()])
 
 
 @router.post("/watchlist/positions", response_model=ApiResponse[PositionOut])
@@ -243,9 +246,7 @@ def post_position(
     db: Session = Depends(get_db),
 ) -> ApiResponse[PositionOut]:
     symbol, exchange = repo.resolve_symbol_pair(body.symbol, body.exchange)
-    row = positions_repo.add_position(
-        db,
-        str(user.id),
+    row = positions_repo.PositionRepository(db, str(user.id)).add_position(
         symbol=symbol,
         exchange=exchange,
         cost_price=body.cost_price,
@@ -265,9 +266,7 @@ def put_position(
     db: Session = Depends(get_db),
 ) -> ApiResponse[PositionOut]:
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
-    row = positions_repo.update_position(
-        db,
-        str(user.id),
+    row = positions_repo.PositionRepository(db, str(user.id)).update_position(
         symbol=symbol,
         exchange=exchange,
         cost_price=body.cost_price,
@@ -286,7 +285,7 @@ def delete_position(
     db: Session = Depends(get_db),
 ) -> ApiResponse[dict[str, Any]]:
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
-    if not positions_repo.delete_position(db, str(user.id), symbol=symbol, exchange=exchange):
+    if not positions_repo.PositionRepository(db, str(user.id)).delete_position(symbol=symbol, exchange=exchange):
         raise HTTPException(status_code=404, detail="持仓不存在")
     return ApiResponse(data={"ok": True})
 
@@ -297,7 +296,7 @@ def post_watchlist(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[WatchlistItemOut]:
-    row = repo.add_item(db, str(user.id), raw_symbol=body.symbol, name=body.name, exchange=body.exchange)
+    row = repo.WatchlistItemRepository(db, str(user.id)).add_item(raw_symbol=body.symbol, name=body.name, exchange=body.exchange)
     return ApiResponse(data=_enrich([row], with_quotes=True, db=db)[0])
 
 
@@ -307,14 +306,14 @@ def put_reorder(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[WatchlistItemOut]]:
-    rows = repo.reorder_items(db, str(user.id), body.items)
+    rows = repo.WatchlistItemRepository(db, str(user.id)).reorder_items(body.items)
     return ApiResponse(data=_enrich(rows, with_quotes=False, db=db))
 
 
 @router.get("/watchlist/groups", response_model=ApiResponse[list[GroupOut]])
 def get_groups(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ApiResponse[list[GroupOut]]:
     return ApiResponse(
-        data=[GroupOut(id=g.id, name=g.name, sort_order=g.sort_order) for g in repo.list_groups(db, str(user.id))]
+        data=[GroupOut(id=g.id, name=g.name, sort_order=g.sort_order) for g in repo.WatchlistGroupRepository(db, str(user.id)).list_groups()]
     )
 
 
@@ -324,7 +323,7 @@ def put_groups_reorder(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[GroupOut]]:
-    rows = repo.reorder_groups(db, str(user.id), body.group_ids)
+    rows = repo.WatchlistGroupRepository(db, str(user.id)).reorder_groups(body.group_ids)
     return ApiResponse(data=[GroupOut(id=g.id, name=g.name, sort_order=g.sort_order) for g in rows])
 
 
@@ -334,7 +333,7 @@ def post_group(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[GroupOut]:
-    g = repo.create_group(db, str(user.id), body.name)
+    g = repo.WatchlistGroupRepository(db, str(user.id)).create_group(body.name)
     return ApiResponse(data=GroupOut(id=g.id, name=g.name, sort_order=g.sort_order))
 
 
@@ -345,7 +344,7 @@ def patch_group(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[GroupOut]:
-    g = repo.rename_group(db, str(user.id), group_id, body.name)
+    g = repo.WatchlistGroupRepository(db, str(user.id)).rename_group(group_id, body.name)
     return ApiResponse(data=GroupOut(id=g.id, name=g.name, sort_order=g.sort_order))
 
 
@@ -355,7 +354,7 @@ def remove_group(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[dict[str, Any]]:
-    if not repo.delete_group(db, str(user.id), group_id):
+    if not repo.WatchlistGroupRepository(db, str(user.id)).delete_group(group_id):
         raise HTTPException(status_code=404, detail="分组不存在")
     return ApiResponse(data={"ok": True})
 
@@ -367,7 +366,7 @@ def post_group_member(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[dict[str, Any]]:
-    row = repo.add_group_member(db, str(user.id), group_id, body.symbol, body.exchange)
+    row = repo.WatchlistGroupMemberRepository(db, str(user.id)).add_group_member(group_id, body.symbol, body.exchange)
     return ApiResponse(data={"ok": True, "symbol": row.symbol, "exchange": row.exchange})
 
 
@@ -378,7 +377,7 @@ def post_group_members_batch(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[GroupMembersBatchOut]:
-    raw = repo.batch_group_members(db, str(user.id), group_id, body.symbols, body.action)
+    raw = repo.WatchlistGroupMemberRepository(db, str(user.id)).batch_group_members(group_id, body.symbols, body.action)
     return ApiResponse(data=GroupMembersBatchOut(**raw))
 
 
@@ -390,7 +389,7 @@ def delete_group_member(
     db: Session = Depends(get_db),
 ) -> ApiResponse[dict[str, Any]]:
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
-    if not repo.remove_group_member(db, str(user.id), group_id, symbol, exchange):
+    if not repo.WatchlistGroupMemberRepository(db, str(user.id)).remove_group_member(group_id, symbol, exchange):
         raise HTTPException(status_code=404, detail="分组成员不存在")
     return ApiResponse(data={"ok": True})
 
@@ -402,7 +401,7 @@ def delete_watchlist(
     db: Session = Depends(get_db),
 ) -> ApiResponse[dict[str, Any]]:
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
-    if not repo.remove_item(db, str(user.id), symbol, exchange):
+    if not repo.WatchlistItemRepository(db, str(user.id)).remove_item(symbol, exchange):
         raise HTTPException(status_code=404, detail="不在自选中")
     return ApiResponse(data={"ok": True})
 

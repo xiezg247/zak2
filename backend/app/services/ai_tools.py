@@ -141,7 +141,7 @@ def _get_bars_summary(db: Session, user_id: str, args: dict[str, Any]) -> Any:
 
 def _get_recent_backtest(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     limit = max(1, min(int(args.get("limit") or 5), 20))
-    runs = backtest_repo.list_runs(db, user_id, limit=limit)
+    runs = backtest_repo.BacktestRepository(db, user_id).list_runs(limit=limit)
     return {
         "runs": [
             {
@@ -195,9 +195,7 @@ def _add_watchlist(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         return {"error": "需要 symbol，例如 600519.SSE"}
     name = str(args.get("name") or "").strip()
     try:
-        item = watchlist_repo.add_item(
-            db,
-            user_id,
+        item = watchlist_repo.WatchlistItemRepository(db, user_id).add_item(
             raw_symbol=raw,
             name=name,
             exchange=args.get("exchange"),
@@ -221,15 +219,15 @@ def _remove_watchlist(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         symbol, exchange = watchlist_repo.resolve_symbol_pair(raw, args.get("exchange"))
     except Exception as exc:  # noqa: BLE001
         return {"error": f"标的解析失败：{exc}"}
-    ok = watchlist_repo.remove_item(db, user_id, symbol, exchange)
+    ok = watchlist_repo.WatchlistItemRepository(db, user_id).remove_item(symbol, exchange)
     if not ok:
         return {"error": "不在自选中"}
     # 尽量同步移出信号名单（忽略失败）
     try:
-        panel = signal_panel_repo.load_symbols(db, user_id)
+        panel = signal_panel_repo.SignalPanelRepository(db, user_id).load_symbols()
         vt = to_vt_symbol(symbol, exchange)
         if vt in panel:
-            signal_panel_repo.save_symbols(db, user_id, [s for s in panel if s != vt])
+            signal_panel_repo.SignalPanelRepository(db, user_id).save_symbols([s for s in panel if s != vt])
     except Exception:  # noqa: BLE001
         pass
     return {"ok": True, "vt_symbol": to_vt_symbol(symbol, exchange), "removed": True}
@@ -297,11 +295,9 @@ def _upsert_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         plan_pct = None
     try:
         symbol, exchange = watchlist_repo.resolve_symbol_pair(raw, args.get("exchange"))
-        existing = positions_repo.get_position(db, user_id, symbol, exchange)
+        existing = positions_repo.PositionRepository(db, user_id).get_position(symbol, exchange)
         if existing:
-            row = positions_repo.update_position(
-                db,
-                user_id,
+            row = positions_repo.PositionRepository(db, user_id).update_position(
                 symbol=symbol,
                 exchange=exchange,
                 cost_price=cost_price,
@@ -312,9 +308,7 @@ def _upsert_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
             )
             action = "updated"
         else:
-            row = positions_repo.add_position(
-                db,
-                user_id,
+            row = positions_repo.PositionRepository(db, user_id).add_position(
                 symbol=symbol,
                 exchange=exchange,
                 cost_price=cost_price,
@@ -343,7 +337,7 @@ def _delete_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         return {"error": "需要 symbol，例如 600519.SSE"}
     try:
         symbol, exchange = watchlist_repo.resolve_symbol_pair(raw, args.get("exchange"))
-        ok = positions_repo.delete_position(db, user_id, symbol=symbol, exchange=exchange)
+        ok = positions_repo.PositionRepository(db, user_id).delete_position(symbol=symbol, exchange=exchange)
     except Exception as exc:  # noqa: BLE001
         return {"error": str(getattr(exc, "detail", None) or exc)}
     if not ok:
@@ -356,7 +350,7 @@ def _add_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     if not raw:
         return {"error": "需要 symbol，例如 600519.SSE"}
     try:
-        symbols = signal_panel_repo.add_symbol(db, user_id, raw)
+        symbols = signal_panel_repo.SignalPanelRepository(db, user_id).add_symbol(raw)
     except Exception as exc:  # noqa: BLE001
         return {"error": str(getattr(exc, "detail", None) or exc)}
     return {"ok": True, "symbols": symbols}
@@ -367,7 +361,7 @@ def _remove_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any
     if not raw:
         return {"error": "需要 symbol，例如 600519.SSE"}
     try:
-        symbols = signal_panel_repo.remove_symbol(db, user_id, raw)
+        symbols = signal_panel_repo.SignalPanelRepository(db, user_id).remove_symbol(raw)
     except Exception as exc:  # noqa: BLE001
         return {"error": str(getattr(exc, "detail", None) or exc)}
     return {"ok": True, "symbols": symbols}

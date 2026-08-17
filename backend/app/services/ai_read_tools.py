@@ -27,7 +27,7 @@ from app.services.symbols import to_vt_symbol
 def get_watchlist(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     limit = max(1, min(int(args.get("limit") or 30), 50))
     with_quotes = bool(args.get("with_quotes", True))
-    items = watchlist_repo.list_items(db, user_id)[:limit]
+    items = watchlist_repo.WatchlistItemRepository(db, user_id).list_items()[:limit]
     rows: list[dict[str, Any]] = []
     for item in items:
         row = {
@@ -68,7 +68,7 @@ def get_market_emotion(db: Session, user_id: str, args: dict[str, Any]) -> Any:
 def get_recent_screening(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     limit = max(1, min(int(args.get("limit") or 1), 5))
     top_n = max(1, min(int(args.get("top_n") or 20), 50))
-    runs = screener_repo.list_runs(db, user_id, limit=limit)
+    runs = screener_repo.ScreenerRunRepository(db, user_id).list_runs(limit=limit)
     out: list[dict[str, Any]] = []
     for run in runs:
         symbols: list[Any] = []
@@ -132,7 +132,7 @@ def get_stock_notes(db: Session, user_id: str, args: dict[str, Any]) -> Any:
 def get_positions(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     limit = max(1, min(int(args.get("limit") or 20), 20))
     with_quotes = bool(args.get("with_quotes", True))
-    items = list(positions_repo.list_positions(db, user_id)[:limit])
+    items = list(positions_repo.PositionRepository(db, user_id).list_positions()[:limit])
     if with_quotes and items:
         try:
             from app.services.symbols import to_tf_symbol
@@ -155,7 +155,7 @@ def get_positions(db: Session, user_id: str, args: dict[str, Any]) -> Any:
 
 def get_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     _ = args
-    return signal_panel_repo.panel_payload(db, user_id)
+    return signal_panel_repo.SignalPanelRepository(db, user_id).panel_payload()
 
 
 def get_trading_risk(db: Session, user_id: str, args: dict[str, Any]) -> Any:

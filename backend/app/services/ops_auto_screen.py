@@ -44,7 +44,7 @@ def _run_auto_screen(
         top_n = 20
     top_n = max(1, min(top_n, 200))
 
-    prev = repo.latest_run_symbols(db, user_id)
+    prev = repo.ScreenerRunRepository(db, user_id).latest_run_symbols()
     req = RecipeRunRequest(recipe_id=recipe_id, top_n=top_n, hard_filter_template="balanced")
     try:
         # cron / 立即执行均用该 user_id 的权重（embedded 侧为 SCHEDULER_SCREEN_USER_ID）
@@ -54,9 +54,7 @@ def _run_auto_screen(
         save_job_run_meta(db, job_id, last_message=message, last_success=False)
         return {"success": False, "message": message}
 
-    run = repo.save_run(
-        db,
-        user_id=user_id,
+    run = repo.ScreenerRunRepository(db, user_id).save_run(
         condition=str(result.get("condition") or label),
         source="scheduled",
         result={**result, "config": {**(result.get("config") or {}), "trigger": f"ops.{job_id}"}},

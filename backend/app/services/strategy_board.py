@@ -351,12 +351,12 @@ def load_strategy_board(
     if mode not in {SIGNAL_MODE_HEURISTIC, SIGNAL_MODE_DOUBLE_MA, SIGNAL_MODE_TREND_MA}:
         mode = SIGNAL_MODE_HEURISTIC
     ck = resolve_board_config_key(db, user_id, signal_mode=mode, override=config_key)
-    items = repo.list_items(db, user_id)
+    items = repo.WatchlistItemRepository(db, user_id).list_items()
     name_by_vt = {
         to_vt_symbol(i.symbol, i.exchange): (i.name or "") for i in items
     }
     watchlist_vts = list(name_by_vt.keys())
-    panel_symbols = signal_panel_repo.load_symbols(db, user_id)
+    panel_symbols = signal_panel_repo.SignalPanelRepository(db, user_id).load_symbols()
     # 名单优先；空则回退自选
     universe = panel_symbols if panel_symbols else watchlist_vts
 

@@ -171,8 +171,8 @@ def test_load_strategy_board_empty() -> None:
 
     db.execute.side_effect = _execute
     with (
-        patch.object(strategy_board.repo, "list_items", return_value=[]),
-        patch.object(strategy_board.signal_panel_repo, "load_symbols", return_value=[]),
+        patch.object(strategy_board.repo.WatchlistItemRepository, "list_items", return_value=[]),
+        patch.object(strategy_board.signal_panel_repo.SignalPanelRepository, "load_symbols", return_value=[]),
         patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
@@ -257,13 +257,13 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
     db.execute.side_effect = _execute
     with (
         patch.object(
-            strategy_board.repo,
+            strategy_board.repo.WatchlistItemRepository,
             "list_items",
             return_value=[
                 SimpleNamespace(symbol="600519", exchange="SSE", name="茅台"),
             ],
         ),
-        patch.object(strategy_board.signal_panel_repo, "load_symbols", return_value=[]),
+        patch.object(strategy_board.signal_panel_repo.SignalPanelRepository, "load_symbols", return_value=[]),
         patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
@@ -340,9 +340,9 @@ def test_load_strategy_board_note_panel_no_signals() -> None:
 
     db.execute.side_effect = _execute
     with (
-        patch.object(strategy_board.repo, "list_items", return_value=[]),
+        patch.object(strategy_board.repo.WatchlistItemRepository, "list_items", return_value=[]),
         patch.object(
-            strategy_board.signal_panel_repo,
+            strategy_board.signal_panel_repo.SignalPanelRepository,
             "load_symbols",
             return_value=["600519.SSE"],
         ),
@@ -409,8 +409,8 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
 
     db.execute.side_effect = _execute
     with (
-        patch.object(strategy_board.repo, "list_items", return_value=[]),
-        patch.object(strategy_board.signal_panel_repo, "load_symbols", return_value=[]),
+        patch.object(strategy_board.repo.WatchlistItemRepository, "list_items", return_value=[]),
+        patch.object(strategy_board.signal_panel_repo.SignalPanelRepository, "load_symbols", return_value=[]),
         patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
@@ -459,8 +459,8 @@ def test_note_empty_mentions_heuristic_job() -> None:
 
     db.execute.side_effect = _execute
     with (
-        patch.object(strategy_board.repo, "list_items", return_value=[]),
-        patch.object(strategy_board.signal_panel_repo, "load_symbols", return_value=[]),
+        patch.object(strategy_board.repo.WatchlistItemRepository, "list_items", return_value=[]),
+        patch.object(strategy_board.signal_panel_repo.SignalPanelRepository, "load_symbols", return_value=[]),
         patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(

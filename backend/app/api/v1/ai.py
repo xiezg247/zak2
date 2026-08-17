@@ -37,7 +37,7 @@ def get_status(user: User = Depends(get_current_user)) -> ApiResponse[LlmStatus]
 def get_sessions(
     user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> ApiResponse[list[SessionOut]]:
-    return ApiResponse(data=repo.list_sessions(db, str(user.id)))
+    return ApiResponse(data=repo.ChatRepository(db, str(user.id)).list_sessions())
 
 
 @router.get("/sessions/page", response_model=ApiResponse[PageOut[SessionOut]])
@@ -47,7 +47,7 @@ def get_sessions_page(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[PageOut[SessionOut]]:
-    result = repo.list_sessions_page(db, str(user.id), page=page, page_size=page_size)
+    result = repo.ChatRepository(db, str(user.id)).list_sessions_page(page=page, page_size=page_size)
     return ApiResponse(
         data=PageOut(
             items=result.items,
@@ -65,7 +65,7 @@ def post_session(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[SessionOut]:
-    return ApiResponse(data=repo.create_session(db, str(user.id), title=body.title, scene=body.scene))
+    return ApiResponse(data=repo.ChatRepository(db, str(user.id)).create_session(title=body.title, scene=body.scene))
 
 
 @router.patch("/sessions/{session_id}", response_model=ApiResponse[SessionOut])
@@ -75,7 +75,7 @@ def patch_session(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[SessionOut]:
-    return ApiResponse(data=repo.update_session(db, str(user.id), session_id, title=body.title, scene=body.scene))
+    return ApiResponse(data=repo.ChatRepository(db, str(user.id)).update_session(session_id, title=body.title, scene=body.scene))
 
 
 @router.delete("/sessions/{session_id}", response_model=ApiResponse[dict[str, Any]])
@@ -84,7 +84,7 @@ def remove_session(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[dict[str, Any]]:
-    repo.delete_session(db, str(user.id), session_id)
+    repo.ChatRepository(db, str(user.id)).delete_session(session_id)
     return ApiResponse(data={"ok": True})
 
 
@@ -94,7 +94,7 @@ def get_messages(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[MessageOut]]:
-    return ApiResponse(data=repo.list_messages(db, str(user.id), session_id))
+    return ApiResponse(data=repo.ChatRepository(db, str(user.id)).list_messages(session_id))
 
 
 @router.post("/sessions/{session_id}/chat", response_model=ApiResponse[MessageOut])
@@ -105,9 +105,7 @@ def post_chat(
     db: Session = Depends(get_db),
 ) -> ApiResponse[MessageOut]:
     return ApiResponse(
-        data=repo.send_message(
-            db,
-            str(user.id),
+        data=repo.ChatRepository(db, str(user.id)).send_message(
             session_id,
             body.content,
             include_context=body.include_context,
@@ -164,7 +162,7 @@ def post_team_stream(
                 title = f"团队分析{'·深度' if mode == 'deep' else ''} {name or vt}"
                 if weighted is not None:
                     title += f" · 加权 {weighted}"
-                msg = repo.finalize_stream(db, user_id, session_id, f"{title}\n\n{report}")
+                msg = repo.ChatRepository(db, user_id).finalize_stream(session_id, f"{title}\n\n{report}")
                 yield f"data: {json.dumps({'type': 'done', 'message': msg.model_dump(mode='json')}, ensure_ascii=False)}\n\n"
             else:
                 yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
@@ -186,9 +184,7 @@ def post_chat_stream(
     use_tools = body.use_tools
     db = SessionLocal()
     try:
-        messages = repo.prepare_stream(
-            db,
-            user_id,
+        messages = repo.ChatRepository(db, user_id).prepare_stream(
             session_id,
             body.content,
             include_context=body.include_context,
@@ -208,7 +204,7 @@ def post_chat_stream(
                     yield f"data: {json.dumps({'type': 'delta', 'content': event.get('content')}, ensure_ascii=False)}\n\n"
                 elif et == "reply_done":
                     reply = str(event.get("content") or "")
-            msg = repo.finalize_stream(db2, user_id, session_id, reply)
+            msg = repo.ChatRepository(db2, user_id).finalize_stream(session_id, reply)
             yield f"data: {json.dumps({'type': 'done', 'message': msg.model_dump(mode='json')}, ensure_ascii=False)}\n\n"
         except Exception as exc:  # noqa: BLE001
             yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)}, ensure_ascii=False)}\n\n"

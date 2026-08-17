@@ -30,11 +30,9 @@ def _run_condition(user_id: str, payload: dict) -> dict[str, Any]:
     db = SessionLocal()
     try:
         req = ConditionRunRequest.model_validate(payload)
-        prev = repo.latest_run_symbols(db, user_id)
+        prev = repo.ScreenerRunRepository(db, user_id).latest_run_symbols()
         result = run_condition_screen(req, previous_symbols=prev, db=db)
-        run = repo.save_run(
-            db,
-            user_id=user_id,
+        run = repo.ScreenerRunRepository(db, user_id).save_run(
             condition=result["condition"],
             source=result["source"],
             result=result,
@@ -50,11 +48,9 @@ def _run_recipe(user_id: str, payload: dict) -> dict[str, Any]:
     db = SessionLocal()
     try:
         req = RecipeRunRequest.model_validate(payload)
-        prev = repo.latest_run_symbols(db, user_id)
+        prev = repo.ScreenerRunRepository(db, user_id).latest_run_symbols()
         result = run_recipe_screen(req, previous_symbols=prev, db=db, user_id=user_id)
-        run = repo.save_run(
-            db,
-            user_id=user_id,
+        run = repo.ScreenerRunRepository(db, user_id).save_run(
             condition=result["condition"],
             source=result["source"],
             result=result,
@@ -70,11 +66,9 @@ def _run_pattern(user_id: str, payload: dict) -> dict[str, Any]:
     db = SessionLocal()
     try:
         req = PatternRunRequest.model_validate(payload)
-        prev = repo.latest_run_symbols(db, user_id)
+        prev = repo.ScreenerRunRepository(db, user_id).latest_run_symbols()
         result = run_pattern_screen(req, db=db, previous_symbols=prev)
-        run = repo.save_run(
-            db,
-            user_id=user_id,
+        run = repo.ScreenerRunRepository(db, user_id).save_run(
             condition=result["condition"],
             source=result["source"],
             result=result,
@@ -90,11 +84,9 @@ def _run_reference_peer(user_id: str, payload: dict) -> dict[str, Any]:
     db = SessionLocal()
     try:
         req = ReferencePeerRequest.model_validate(payload)
-        prev = repo.latest_run_symbols(db, user_id)
+        prev = repo.ScreenerRunRepository(db, user_id).latest_run_symbols()
         result = run_reference_peer(req, db=db, previous_symbols=prev)
-        run = repo.save_run(
-            db,
-            user_id=user_id,
+        run = repo.ScreenerRunRepository(db, user_id).save_run(
             condition=result["condition"],
             source=result["source"],
             result=result,
