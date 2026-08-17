@@ -293,10 +293,10 @@ def test_api_plan_draft_ok() -> None:
     create.assert_called_once()
     assert create.call_args[0][1] == str(user.id)
     body = resp.json()
-    assert body["plan_id"] == "abc123"
-    assert body["trade_date"] == "2026-08-11"
-    assert body["symbol_count"] == 1
-    assert body["replaced"] is False
+    assert body["data"]["plan_id"] == "abc123"
+    assert body["data"]["trade_date"] == "2026-08-11"
+    assert body["data"]["symbol_count"] == 1
+    assert body["data"]["replaced"] is False
 
 
 def test_api_plan_draft_bad_request() -> None:
@@ -406,5 +406,5 @@ def test_api_draft_append() -> None:
     append.assert_called_once()
     assert append.call_args[0][1] == str(user.id)
     body = resp.json()
-    assert body["added"] is True
-    assert body["plan_id"] == "p1"
+    assert body["data"]["added"] is True
+    assert body["data"]["plan_id"] == "p1"

@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.bars import DbBarData
-from app.services.watchlist_repo import resolve_symbol_pair
+from app.repositories.watchlist import resolve_symbol_pair
 
 ALLOWED_INTERVALS = frozenset({"d", "1m"})
 

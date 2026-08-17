@@ -128,4 +128,4 @@ def test_quotes_endpoint_enriches_industry() -> None:
         resp = client.get("/api/v1/quotes", params={"symbols": "600519.SSE"})
     assert resp.status_code == 200
     body = resp.json()
-    assert body[0]["industry"] == "白酒"
+    assert body["data"][0]["industry"] == "白酒"

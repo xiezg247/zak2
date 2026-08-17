@@ -7,7 +7,8 @@ from typing import Any, Callable
 
 from sqlalchemy.orm import Session
 
-from app.services import backtest_repo, bars, notes, positions_repo, signal_panel_repo, watchlist_repo
+from app.repositories import backtest as backtest_repo, positions as positions_repo, signal_panel as signal_panel_repo, watchlist as watchlist_repo
+from app.services import bars, notes
 from app.services.symbols import to_vt_symbol
 
 MAX_RESULT_CHARS = 6000

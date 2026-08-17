@@ -171,9 +171,9 @@ def test_get_resonance_weights_api() -> None:
         resp = client.get("/api/v1/radar/resonance/weights")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["weights"]["leader_pick"] == 2.5
-    assert any(i["card_id"] == "leader_pick" for i in body["items"])
-    assert all(i["card_id"] != "sector_flow_hot" for i in body["items"])
+    assert body["data"]["weights"]["leader_pick"] == 2.5
+    assert any(i["card_id"] == "leader_pick" for i in body["data"]["items"])
+    assert all(i["card_id"] != "sector_flow_hot" for i in body["data"]["items"])
 
 
 def test_put_resonance_weights_api_ok() -> None:
@@ -191,7 +191,7 @@ def test_put_resonance_weights_api_ok() -> None:
     assert resp.status_code == 200
     save.assert_called_once()
     assert save.call_args[0][1] == str(user.id)
-    assert resp.json()["weights"]["leader_pick"] == 3.0
+    assert resp.json()["data"]["weights"]["leader_pick"] == 3.0
 
 
 def test_put_resonance_weights_api_reset() -> None:
@@ -205,7 +205,7 @@ def test_put_resonance_weights_api_reset() -> None:
         resp = client.put("/api/v1/radar/resonance/weights", json={"weights": {}})
     assert resp.status_code == 200
     save.assert_called_once_with(save.call_args[0][0], str(user.id), {})
-    assert resp.json()["weights"]["leader_pick"] == rr.CARD_WEIGHTS["leader_pick"]
+    assert resp.json()["data"]["weights"]["leader_pick"] == rr.CARD_WEIGHTS["leader_pick"]
 
 
 def test_put_resonance_weights_api_bad_request() -> None:

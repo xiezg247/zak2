@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from fastapi import HTTPException
 
-from app.services.positions_repo import (
+from app.repositories.positions import (
     normalize_cost_price,
     normalize_volume,
     validate_inputs,

@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.screener import ScreenerRecipe, ScreenerRun, ScreenerScheme
+from app.repositories.pagination import Page, paginate
 from app.schemas.screener import (
     RecipeCreate,
     RecipeUpdate,
@@ -166,6 +167,11 @@ def list_runs(db: Session, user_id: str, *, limit: int = 50) -> list[ScreenerRun
             .limit(limit)
         )
     )
+
+
+def list_runs_page(db: Session, user_id: str, *, page: int = 1, page_size: int = 20) -> Page[ScreenerRun]:
+    stmt = select(ScreenerRun).where(ScreenerRun.user_id == user_id).order_by(ScreenerRun.created_at.desc())
+    return paginate(db, stmt, page=page, page_size=page_size)
 
 
 def get_run(db: Session, user_id: str, run_id: str) -> ScreenerRun | None:

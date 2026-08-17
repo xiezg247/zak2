@@ -138,9 +138,9 @@ def test_get_trading_risk_api_defaults() -> None:
     resp = client.get("/api/v1/watchlist/trading-risk")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["stop_loss_pct"] == tr.DEFAULT_STOP_LOSS_PCT
-    assert body["caution_float_pct"] == tr.DEFAULT_CAUTION_FLOAT_PCT
-    assert body["total_capital"] is None
+    assert body["data"]["stop_loss_pct"] == tr.DEFAULT_STOP_LOSS_PCT
+    assert body["data"]["caution_float_pct"] == tr.DEFAULT_CAUTION_FLOAT_PCT
+    assert body["data"]["total_capital"] is None
 
 
 def test_put_trading_risk_api_ok() -> None:
@@ -153,8 +153,8 @@ def test_put_trading_risk_api_ok() -> None:
     )
     assert resp.status_code == 200
     body = resp.json()
-    assert body["total_capital"] == 50000
-    assert body["stop_loss_pct"] == 0.06
+    assert body["data"]["total_capital"] == 50000
+    assert body["data"]["stop_loss_pct"] == 0.06
 
 
 def test_put_trading_risk_api_bad_value_400() -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -18,7 +19,8 @@ from app.schemas.backtest import (
     StrategyInfo,
     StrategyProfileOut,
 )
-from app.services import backtest_repo as repo
+from app.schemas.common import ApiResponse, PageOut
+from app.repositories import backtest as repo
 from app.services.arq_jobs import BACKTEST_FUNCS, enqueue_app_job
 from app.services.backtest_engine import PROFILES, STRATEGIES
 from app.services.backtest_optimize import expand_ma_grid
@@ -31,47 +33,69 @@ def _validate_ma_windows(fast: int, slow: int) -> None:
         raise HTTPException(status_code=400, detail="fast_window 须小于 slow_window")
 
 
-@router.get("/strategies", response_model=list[StrategyInfo])
-def list_strategies(user: User = Depends(get_current_user)) -> list[StrategyInfo]:
+@router.get("/strategies", response_model=ApiResponse[list[StrategyInfo]])
+def list_strategies(user: User = Depends(get_current_user)) -> ApiResponse[list[StrategyInfo]]:
     _ = user
-    return [StrategyInfo(**s) for s in STRATEGIES]
+    return ApiResponse(data=[StrategyInfo(**s) for s in STRATEGIES])
 
 
-@router.get("/profiles", response_model=list[StrategyProfileOut])
-def list_profiles(user: User = Depends(get_current_user)) -> list[StrategyProfileOut]:
+@router.get("/profiles", response_model=ApiResponse[list[StrategyProfileOut]])
+def list_profiles(user: User = Depends(get_current_user)) -> ApiResponse[list[StrategyProfileOut]]:
     _ = user
-    return [StrategyProfileOut(**p) for p in PROFILES]
+    return ApiResponse(data=[StrategyProfileOut(**p) for p in PROFILES])
 
 
-@router.get("/runs", response_model=list[BacktestRunOut])
+@router.get("/runs", response_model=ApiResponse[list[BacktestRunOut]])
 def get_runs(
     limit: int = Query(default=50, ge=1, le=200),
     batch_id: str | None = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[BacktestRunOut]:
-    return repo.list_runs(db, str(user.id), limit=limit, batch_id=batch_id)
+) -> ApiResponse[list[BacktestRunOut]]:
+    return ApiResponse(data=repo.list_runs(db, str(user.id), limit=limit, batch_id=batch_id))
 
 
-@router.get("/runs/{run_id}", response_model=BacktestRunOut)
+@router.get("/runs/page", response_model=ApiResponse[PageOut[BacktestRunOut]])
+def get_runs_page(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    batch_id: str | None = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[PageOut[BacktestRunOut]]:
+    result = repo.list_runs_page(db, str(user.id), page=page, page_size=page_size, batch_id=batch_id)
+    return ApiResponse(
+        data=PageOut(
+            items=result.items,
+            total=result.total,
+            page=result.page,
+            page_size=result.page_size,
+            pages=result.pages,
+        )
+    )
+
+
+@router.get("/runs/{run_id}", response_model=ApiResponse[BacktestRunOut])
 def get_run(
     run_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> BacktestRunOut:
+) -> ApiResponse[BacktestRunOut]:
     row = repo.get_run(db, str(user.id), run_id)
     if not row:
         raise HTTPException(status_code=404, detail="回测记录不存在")
-    return row
+    return ApiResponse(data=row)
 
 
-@router.get("/batches")
-def get_batches(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[dict]:
-    return repo.list_batches(db, str(user.id))
+@router.get("/batches", response_model=ApiResponse[list[dict[str, Any]]])
+def get_batches(
+    user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> ApiResponse[list[dict[str, Any]]]:
+    return ApiResponse(data=repo.list_batches(db, str(user.id)))
 
 
-@router.post("/runs", response_model=JobAccepted)
-async def post_run(body: BacktestRunRequest, user: User = Depends(get_current_user)) -> JobAccepted:
+@router.post("/runs", response_model=ApiResponse[JobAccepted])
+async def post_run(body: BacktestRunRequest, user: User = Depends(get_current_user)) -> ApiResponse[JobAccepted]:
     _validate_ma_windows(body.fast_window, body.slow_window)
     kind = "backtest.single"
     job_id = await enqueue_app_job(
@@ -80,11 +104,13 @@ async def post_run(body: BacktestRunRequest, user: User = Depends(get_current_us
         user_id=str(user.id),
         payload=body.model_dump(),
     )
-    return JobAccepted(job_id=job_id)
+    return ApiResponse(data=JobAccepted(job_id=job_id))
 
 
-@router.post("/runs/batch", response_model=JobAccepted)
-async def post_batch(body: BatchBacktestRequest, user: User = Depends(get_current_user)) -> JobAccepted:
+@router.post("/runs/batch", response_model=ApiResponse[JobAccepted])
+async def post_batch(
+    body: BatchBacktestRequest, user: User = Depends(get_current_user)
+) -> ApiResponse[JobAccepted]:
     _validate_ma_windows(body.fast_window, body.slow_window)
     batch_id = uuid4().hex
     kind = "backtest.batch"
@@ -95,11 +121,13 @@ async def post_batch(body: BatchBacktestRequest, user: User = Depends(get_curren
         payload=body.model_dump(),
         batch_id=batch_id,
     )
-    return JobAccepted(job_id=job_id, batch_id=batch_id)
+    return ApiResponse(data=JobAccepted(job_id=job_id, batch_id=batch_id))
 
 
-@router.post("/optimize", response_model=JobAccepted)
-async def post_optimize(body: OptimizeBacktestRequest, user: User = Depends(get_current_user)) -> JobAccepted:
+@router.post("/optimize", response_model=ApiResponse[JobAccepted])
+async def post_optimize(
+    body: OptimizeBacktestRequest, user: User = Depends(get_current_user)
+) -> ApiResponse[JobAccepted]:
     try:
         expand_ma_grid(body.space)
     except ValueError as exc:
@@ -113,14 +141,14 @@ async def post_optimize(body: OptimizeBacktestRequest, user: User = Depends(get_
         payload=body.model_dump(),
         batch_id=batch_id,
     )
-    return JobAccepted(job_id=job_id, batch_id=batch_id)
+    return ApiResponse(data=JobAccepted(job_id=job_id, batch_id=batch_id))
 
 
-@router.get("/optimize/{batch_id}", response_model=OptimizeSummaryOut)
+@router.get("/optimize/{batch_id}", response_model=ApiResponse[OptimizeSummaryOut])
 def get_optimize(
     batch_id: str,
     objective: str = Query(default="sharpe_ratio"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> OptimizeSummaryOut:
-    return repo.summarize_optimize(db, str(user.id), batch_id, objective=objective)
+) -> ApiResponse[OptimizeSummaryOut]:
+    return ApiResponse(data=repo.summarize_optimize(db, str(user.id), batch_id, objective=objective))

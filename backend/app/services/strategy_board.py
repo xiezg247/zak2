@@ -10,8 +10,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.redis_keys import KEY_PREFIX
-from app.services import signal_panel_repo
-from app.services import watchlist_repo as repo
+from app.repositories import signal_panel as signal_panel_repo
+from app.repositories import watchlist as repo
 from app.services.off_plan import (
     build_plan_symbol_statuses,
     list_off_plan_vt_symbols,

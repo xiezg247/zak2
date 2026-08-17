@@ -35,6 +35,10 @@ export async function api<T>(
   }
   if (resp.status === 204) return undefined as T
   const ct = resp.headers.get('content-type') || ''
-  if (ct.includes('application/json')) return (await resp.json()) as T
+  if (ct.includes('application/json')) {
+    const body = (await resp.json()) as { code: number; message: string; data: T }
+    if (body.code !== 0) throw new Error(body.message || '请求失败')
+    return body.data
+  }
   return (await resp.text()) as T
 }

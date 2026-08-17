@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.models.user import User
+from app.schemas.common import ApiResponse, PageOut
 from app.schemas.screener import (
     BuiltinRecipeOut,
     ConditionRunRequest,
@@ -30,8 +32,8 @@ from app.schemas.screener import (
     SchemeOut,
     SchemeUpdate,
 )
+from app.repositories import screener as repo
 from app.services import recipe_weights as recipe_weights_svc
-from app.services import screener_repo as repo
 from app.services.arq_jobs import SCREENER_FUNCS, enqueue_app_job
 from app.services.hard_filters import TEMPLATES
 from app.services.pattern_screen import list_patterns
@@ -88,144 +90,144 @@ def _run_detail(row) -> RunDetail:  # type: ignore[no-untyped-def]
     )
 
 
-@router.get("/presets", response_model=list[PresetOut])
-def presets(user: User = Depends(get_current_user)) -> list[PresetOut]:
+@router.get("/presets", response_model=ApiResponse[list[PresetOut]])
+def presets(user: User = Depends(get_current_user)) -> ApiResponse[list[PresetOut]]:
     _ = user
-    return list_presets()
+    return ApiResponse(data=list_presets())
 
 
-@router.get("/hard-filter-templates", response_model=list[HardFilterTemplate])
-def hard_filter_templates(user: User = Depends(get_current_user)) -> list[HardFilterTemplate]:
+@router.get("/hard-filter-templates", response_model=ApiResponse[list[HardFilterTemplate]])
+def hard_filter_templates(user: User = Depends(get_current_user)) -> ApiResponse[list[HardFilterTemplate]]:
     _ = user
-    return TEMPLATES
+    return ApiResponse(data=TEMPLATES)
 
 
-@router.get("/industries", response_model=IndustryListOut)
+@router.get("/industries", response_model=ApiResponse[IndustryListOut])
 def industries(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> IndustryListOut:
+) -> ApiResponse[IndustryListOut]:
     _ = user
-    return IndustryListOut(items=list_industry_names(db))
+    return ApiResponse(data=IndustryListOut(items=list_industry_names(db)))
 
 
-@router.get("/builtin-recipes", response_model=list[BuiltinRecipeOut])
-def builtin_recipes(user: User = Depends(get_current_user)) -> list[BuiltinRecipeOut]:
+@router.get("/builtin-recipes", response_model=ApiResponse[list[BuiltinRecipeOut]])
+def builtin_recipes(user: User = Depends(get_current_user)) -> ApiResponse[list[BuiltinRecipeOut]]:
     _ = user
-    return list_builtin_recipes()
+    return ApiResponse(data=list_builtin_recipes())
 
 
-@router.get("/patterns", response_model=list[PatternOut])
-def patterns(user: User = Depends(get_current_user)) -> list[PatternOut]:
+@router.get("/patterns", response_model=ApiResponse[list[PatternOut]])
+def patterns(user: User = Depends(get_current_user)) -> ApiResponse[list[PatternOut]]:
     _ = user
-    return [PatternOut(**m) for m in list_patterns()]
+    return ApiResponse(data=[PatternOut(**m) for m in list_patterns()])
 
 
-@router.get("/data-status")
-def data_status(user: User = Depends(get_current_user)) -> dict:
+@router.get("/data-status", response_model=ApiResponse[dict[str, Any]])
+def data_status(user: User = Depends(get_current_user)) -> ApiResponse[dict[str, Any]]:
     _ = user
     from app.core.settings import get_settings
 
     store = get_quote_store()
     meta = store.meta()
-    return {"redis": meta, "tushare_configured": bool(get_settings().tushare_token)}
+    return ApiResponse(data={"redis": meta, "tushare_configured": bool(get_settings().tushare_token)})
 
 
-@router.get("/schemes", response_model=list[SchemeOut])
-def get_schemes(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[SchemeOut]:
-    return [_scheme_out(r) for r in repo.list_schemes(db, str(user.id))]
+@router.get("/schemes", response_model=ApiResponse[list[SchemeOut]])
+def get_schemes(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ApiResponse[list[SchemeOut]]:
+    return ApiResponse(data=[_scheme_out(r) for r in repo.list_schemes(db, str(user.id))])
 
 
-@router.post("/schemes", response_model=SchemeOut)
+@router.post("/schemes", response_model=ApiResponse[SchemeOut])
 def post_scheme(
     body: SchemeCreate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> SchemeOut:
-    return _scheme_out(repo.create_scheme(db, str(user.id), body))
+) -> ApiResponse[SchemeOut]:
+    return ApiResponse(data=_scheme_out(repo.create_scheme(db, str(user.id), body)))
 
 
-@router.patch("/schemes/{scheme_id}", response_model=SchemeOut)
+@router.patch("/schemes/{scheme_id}", response_model=ApiResponse[SchemeOut])
 def patch_scheme(
     scheme_id: str,
     body: SchemeUpdate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> SchemeOut:
+) -> ApiResponse[SchemeOut]:
     row = repo.update_scheme(db, str(user.id), scheme_id, body)
     if not row:
         raise HTTPException(status_code=404, detail="方案不存在")
-    return _scheme_out(row)
+    return ApiResponse(data=_scheme_out(row))
 
 
-@router.delete("/schemes/{scheme_id}")
+@router.delete("/schemes/{scheme_id}", response_model=ApiResponse[dict[str, Any]])
 def remove_scheme(
     scheme_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> ApiResponse[dict[str, Any]]:
     if not repo.delete_scheme(db, str(user.id), scheme_id):
         raise HTTPException(status_code=404, detail="方案不存在")
-    return {"ok": True}
+    return ApiResponse(data={"ok": True})
 
 
-@router.get("/recipes", response_model=list[RecipeOut])
-def get_recipes(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[RecipeOut]:
-    return [_recipe_out(r) for r in repo.list_recipes(db, str(user.id))]
+@router.get("/recipes", response_model=ApiResponse[list[RecipeOut]])
+def get_recipes(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ApiResponse[list[RecipeOut]]:
+    return ApiResponse(data=[_recipe_out(r) for r in repo.list_recipes(db, str(user.id))])
 
 
-@router.post("/recipes", response_model=RecipeOut)
+@router.post("/recipes", response_model=ApiResponse[RecipeOut])
 def post_recipe(
     body: RecipeCreate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> RecipeOut:
-    return _recipe_out(repo.create_recipe(db, str(user.id), body))
+) -> ApiResponse[RecipeOut]:
+    return ApiResponse(data=_recipe_out(repo.create_recipe(db, str(user.id), body)))
 
 
-@router.patch("/recipes/{recipe_id}", response_model=RecipeOut)
+@router.patch("/recipes/{recipe_id}", response_model=ApiResponse[RecipeOut])
 def patch_recipe(
     recipe_id: str,
     body: RecipeUpdate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> RecipeOut:
+) -> ApiResponse[RecipeOut]:
     row = repo.update_recipe(db, str(user.id), recipe_id, body)
     if not row:
         raise HTTPException(status_code=404, detail="配方不存在")
-    return _recipe_out(row)
+    return ApiResponse(data=_recipe_out(row))
 
 
-@router.delete("/recipes/{recipe_id}")
+@router.delete("/recipes/{recipe_id}", response_model=ApiResponse[dict[str, Any]])
 def remove_recipe(
     recipe_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> ApiResponse[dict[str, Any]]:
     if not repo.delete_recipe(db, str(user.id), recipe_id):
         raise HTTPException(status_code=404, detail="配方不存在")
-    return {"ok": True}
+    return ApiResponse(data={"ok": True})
 
 
-@router.get("/recipes/{recipe_id}/weights", response_model=RecipeWeightsOut)
+@router.get("/recipes/{recipe_id}/weights", response_model=ApiResponse[RecipeWeightsOut])
 def get_recipe_weights(
     recipe_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> RecipeWeightsOut:
+) -> ApiResponse[RecipeWeightsOut]:
     if recipe_id not in recipe_weights_svc.EDITABLE_RECIPES:
         raise HTTPException(status_code=400, detail=f"未知或不可编辑的配方：{recipe_id}")
     merged = recipe_weights_svc.load_recipe_weights(db, str(user.id), recipe_id)
-    return RecipeWeightsOut(**recipe_weights_svc.weights_payload(recipe_id, merged))
+    return ApiResponse(data=RecipeWeightsOut(**recipe_weights_svc.weights_payload(recipe_id, merged)))
 
 
-@router.put("/recipes/{recipe_id}/weights", response_model=RecipeWeightsOut)
+@router.put("/recipes/{recipe_id}/weights", response_model=ApiResponse[RecipeWeightsOut])
 def put_recipe_weights(
     recipe_id: str,
     body: RecipeWeightsPut,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> RecipeWeightsOut:
+) -> ApiResponse[RecipeWeightsOut]:
     if recipe_id not in recipe_weights_svc.EDITABLE_RECIPES:
         raise HTTPException(status_code=400, detail=f"未知或不可编辑的配方：{recipe_id}")
     try:
@@ -234,14 +236,14 @@ def put_recipe_weights(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return RecipeWeightsOut(**recipe_weights_svc.weights_payload(recipe_id, merged))
+    return ApiResponse(data=RecipeWeightsOut(**recipe_weights_svc.weights_payload(recipe_id, merged)))
 
 
-@router.post("/runs/condition", response_model=JobAccepted)
+@router.post("/runs/condition", response_model=ApiResponse[JobAccepted])
 async def post_condition_run(
     body: ConditionRunRequest,
     user: User = Depends(get_current_user),
-) -> JobAccepted:
+) -> ApiResponse[JobAccepted]:
     kind = "screener.condition"
     job_id = await enqueue_app_job(
         function=SCREENER_FUNCS[kind],
@@ -249,14 +251,14 @@ async def post_condition_run(
         user_id=str(user.id),
         payload=body.model_dump(),
     )
-    return JobAccepted(job_id=job_id)
+    return ApiResponse(data=JobAccepted(job_id=job_id))
 
 
-@router.post("/runs/recipe", response_model=JobAccepted)
+@router.post("/runs/recipe", response_model=ApiResponse[JobAccepted])
 async def post_recipe_run(
     body: RecipeRunRequest,
     user: User = Depends(get_current_user),
-) -> JobAccepted:
+) -> ApiResponse[JobAccepted]:
     kind = "screener.recipe"
     job_id = await enqueue_app_job(
         function=SCREENER_FUNCS[kind],
@@ -264,14 +266,14 @@ async def post_recipe_run(
         user_id=str(user.id),
         payload=body.model_dump(),
     )
-    return JobAccepted(job_id=job_id)
+    return ApiResponse(data=JobAccepted(job_id=job_id))
 
 
-@router.post("/runs/pattern", response_model=JobAccepted)
+@router.post("/runs/pattern", response_model=ApiResponse[JobAccepted])
 async def post_pattern_run(
     body: PatternRunRequest,
     user: User = Depends(get_current_user),
-) -> JobAccepted:
+) -> ApiResponse[JobAccepted]:
     kind = "screener.pattern"
     job_id = await enqueue_app_job(
         function=SCREENER_FUNCS[kind],
@@ -279,14 +281,14 @@ async def post_pattern_run(
         user_id=str(user.id),
         payload=body.model_dump(),
     )
-    return JobAccepted(job_id=job_id)
+    return ApiResponse(data=JobAccepted(job_id=job_id))
 
 
-@router.post("/runs/reference-peer", response_model=JobAccepted)
+@router.post("/runs/reference-peer", response_model=ApiResponse[JobAccepted])
 async def post_reference_peer_run(
     body: ReferencePeerRequest,
     user: User = Depends(get_current_user),
-) -> JobAccepted:
+) -> ApiResponse[JobAccepted]:
     kind = "screener.reference_peer"
     job_id = await enqueue_app_job(
         function=SCREENER_FUNCS[kind],
@@ -294,24 +296,43 @@ async def post_reference_peer_run(
         user_id=str(user.id),
         payload=body.model_dump(),
     )
-    return JobAccepted(job_id=job_id)
+    return ApiResponse(data=JobAccepted(job_id=job_id))
 
 
-@router.get("/runs", response_model=list[RunSummary])
-def get_runs(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[RunSummary]:
-    return [_run_summary(r) for r in repo.list_runs(db, str(user.id))]
+@router.get("/runs", response_model=ApiResponse[list[RunSummary]])
+def get_runs(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ApiResponse[list[RunSummary]]:
+    return ApiResponse(data=[_run_summary(r) for r in repo.list_runs(db, str(user.id))])
 
 
-@router.get("/runs/{run_id}", response_model=RunDetail)
+@router.get("/runs/page", response_model=ApiResponse[PageOut[RunSummary]])
+def get_runs_page(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[PageOut[RunSummary]]:
+    result = repo.list_runs_page(db, str(user.id), page=page, page_size=page_size)
+    return ApiResponse(
+        data=PageOut(
+            items=[_run_summary(r) for r in result.items],
+            total=result.total,
+            page=result.page,
+            page_size=result.page_size,
+            pages=result.pages,
+        )
+    )
+
+
+@router.get("/runs/{run_id}", response_model=ApiResponse[RunDetail])
 def get_run_detail(
     run_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> RunDetail:
+) -> ApiResponse[RunDetail]:
     row = repo.get_run(db, str(user.id), run_id)
     if not row:
         raise HTTPException(status_code=404, detail="运行记录不存在")
-    return _run_detail(row)
+    return ApiResponse(data=_run_detail(row))
 
 
 @router.get("/runs/{run_id}/export.csv")

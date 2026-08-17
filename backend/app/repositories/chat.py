@@ -8,6 +8,7 @@ from sqlalchemy import delete, desc, select
 from sqlalchemy.orm import Session
 
 from app.models.chat import ChatMessage, ChatSession
+from app.repositories.pagination import Page, paginate
 from app.schemas.chat import MessageOut, SessionOut
 from app.services.ai_context import SYSTEM_PROMPT, build_context_brief
 from app.services import ai_agent
@@ -28,6 +29,20 @@ def list_sessions(db: Session, user_id: str, *, limit: int = 50) -> list[Session
         SessionOut(id=r.id, title=r.title, scene=r.scene, created_at=r.created_at, updated_at=r.updated_at)
         for r in rows
     ]
+
+
+def list_sessions_page(db: Session, user_id: str, *, page: int = 1, page_size: int = 20) -> Page[SessionOut]:
+    stmt = select(ChatSession).where(ChatSession.user_id == user_id).order_by(desc(ChatSession.updated_at))
+    result = paginate(db, stmt, page=page, page_size=page_size)
+    return Page(
+        items=[
+            SessionOut(id=r.id, title=r.title, scene=r.scene, created_at=r.created_at, updated_at=r.updated_at)
+            for r in result.items
+        ],
+        total=result.total,
+        page=result.page,
+        page_size=result.page_size,
+    )
 
 
 def create_session(db: Session, user_id: str, *, title: str = "", scene: str = "general") -> SessionOut:

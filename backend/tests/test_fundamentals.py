@@ -52,7 +52,7 @@ def test_api_fundamentals_ok() -> None:
     with patch("app.api.v1.watchlist.fundamentals_svc.get_fundamentals", return_value=fake) as g:
         r = client.get("/api/v1/watchlist/items/600519.SSE/fundamentals")
     assert r.status_code == 200
-    assert r.json()["ts_code"] == "600519.SH"
+    assert r.json()["data"]["ts_code"] == "600519.SH"
     g.assert_called_once()
 
 

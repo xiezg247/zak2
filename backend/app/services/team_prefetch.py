@@ -8,7 +8,8 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.services import emotion_cycle as emotion_cycle_svc
-from app.services import strategy_board, watchlist_repo
+from app.repositories import watchlist as watchlist_repo
+from app.services import strategy_board
 from app.services.bars import load_bars
 from app.services.quotes import get_quote_store
 from app.services.symbols import to_tf_symbol, to_vt_symbol

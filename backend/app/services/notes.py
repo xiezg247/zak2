@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.models.content import StockNoteEntry, StockNoteMemo
 from app.schemas.content import NoteEntryOut, NoteMemoOut, NoteSymbolOut
 from app.services.symbols import to_vt_symbol
-from app.services.watchlist_repo import resolve_symbol_pair
+from app.repositories.watchlist import resolve_symbol_pair
 
 
 def _now() -> str:

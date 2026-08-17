@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.services import watchlist_repo as wl_repo
+from app.repositories import watchlist as wl_repo
 from app.services.symbols import to_vt_symbol
 
 NAMESPACE = "watchlist"

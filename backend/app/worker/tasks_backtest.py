@@ -14,7 +14,7 @@ from fastapi import HTTPException
 from app.core.db import SessionLocal
 from app.core.settings import get_settings
 from app.schemas.backtest import BacktestRunRequest, BatchBacktestRequest, OptimizeBacktestRequest
-from app.services import backtest_repo as repo
+from app.repositories import backtest as repo
 from app.services.backtest_bars import bars_to_records
 from app.services.backtest_optimize import expand_ma_grid
 from app.services.backtest_settings import build_strategy_setting

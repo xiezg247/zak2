@@ -114,8 +114,8 @@ def test_api_notify_log_ok() -> None:
         resp = client.get("/api/v1/watchlist/notify-log?limit=10")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["count"] == 1
-    assert body["limit"] == 10
-    assert body["items"][0]["event_type"] == "risk_alert"
-    assert body["items"][0]["payload"] == {"symbol": "600519.SSE"}
+    assert body["data"]["count"] == 1
+    assert body["data"]["limit"] == 10
+    assert body["data"]["items"][0]["event_type"] == "risk_alert"
+    assert body["data"]["items"][0]["payload"] == {"symbol": "600519.SSE"}
     mock_list.assert_called_once_with(db, str(user.id), limit=10)

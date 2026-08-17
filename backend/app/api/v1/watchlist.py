@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.models.user import User
+from app.schemas.common import ApiResponse
 from app.schemas.watchlist import (
     BarsResponse,
     FundamentalsOut,
@@ -30,8 +33,9 @@ from app.schemas.watchlist import (
     WatchlistItemOut,
     WatchlistReorderRequest,
 )
+from app.repositories import positions as positions_repo, signal_panel as signal_panel_repo, watchlist as repo
+from app.services import notify_log, strategy_board, trading_risk
 from app.services import fundamentals as fundamentals_svc
-from app.services import notify_log, positions_repo, signal_panel_repo, strategy_board, trading_risk, watchlist_repo as repo
 from app.services.bars import load_bars
 from app.services.quotes import QuoteRow, get_quote_store
 from app.services.stock_industry import enrich_rows_from_db
@@ -101,21 +105,21 @@ def _enrich(items: list, *, with_quotes: bool, db: Session | None = None) -> lis
     return out
 
 
-@router.get("/watchlist", response_model=list[WatchlistItemOut])
+@router.get("/watchlist", response_model=ApiResponse[list[WatchlistItemOut]])
 def get_watchlist(
     enrich: bool = Query(default=True),
     group_id: str | None = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[WatchlistItemOut]:
+) -> ApiResponse[list[WatchlistItemOut]]:
     items = repo.list_items(db, str(user.id))
     if group_id:
         members = {(m.symbol, m.exchange) for m in repo.list_group_members(db, str(user.id), group_id)}
         items = [i for i in items if (i.symbol, i.exchange) in members]
-    return _enrich(items, with_quotes=enrich, db=db)
+    return ApiResponse(data=_enrich(items, with_quotes=enrich, db=db))
 
 
-@router.get("/watchlist/strategy-board", response_model=StrategyBoardOut)
+@router.get("/watchlist/strategy-board", response_model=ApiResponse[StrategyBoardOut])
 def get_strategy_board(
     config_key: str | None = Query(default=None, description="缺省读用户偏好或默认短线突破 5/10"),
     signal_mode: str = Query(
@@ -124,37 +128,39 @@ def get_strategy_board(
     ),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> StrategyBoardOut:
-    return StrategyBoardOut(
-        **strategy_board.load_strategy_board(
-            db, str(user.id), config_key=config_key, signal_mode=signal_mode
+) -> ApiResponse[StrategyBoardOut]:
+    return ApiResponse(
+        data=StrategyBoardOut(
+            **strategy_board.load_strategy_board(
+                db, str(user.id), config_key=config_key, signal_mode=signal_mode
+            )
         )
     )
 
 
-@router.get("/watchlist/trading-risk", response_model=TradingRiskPrefsOut)
+@router.get("/watchlist/trading-risk", response_model=ApiResponse[TradingRiskPrefsOut])
 def get_trading_risk(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> TradingRiskPrefsOut:
-    return TradingRiskPrefsOut(**trading_risk.load_trading_risk_prefs(db, str(user.id)))
+) -> ApiResponse[TradingRiskPrefsOut]:
+    return ApiResponse(data=TradingRiskPrefsOut(**trading_risk.load_trading_risk_prefs(db, str(user.id))))
 
 
-@router.get("/watchlist/notify-log", response_model=NotifyLogOut)
+@router.get("/watchlist/notify-log", response_model=ApiResponse[NotifyLogOut])
 def get_notify_log(
     limit: int | None = Query(default=None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> NotifyLogOut:
-    return NotifyLogOut(**notify_log.list_notify_log(db, str(user.id), limit=limit))
+) -> ApiResponse[NotifyLogOut]:
+    return ApiResponse(data=NotifyLogOut(**notify_log.list_notify_log(db, str(user.id), limit=limit)))
 
 
-@router.put("/watchlist/trading-risk", response_model=TradingRiskPrefsOut)
+@router.put("/watchlist/trading-risk", response_model=ApiResponse[TradingRiskPrefsOut])
 def put_trading_risk(
     body: TradingRiskPrefsPut,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> TradingRiskPrefsOut:
+) -> ApiResponse[TradingRiskPrefsOut]:
     try:
         prefs = trading_risk.save_trading_risk_prefs(
             db,
@@ -163,73 +169,79 @@ def put_trading_risk(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return TradingRiskPrefsOut(**prefs)
+    return ApiResponse(data=TradingRiskPrefsOut(**prefs))
 
 
-@router.get("/watchlist/signal-panel", response_model=SignalPanelOut)
+@router.get("/watchlist/signal-panel", response_model=ApiResponse[SignalPanelOut])
 def get_signal_panel(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> SignalPanelOut:
-    return SignalPanelOut(**signal_panel_repo.panel_payload(db, str(user.id)))
+) -> ApiResponse[SignalPanelOut]:
+    return ApiResponse(data=SignalPanelOut(**signal_panel_repo.panel_payload(db, str(user.id))))
 
 
-@router.put("/watchlist/signal-panel", response_model=SignalPanelOut)
+@router.put("/watchlist/signal-panel", response_model=ApiResponse[SignalPanelOut])
 def put_signal_panel(
     body: SignalPanelReplaceRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> SignalPanelOut:
+) -> ApiResponse[SignalPanelOut]:
     symbols = signal_panel_repo.save_symbols(db, str(user.id), body.symbols)
-    return SignalPanelOut(
-        symbols=symbols,
-        max_symbols=signal_panel_repo.SIGNAL_PANEL_MAX_SYMBOLS,
-        count=len(symbols),
+    return ApiResponse(
+        data=SignalPanelOut(
+            symbols=symbols,
+            max_symbols=signal_panel_repo.SIGNAL_PANEL_MAX_SYMBOLS,
+            count=len(symbols),
+        )
     )
 
 
-@router.post("/watchlist/signal-panel/members", response_model=SignalPanelOut)
+@router.post("/watchlist/signal-panel/members", response_model=ApiResponse[SignalPanelOut])
 def post_signal_panel_member(
     body: SignalPanelMemberRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> SignalPanelOut:
+) -> ApiResponse[SignalPanelOut]:
     symbols = signal_panel_repo.add_symbol(db, str(user.id), body.symbol)
-    return SignalPanelOut(
-        symbols=symbols,
-        max_symbols=signal_panel_repo.SIGNAL_PANEL_MAX_SYMBOLS,
-        count=len(symbols),
+    return ApiResponse(
+        data=SignalPanelOut(
+            symbols=symbols,
+            max_symbols=signal_panel_repo.SIGNAL_PANEL_MAX_SYMBOLS,
+            count=len(symbols),
+        )
     )
 
 
-@router.delete("/watchlist/signal-panel/members/{vt_symbol}", response_model=SignalPanelOut)
+@router.delete("/watchlist/signal-panel/members/{vt_symbol}", response_model=ApiResponse[SignalPanelOut])
 def delete_signal_panel_member(
     vt_symbol: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> SignalPanelOut:
+) -> ApiResponse[SignalPanelOut]:
     symbols = signal_panel_repo.remove_symbol(db, str(user.id), vt_symbol)
-    return SignalPanelOut(
-        symbols=symbols,
-        max_symbols=signal_panel_repo.SIGNAL_PANEL_MAX_SYMBOLS,
-        count=len(symbols),
+    return ApiResponse(
+        data=SignalPanelOut(
+            symbols=symbols,
+            max_symbols=signal_panel_repo.SIGNAL_PANEL_MAX_SYMBOLS,
+            count=len(symbols),
+        )
     )
 
 
-@router.get("/watchlist/positions", response_model=list[PositionOut])
+@router.get("/watchlist/positions", response_model=ApiResponse[list[PositionOut]])
 def get_positions(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[PositionOut]:
-    return [PositionOut(**row) for row in positions_repo.list_positions(db, str(user.id))]
+) -> ApiResponse[list[PositionOut]]:
+    return ApiResponse(data=[PositionOut(**row) for row in positions_repo.list_positions(db, str(user.id))])
 
 
-@router.post("/watchlist/positions", response_model=PositionOut)
+@router.post("/watchlist/positions", response_model=ApiResponse[PositionOut])
 def post_position(
     body: PositionUpsertRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> PositionOut:
+) -> ApiResponse[PositionOut]:
     symbol, exchange = repo.resolve_symbol_pair(body.symbol, body.exchange)
     row = positions_repo.add_position(
         db,
@@ -242,16 +254,16 @@ def post_position(
         notes=body.notes,
         plan_pct=body.plan_pct,
     )
-    return PositionOut(**row)
+    return ApiResponse(data=PositionOut(**row))
 
 
-@router.put("/watchlist/positions/{vt_symbol}", response_model=PositionOut)
+@router.put("/watchlist/positions/{vt_symbol}", response_model=ApiResponse[PositionOut])
 def put_position(
     vt_symbol: str,
     body: PositionUpsertRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> PositionOut:
+) -> ApiResponse[PositionOut]:
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
     row = positions_repo.update_position(
         db,
@@ -264,141 +276,143 @@ def put_position(
         notes=body.notes,
         plan_pct=body.plan_pct,
     )
-    return PositionOut(**row)
+    return ApiResponse(data=PositionOut(**row))
 
 
-@router.delete("/watchlist/positions/{vt_symbol}")
+@router.delete("/watchlist/positions/{vt_symbol}", response_model=ApiResponse[dict[str, Any]])
 def delete_position(
     vt_symbol: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> ApiResponse[dict[str, Any]]:
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
     if not positions_repo.delete_position(db, str(user.id), symbol=symbol, exchange=exchange):
         raise HTTPException(status_code=404, detail="持仓不存在")
-    return {"ok": True}
+    return ApiResponse(data={"ok": True})
 
 
-@router.post("/watchlist", response_model=WatchlistItemOut)
+@router.post("/watchlist", response_model=ApiResponse[WatchlistItemOut])
 def post_watchlist(
     body: WatchlistAddRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> WatchlistItemOut:
+) -> ApiResponse[WatchlistItemOut]:
     row = repo.add_item(db, str(user.id), raw_symbol=body.symbol, name=body.name, exchange=body.exchange)
-    return _enrich([row], with_quotes=True, db=db)[0]
+    return ApiResponse(data=_enrich([row], with_quotes=True, db=db)[0])
 
 
-@router.put("/watchlist/reorder", response_model=list[WatchlistItemOut])
+@router.put("/watchlist/reorder", response_model=ApiResponse[list[WatchlistItemOut]])
 def put_reorder(
     body: WatchlistReorderRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[WatchlistItemOut]:
+) -> ApiResponse[list[WatchlistItemOut]]:
     rows = repo.reorder_items(db, str(user.id), body.items)
-    return _enrich(rows, with_quotes=False, db=db)
+    return ApiResponse(data=_enrich(rows, with_quotes=False, db=db))
 
 
-@router.get("/watchlist/groups", response_model=list[GroupOut])
-def get_groups(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[GroupOut]:
-    return [GroupOut(id=g.id, name=g.name, sort_order=g.sort_order) for g in repo.list_groups(db, str(user.id))]
+@router.get("/watchlist/groups", response_model=ApiResponse[list[GroupOut]])
+def get_groups(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ApiResponse[list[GroupOut]]:
+    return ApiResponse(
+        data=[GroupOut(id=g.id, name=g.name, sort_order=g.sort_order) for g in repo.list_groups(db, str(user.id))]
+    )
 
 
-@router.put("/watchlist/groups/reorder", response_model=list[GroupOut])
+@router.put("/watchlist/groups/reorder", response_model=ApiResponse[list[GroupOut]])
 def put_groups_reorder(
     body: GroupsReorderRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[GroupOut]:
+) -> ApiResponse[list[GroupOut]]:
     rows = repo.reorder_groups(db, str(user.id), body.group_ids)
-    return [GroupOut(id=g.id, name=g.name, sort_order=g.sort_order) for g in rows]
+    return ApiResponse(data=[GroupOut(id=g.id, name=g.name, sort_order=g.sort_order) for g in rows])
 
 
-@router.post("/watchlist/groups", response_model=GroupOut)
+@router.post("/watchlist/groups", response_model=ApiResponse[GroupOut])
 def post_group(
     body: GroupCreate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> GroupOut:
+) -> ApiResponse[GroupOut]:
     g = repo.create_group(db, str(user.id), body.name)
-    return GroupOut(id=g.id, name=g.name, sort_order=g.sort_order)
+    return ApiResponse(data=GroupOut(id=g.id, name=g.name, sort_order=g.sort_order))
 
 
-@router.patch("/watchlist/groups/{group_id}", response_model=GroupOut)
+@router.patch("/watchlist/groups/{group_id}", response_model=ApiResponse[GroupOut])
 def patch_group(
     group_id: str,
     body: GroupRename,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> GroupOut:
+) -> ApiResponse[GroupOut]:
     g = repo.rename_group(db, str(user.id), group_id, body.name)
-    return GroupOut(id=g.id, name=g.name, sort_order=g.sort_order)
+    return ApiResponse(data=GroupOut(id=g.id, name=g.name, sort_order=g.sort_order))
 
 
-@router.delete("/watchlist/groups/{group_id}")
+@router.delete("/watchlist/groups/{group_id}", response_model=ApiResponse[dict[str, Any]])
 def remove_group(
     group_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> ApiResponse[dict[str, Any]]:
     if not repo.delete_group(db, str(user.id), group_id):
         raise HTTPException(status_code=404, detail="分组不存在")
-    return {"ok": True}
+    return ApiResponse(data={"ok": True})
 
 
-@router.post("/watchlist/groups/{group_id}/members")
+@router.post("/watchlist/groups/{group_id}/members", response_model=ApiResponse[dict[str, Any]])
 def post_group_member(
     group_id: str,
     body: GroupMemberRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> ApiResponse[dict[str, Any]]:
     row = repo.add_group_member(db, str(user.id), group_id, body.symbol, body.exchange)
-    return {"ok": True, "symbol": row.symbol, "exchange": row.exchange}
+    return ApiResponse(data={"ok": True, "symbol": row.symbol, "exchange": row.exchange})
 
 
-@router.post("/watchlist/groups/{group_id}/members/batch", response_model=GroupMembersBatchOut)
+@router.post("/watchlist/groups/{group_id}/members/batch", response_model=ApiResponse[GroupMembersBatchOut])
 def post_group_members_batch(
     group_id: str,
     body: GroupMembersBatchRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> GroupMembersBatchOut:
+) -> ApiResponse[GroupMembersBatchOut]:
     raw = repo.batch_group_members(db, str(user.id), group_id, body.symbols, body.action)
-    return GroupMembersBatchOut(**raw)
+    return ApiResponse(data=GroupMembersBatchOut(**raw))
 
 
-@router.delete("/watchlist/groups/{group_id}/members/{vt_symbol}")
+@router.delete("/watchlist/groups/{group_id}/members/{vt_symbol}", response_model=ApiResponse[dict[str, Any]])
 def delete_group_member(
     group_id: str,
     vt_symbol: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> ApiResponse[dict[str, Any]]:
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
     if not repo.remove_group_member(db, str(user.id), group_id, symbol, exchange):
         raise HTTPException(status_code=404, detail="分组成员不存在")
-    return {"ok": True}
+    return ApiResponse(data={"ok": True})
 
 
-@router.delete("/watchlist/{vt_symbol}")
+@router.delete("/watchlist/{vt_symbol}", response_model=ApiResponse[dict[str, Any]])
 def delete_watchlist(
     vt_symbol: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> ApiResponse[dict[str, Any]]:
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
     if not repo.remove_item(db, str(user.id), symbol, exchange):
         raise HTTPException(status_code=404, detail="不在自选中")
-    return {"ok": True}
+    return ApiResponse(data={"ok": True})
 
 
-@router.get("/quotes", response_model=list[QuoteOut])
+@router.get("/quotes", response_model=ApiResponse[list[QuoteOut]])
 def get_quotes(
     symbols: str = Query(description="逗号分隔 vt_symbol，如 600519.SSE,000001.SZSE"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[QuoteOut]:
+) -> ApiResponse[list[QuoteOut]]:
     _ = user
     store = get_quote_store()
     if not store.available():
@@ -451,27 +465,27 @@ def get_quotes(
                 industry=row.industry or "",
             )
         )
-    return out
+    return ApiResponse(data=out)
 
 
-@router.get("/watchlist/items/{vt_symbol}/fundamentals", response_model=FundamentalsOut)
+@router.get("/watchlist/items/{vt_symbol}/fundamentals", response_model=ApiResponse[FundamentalsOut])
 def get_item_fundamentals(
     vt_symbol: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> FundamentalsOut:
+) -> ApiResponse[FundamentalsOut]:
     _ = user
-    return FundamentalsOut(**fundamentals_svc.get_fundamentals(db, vt_symbol))
+    return ApiResponse(data=FundamentalsOut(**fundamentals_svc.get_fundamentals(db, vt_symbol)))
 
 
-@router.get("/bars/{vt_symbol}", response_model=BarsResponse)
+@router.get("/bars/{vt_symbol}", response_model=ApiResponse[BarsResponse])
 def get_bars(
     vt_symbol: str,
     interval: str = Query(default="d"),
     limit: int = Query(default=120, ge=1, le=2000),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> BarsResponse:
+) -> ApiResponse[BarsResponse]:
     _ = user
     symbol, exchange = repo.resolve_symbol_pair(vt_symbol)
-    return load_bars(db, symbol=symbol, exchange=exchange, interval=interval, limit=limit)
+    return ApiResponse(data=load_bars(db, symbol=symbol, exchange=exchange, interval=interval, limit=limit))

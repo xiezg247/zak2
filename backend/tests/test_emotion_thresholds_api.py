@@ -53,8 +53,8 @@ def test_get_emotion_thresholds_default() -> None:
         resp = client.get("/api/v1/market/emotion-cycle/thresholds")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["is_default"] is True
-    assert body["recession_limit_down"] == DEFAULT_THRESHOLDS.recession_limit_down
+    assert body["data"]["is_default"] is True
+    assert body["data"]["recession_limit_down"] == DEFAULT_THRESHOLDS.recession_limit_down
 
 
 def test_put_emotion_thresholds() -> None:
@@ -71,7 +71,7 @@ def test_put_emotion_thresholds() -> None:
     assert resp.status_code == 200
     save.assert_called_once()
     body = resp.json()
-    assert body["is_default"] is False
+    assert body["data"]["is_default"] is False
 
 
 def test_reset_emotion_thresholds() -> None:
@@ -84,4 +84,4 @@ def test_reset_emotion_thresholds() -> None:
     assert resp.status_code == 200
     reset.assert_called_once()
     body = resp.json()
-    assert body["is_default"] is True
+    assert body["data"]["is_default"] is True

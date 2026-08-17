@@ -349,9 +349,9 @@ def test_get_recipe_weights_api() -> None:
         resp = client.get("/api/v1/screener/recipes/intraday_multi/weights")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["recipe_id"] == "intraday_multi"
-    assert body["weights"]["momentum"] == 0.35
-    assert any(i["key"] == "momentum" and i["label"] == "动量" for i in body["items"])
+    assert body["data"]["recipe_id"] == "intraday_multi"
+    assert body["data"]["weights"]["momentum"] == 0.35
+    assert any(i["key"] == "momentum" and i["label"] == "动量" for i in body["data"]["items"])
 
 
 def test_get_recipe_weights_api_ultra_short() -> None:
@@ -362,9 +362,9 @@ def test_get_recipe_weights_api_ultra_short() -> None:
         resp = client.get("/api/v1/screener/recipes/ultra_short_unified/weights")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["recipe_id"] == "ultra_short_unified"
-    assert body["weights"]["board"] == 0.4
-    assert any(i["key"] == "board" and i["label"] == "连板" for i in body["items"])
+    assert body["data"]["recipe_id"] == "ultra_short_unified"
+    assert body["data"]["weights"]["board"] == 0.4
+    assert any(i["key"] == "board" and i["label"] == "连板" for i in body["data"]["items"])
 
 
 def test_get_recipe_weights_api_bad_recipe() -> None:
@@ -392,7 +392,7 @@ def test_put_recipe_weights_api_ok() -> None:
     assert resp.status_code == 200
     save.assert_called_once()
     assert save.call_args[0][1] == str(user.id)
-    assert abs(sum(resp.json()["weights"].values()) - 1.0) < 1e-6
+    assert abs(sum(resp.json()["data"]["weights"].values()) - 1.0) < 1e-6
 
 
 def test_put_recipe_weights_api_reset() -> None:
@@ -409,7 +409,7 @@ def test_put_recipe_weights_api_reset() -> None:
         )
     assert resp.status_code == 200
     save.assert_called_once_with(save.call_args[0][0], str(user.id), "post_close_multi", {})
-    assert resp.json()["weights"] == merged
+    assert resp.json()["data"]["weights"] == merged
 
 
 def test_put_recipe_weights_api_bad_request() -> None:

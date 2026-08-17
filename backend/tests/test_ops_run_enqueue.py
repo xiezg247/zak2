@@ -54,8 +54,8 @@ def test_run_scheduler_job_enqueues() -> None:
         r = client.post("/api/v1/ops/scheduler/jobs/sync_universe/run")
     assert r.status_code == 200
     body = r.json()
-    assert body["job_id"] == "arq-id-1"
-    assert body["kind"] == "ops.sync_universe"
+    assert body["data"]["job_id"] == "arq-id-1"
+    assert body["data"]["kind"] == "ops.sync_universe"
     enq.assert_awaited_once()
     assert enq.await_args.args[0] == "sync_universe"
     assert enq.await_args.kwargs.get("force") is True

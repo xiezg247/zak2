@@ -108,7 +108,7 @@ def test_get_radar_horizon_missing_cache_returns_200() -> None:
     resp = client.get("/api/v1/radar/horizon")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["empty"] is True
-    assert body["rows"] == []
-    assert body["computed_at"] is None
-    assert body["label"] == "启发式展望（基于共振）"
+    assert body["data"]["empty"] is True
+    assert body["data"]["rows"] == []
+    assert body["data"]["computed_at"] is None
+    assert body["data"]["label"] == "启发式展望（基于共振）"

@@ -61,11 +61,11 @@ def test_login_and_me() -> None:
 
     ok = client.post("/api/v1/auth/login", json={"username": "demo", "password": "demo-pass"})
     assert ok.status_code == 200
-    token = ok.json()["access_token"]
+    token = ok.json()["data"]["access_token"]
 
     me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me.status_code == 200
-    assert me.json()["username"] == "demo"
+    assert me.json()["data"]["username"] == "demo"
 
 
 def test_disabled_user_forbidden() -> None:

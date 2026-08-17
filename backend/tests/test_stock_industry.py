@@ -101,4 +101,4 @@ def test_industries_api() -> None:
     with patch("app.api.v1.screener.list_industry_names", return_value=["白酒", "银行"]):
         resp = client.get("/api/v1/screener/industries")
     assert resp.status_code == 200
-    assert resp.json() == {"items": ["白酒", "银行"]}
+    assert resp.json()["data"] == {"items": ["白酒", "银行"]}

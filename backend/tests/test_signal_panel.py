@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.services.signal_panel_repo import SIGNAL_PANEL_MAX_SYMBOLS, normalize_symbols
+from app.repositories.signal_panel import SIGNAL_PANEL_MAX_SYMBOLS, normalize_symbols
 
 
 def test_normalize_symbols_dedupe_and_cap() -> None:

@@ -81,7 +81,7 @@ def test_patch_planned_job_enabled_false_returns_200() -> None:
         r = client.patch("/api/v1/ops/scheduler/jobs/purge_stale_cache", json={"enabled": False})
     assert r.status_code == 200
     p.assert_called_once()
-    assert r.json()["enabled"] is False
+    assert r.json()["data"]["enabled"] is False
 
 
 def test_patch_unknown_job_returns_404() -> None:

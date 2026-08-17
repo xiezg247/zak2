@@ -14,7 +14,7 @@ from app.schemas.screener import (
     RecipeRunRequest,
     ReferencePeerRequest,
 )
-from app.services import screener_repo as repo
+from app.repositories import screener as repo
 from app.services.engine import run_condition_screen, run_recipe_screen
 from app.services.pattern_screen import run_pattern_screen
 from app.services.reference_peer import run_reference_peer

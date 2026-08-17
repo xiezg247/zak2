@@ -10,12 +10,13 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.models.backtest import BacktestRun
+from app.repositories.pagination import Page, paginate
 from app.schemas.backtest import BacktestRunOut, BacktestRunRequest, OptimizeSummaryOut
 from app.services.backtest_bars import bars_to_records, load_bars
 from app.services.backtest_optimize import pick_best
 from app.services.backtest_settings import build_strategy_setting, min_bars_for_request
 from app.services.symbols import to_vt_symbol
-from app.services.watchlist_repo import resolve_symbol_pair
+from app.repositories.watchlist import resolve_symbol_pair
 
 
 def _load_bars_for_request(db: Session, req: BacktestRunRequest):
@@ -86,6 +87,26 @@ def list_runs(db: Session, user_id: str, *, limit: int = 50, batch_id: str | Non
         stmt = stmt.where(BacktestRun.batch_id == batch_id)
     rows = db.scalars(stmt.order_by(desc(BacktestRun.created_at)).limit(limit))
     return [_to_out(r) for r in rows]
+
+
+def list_runs_page(
+    db: Session,
+    user_id: str,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+    batch_id: str | None = None,
+) -> Page[BacktestRunOut]:
+    stmt = select(BacktestRun).where(BacktestRun.user_id == user_id)
+    if batch_id:
+        stmt = stmt.where(BacktestRun.batch_id == batch_id)
+    result = paginate(db, stmt.order_by(desc(BacktestRun.created_at)), page=page, page_size=page_size)
+    return Page(
+        items=[_to_out(r) for r in result.items],
+        total=result.total,
+        page=result.page,
+        page_size=result.page_size,
+    )
 
 
 def get_run(db: Session, user_id: str, run_id: str) -> BacktestRunOut | None:

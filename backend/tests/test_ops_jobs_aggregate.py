@@ -21,7 +21,7 @@ async def test_list_jobs_delegates() -> None:
     ]
     with patch.object(jobs_api, "list_job_outs", new_callable=AsyncMock, return_value=rows):
         out = await jobs_api.list_jobs(user=MagicMock())  # type: ignore[arg-type]
-    assert out == rows
+    assert out.data == rows
 
 
 from unittest.mock import MagicMock  # noqa: E402

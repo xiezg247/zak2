@@ -9,11 +9,12 @@ from app.core.db import get_db
 from app.core.security import create_access_token, verify_password
 from app.models.user import User
 from app.schemas.auth import LoginRequest, TokenResponse, UserOut
+from app.schemas.common import ApiResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=ApiResponse[TokenResponse])
 def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     user = db.scalar(select(User).where(User.username == body.username))
     if user is None or not verify_password(body.password, user.password_hash):
@@ -21,12 +22,14 @@ def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="用户已禁用")
     token = create_access_token(user_id=str(user.id), username=user.username)
-    return TokenResponse(
-        access_token=token,
-        user=UserOut(id=str(user.id), username=user.username, display_name=user.display_name),
+    return ApiResponse(
+        data=TokenResponse(
+            access_token=token,
+            user=UserOut(id=str(user.id), username=user.username, display_name=user.display_name),
+        )
     )
 
 
-@router.get("/me", response_model=UserOut)
+@router.get("/me", response_model=ApiResponse[UserOut])
 def me(user: User = Depends(get_current_user)) -> UserOut:
-    return UserOut(id=str(user.id), username=user.username, display_name=user.display_name)
+    return ApiResponse(data=UserOut(id=str(user.id), username=user.username, display_name=user.display_name))

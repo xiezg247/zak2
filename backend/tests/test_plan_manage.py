@@ -340,7 +340,7 @@ def test_api_activate_ok() -> None:
     with patch("app.api.v1.content.plan_manage_svc.activate_plan", return_value=fake) as act:
         r = client.post("/api/v1/playbook/plans/p1/activate")
     assert r.status_code == 200
-    assert r.json()["status"] == "active"
+    assert r.json()["data"]["status"] == "active"
     act.assert_called_once()
     assert act.call_args.args[1] == str(u.id)
 
@@ -359,5 +359,5 @@ def test_api_patch_ok() -> None:
     with patch("app.api.v1.content.plan_manage_svc.update_plan", return_value=fake) as upd:
         r = client.patch("/api/v1/playbook/plans/p1", json={"notes": "x", "max_position_pct": 0.25})
     assert r.status_code == 200
-    assert r.json()["notes"] == "x"
+    assert r.json()["data"]["notes"] == "x"
     upd.assert_called_once()

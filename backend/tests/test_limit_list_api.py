@@ -115,9 +115,9 @@ def test_get_limit_list_api_empty() -> None:
         resp = client.get("/api/v1/market/limit-list?trade_date=20240805")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["trade_date"] == "20240805"
-    assert body["total"] == 0
-    assert body["rows"] == []
+    assert body["data"]["trade_date"] == "20240805"
+    assert body["data"]["total"] == 0
+    assert body["data"]["rows"] == []
 
 
 def test_synth_limit_ladder_attaches_seal_fields() -> None:

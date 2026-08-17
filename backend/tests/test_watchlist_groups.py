@@ -5,7 +5,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.models.watchlist import WatchlistGroup
-from app.services import watchlist_repo as repo
+from app.repositories import watchlist as repo
 
 
 def _group(*, gid: str | None = None, name: str = "A", user_id: str = "u1") -> WatchlistGroup:

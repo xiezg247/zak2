@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -18,94 +19,119 @@ from app.schemas.chat import (
     SessionUpdate,
     TeamStreamRequest,
 )
-from app.services import ai_agent, ai_proposals, chat_repo as repo, team_orchestrator
+from app.schemas.common import ApiResponse, PageOut
+from app.repositories import chat as repo
+from app.services import ai_agent, ai_proposals, team_orchestrator
 from app.services import llm as llm_svc
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
-@router.get("/status", response_model=LlmStatus)
-def get_status(user: User = Depends(get_current_user)) -> LlmStatus:
+@router.get("/status", response_model=ApiResponse[LlmStatus])
+def get_status(user: User = Depends(get_current_user)) -> ApiResponse[LlmStatus]:
     _ = user
-    return LlmStatus(**llm_svc.llm_status())
+    return ApiResponse(data=LlmStatus(**llm_svc.llm_status()))
 
 
-@router.get("/sessions", response_model=list[SessionOut])
-def get_sessions(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[SessionOut]:
-    return repo.list_sessions(db, str(user.id))
+@router.get("/sessions", response_model=ApiResponse[list[SessionOut]])
+def get_sessions(
+    user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> ApiResponse[list[SessionOut]]:
+    return ApiResponse(data=repo.list_sessions(db, str(user.id)))
 
 
-@router.post("/sessions", response_model=SessionOut)
+@router.get("/sessions/page", response_model=ApiResponse[PageOut[SessionOut]])
+def get_sessions_page(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[PageOut[SessionOut]]:
+    result = repo.list_sessions_page(db, str(user.id), page=page, page_size=page_size)
+    return ApiResponse(
+        data=PageOut(
+            items=result.items,
+            total=result.total,
+            page=result.page,
+            page_size=result.page_size,
+            pages=result.pages,
+        )
+    )
+
+
+@router.post("/sessions", response_model=ApiResponse[SessionOut])
 def post_session(
     body: SessionCreate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> SessionOut:
-    return repo.create_session(db, str(user.id), title=body.title, scene=body.scene)
+) -> ApiResponse[SessionOut]:
+    return ApiResponse(data=repo.create_session(db, str(user.id), title=body.title, scene=body.scene))
 
 
-@router.patch("/sessions/{session_id}", response_model=SessionOut)
+@router.patch("/sessions/{session_id}", response_model=ApiResponse[SessionOut])
 def patch_session(
     session_id: str,
     body: SessionUpdate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> SessionOut:
-    return repo.update_session(db, str(user.id), session_id, title=body.title, scene=body.scene)
+) -> ApiResponse[SessionOut]:
+    return ApiResponse(data=repo.update_session(db, str(user.id), session_id, title=body.title, scene=body.scene))
 
 
-@router.delete("/sessions/{session_id}")
+@router.delete("/sessions/{session_id}", response_model=ApiResponse[dict[str, Any]])
 def remove_session(
     session_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> ApiResponse[dict[str, Any]]:
     repo.delete_session(db, str(user.id), session_id)
-    return {"ok": True}
+    return ApiResponse(data={"ok": True})
 
 
-@router.get("/sessions/{session_id}/messages", response_model=list[MessageOut])
+@router.get("/sessions/{session_id}/messages", response_model=ApiResponse[list[MessageOut]])
 def get_messages(
     session_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[MessageOut]:
-    return repo.list_messages(db, str(user.id), session_id)
+) -> ApiResponse[list[MessageOut]]:
+    return ApiResponse(data=repo.list_messages(db, str(user.id), session_id))
 
 
-@router.post("/sessions/{session_id}/chat", response_model=MessageOut)
+@router.post("/sessions/{session_id}/chat", response_model=ApiResponse[MessageOut])
 def post_chat(
     session_id: str,
     body: ChatRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> MessageOut:
-    return repo.send_message(
-        db,
-        str(user.id),
-        session_id,
-        body.content,
-        include_context=body.include_context,
-        use_tools=body.use_tools,
+) -> ApiResponse[MessageOut]:
+    return ApiResponse(
+        data=repo.send_message(
+            db,
+            str(user.id),
+            session_id,
+            body.content,
+            include_context=body.include_context,
+            use_tools=body.use_tools,
+        )
     )
 
 
-@router.post("/proposals/{proposal_id}/confirm")
+@router.post("/proposals/{proposal_id}/confirm", response_model=ApiResponse[dict[str, Any]])
 def post_confirm_proposal(
     proposal_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict:
-    return ai_proposals.confirm_proposal(db, proposal_id, str(user.id))
+) -> ApiResponse[dict[str, Any]]:
+    return ApiResponse(data=ai_proposals.confirm_proposal(db, proposal_id, str(user.id)))
 
 
-@router.post("/proposals/{proposal_id}/reject")
+@router.post("/proposals/{proposal_id}/reject", response_model=ApiResponse[dict[str, Any]])
 def post_reject_proposal(
     proposal_id: str,
     user: User = Depends(get_current_user),
-) -> dict:
+) -> ApiResponse[dict[str, Any]]:
     proposal = ai_proposals.reject_proposal(proposal_id, str(user.id))
-    return {"ok": True, **ai_proposals.proposal_public(proposal)}
+    return ApiResponse(data={"ok": True, **ai_proposals.proposal_public(proposal)})
 
 
 @router.post("/team/stream")

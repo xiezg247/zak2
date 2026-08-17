@@ -31,7 +31,7 @@ def test_build_setting_and_min_bars():
 
 
 def test_execute_unknown_strategy_501():
-    from app.services import backtest_repo as repo
+    from app.repositories import backtest as repo
 
     class DummyDb:
         pass

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.schemas.screener import RecipeRunRequest
 from app.services.engine import run_recipe_screen
 from app.services.ops_scheduler import load_scheduler_config, save_job_run_meta
-from app.services import screener_repo as repo
+from app.repositories import screener as repo
 
 JOB_INTRADAY = "screen_intraday"
 JOB_POST_CLOSE = "screen_post_close"
