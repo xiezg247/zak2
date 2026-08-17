@@ -20,5 +20,5 @@ def test_validate_helper_semantics():
     try:
         api._validate_ma_windows(20, 10)
         raise AssertionError("expected HTTPException")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         assert getattr(exc, "status_code", None) == 400

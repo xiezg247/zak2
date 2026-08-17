@@ -102,7 +102,9 @@ def _count_overview(
         .mappings()
         .first()
     )
-    return int((row or {}).get("n") or 0)
+    if row is None:
+        return 0
+    return int(row["n"] or 0)
 
 
 def _empty_result(
@@ -172,7 +174,7 @@ def fill_focus_pool_minute(db: Session) -> dict[str, Any]:
             db.commit()
             downloaded += 1
             bars_added += n
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             db.rollback()
             failed.append(f"{symbol}.{exchange}:{exc}")
         _sleep()

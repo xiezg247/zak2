@@ -60,6 +60,6 @@ def run_skill_module(skill_id: str, ctx: SkillContext, args: dict[str, Any] | No
             pool.shutdown(wait=not timed_out)
     except FuturesTimeout:
         return {"error": f"skill 执行超时（>{SKILL_TIMEOUT_SEC}s）：{skill_id}"}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         _logger.warning("skill %s failed: %s", skill_id, exc)
         return {"error": str(exc)}

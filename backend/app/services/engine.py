@@ -99,7 +99,7 @@ def _enrich_names_from_redis(rows: list[QuoteRow], store: QuoteStore) -> None:
         return
     try:
         quotes = store.get_quotes([r.symbol for r in rows[:200]])
-    except Exception:  # noqa: BLE001
+    except Exception:
         return
     by_sym = {q.symbol: q for q in quotes}
     for row in rows:

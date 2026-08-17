@@ -190,7 +190,7 @@ def _synth_volume_surge() -> RadarCardOut | None:
         vt = ""
         try:
             vt = _to_vt_symbol(tf) if "." in tf and tf.split(".", 1)[0] in {"SHSE", "SZSE", "BJSE"} else ""
-        except Exception:  # noqa: BLE001
+        except Exception:
             vt = ""
         if not vt:
             vt = str(tf)

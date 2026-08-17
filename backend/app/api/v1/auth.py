@@ -16,7 +16,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=ApiResponse[TokenResponse])
-def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
+def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)) -> ApiResponse[TokenResponse]:
     ip = request.client.host if request.client else None
     if login_guard.is_locked(body.username, ip):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="尝试次数过多，请稍后再试")
@@ -39,5 +39,5 @@ def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)) -
 
 
 @router.get("/me", response_model=ApiResponse[UserOut])
-def me(user: User = Depends(get_current_user)) -> UserOut:
+def me(user: User = Depends(get_current_user)) -> ApiResponse[UserOut]:
     return ApiResponse(data=UserOut(id=str(user.id), username=user.username, display_name=user.display_name))

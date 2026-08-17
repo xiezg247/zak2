@@ -70,10 +70,13 @@ def compute_ma_signal(
     i = len(closes) - 1
     j = i - 1
     k = i - 2
-    f, s = fast_ma[i], slow_ma[i]
-    pf, ps = fast_ma[j], slow_ma[j]
-    kf, ks = fast_ma[k], slow_ma[k]
-    if None in (f, s, pf, ps, kf, ks):
+    f = fast_ma[i]
+    s = slow_ma[i]
+    pf = fast_ma[j]
+    ps = slow_ma[j]
+    kf = fast_ma[k]
+    ks = slow_ma[k]
+    if f is None or s is None or pf is None or ps is None or kf is None or ks is None:
         return None
 
     same_day = cross_kind(pf, ps, f, s)
@@ -155,9 +158,11 @@ def compute_double_ma_signal(
     slow_ma = sma(closes, slow)
     i = len(closes) - 1
     j = i - 1
-    f, s = fast_ma[i], slow_ma[i]
-    pf, ps = fast_ma[j], slow_ma[j]
-    if None in (f, s, pf, ps):
+    f = fast_ma[i]
+    s = slow_ma[i]
+    pf = fast_ma[j]
+    ps = slow_ma[j]
+    if f is None or s is None or pf is None or ps is None:
         return None
 
     kind = cross_kind(pf, ps, f, s)
@@ -293,10 +298,12 @@ def compute_trend_ma_signal(
     adx_arr = wilder_adx(highs, lows, closes, adx_period)
     i = len(closes) - 1
     j = i - 1
-    f, s = fast_ma[i], slow_ma[i]
-    pf, ps = fast_ma[j], slow_ma[j]
+    f = fast_ma[i]
+    s = slow_ma[i]
+    pf = fast_ma[j]
+    ps = slow_ma[j]
     adx_v = adx_arr[i]
-    if None in (f, s, pf, ps) or adx_v is None:
+    if f is None or s is None or pf is None or ps is None or adx_v is None:
         return None
 
     cross = cross_kind(pf, ps, f, s)

@@ -54,7 +54,7 @@ def list_watchlist_symbols(db: Session) -> list[tuple[str, str]]:
     return [(str(r["symbol"]), normalize_exchange(str(r["exchange"]))) for r in rows]
 
 
-def _fill_one(db: Session, *, symbol: str, exchange: str, as_of) -> tuple[str, int]:
+def _fill_one(db: Session, *, symbol: str, exchange: str, as_of: date) -> tuple[str, int]:
     """返回 (status, bars_added)：ok|skip|fail。"""
     rng = bars.resolve_fill_range(db, symbol=symbol, exchange=exchange, as_of=as_of)
     if rng is None:
@@ -64,7 +64,7 @@ def _fill_one(db: Session, *, symbol: str, exchange: str, as_of) -> tuple[str, i
         n = bars.download_daily_bars(db, symbol=symbol, exchange=exchange, start=start, end=end)
         db.commit()
         return ("ok" if n > 0 else "skip"), n
-    except Exception:  # noqa: BLE001
+    except Exception:
         db.rollback()
         return "fail", 0
 
@@ -73,7 +73,7 @@ def _run_pool(db: Session, pool: list[tuple[str, str]], *, job_id: str) -> dict[
     try:
         ts.require_token()
     except ts.TushareNotConfiguredError as exc:
-        out = {
+        out: dict[str, Any] = {
             "success": False,
             "message": str(exc),
             "attempted": 0,
@@ -178,7 +178,7 @@ def _download_universe_one(
         n = bars.download_daily_bars(db, symbol=symbol, exchange=exchange, start=unified_start, end=as_of)
         db.commit()
         return ("ok" if n > 0 else "skip"), n
-    except Exception:  # noqa: BLE001
+    except Exception:
         db.rollback()
         return "fail", 0
 
@@ -187,7 +187,7 @@ def batch_download_universe(db: Session) -> dict[str, Any]:
     try:
         ts.require_token()
     except ts.TushareNotConfiguredError as exc:
-        out = {
+        out: dict[str, Any] = {
             "success": False,
             "message": str(exc),
             "attempted": 0,

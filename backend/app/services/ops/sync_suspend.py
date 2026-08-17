@@ -44,7 +44,7 @@ def sync_suspend_daily(db: Session) -> dict[str, Any]:
             {"trade_date": trade_date, "suspend_type": "S"},
             fields="ts_code,trade_date,suspend_type",
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         message = f"suspend_d 失败: {exc}"
         save_job_run_meta(db, JOB_ID, last_message=message[:500], last_success=False)
         return {"success": False, "skipped": True, "message": message, "trade_date": trade_date}

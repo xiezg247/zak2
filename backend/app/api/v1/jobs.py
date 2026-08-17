@@ -12,13 +12,13 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
 @router.get("", response_model=ApiResponse[list[JobOut]])
-async def list_jobs(user: User = Depends(get_current_user)) -> list[JobOut]:
+async def list_jobs(user: User = Depends(get_current_user)) -> ApiResponse[list[JobOut]]:
     _ = user
     return ApiResponse(data=await list_job_outs(limit=50))
 
 
 @router.get("/{job_id}", response_model=ApiResponse[JobOut])
-async def get_job(job_id: str, user: User = Depends(get_current_user)) -> JobOut:
+async def get_job(job_id: str, user: User = Depends(get_current_user)) -> ApiResponse[JobOut]:
     _ = user
     job = await get_job_out(job_id)
     if not job:

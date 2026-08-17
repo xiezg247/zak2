@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.schemas.backtest import BacktestRunRequest
 
 
-def build_strategy_setting(req: BacktestRunRequest) -> dict:
-    base = {
+def build_strategy_setting(req: BacktestRunRequest) -> dict[str, Any]:
+    base: dict[str, Any] = {
         "fast_window": req.fast_window,
         "slow_window": req.slow_window,
         "trade_volume": 100,

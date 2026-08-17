@@ -180,7 +180,7 @@ def _stream_chief(
         for piece in llm_svc.stream_completion(_chief_messages(prefetch, scores, analyst_texts=analyst_texts)):
             chunks.append(piece)
             yield {"type": "team", "agent": "chief", "kind": "delta", "content": piece}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         fallback = _fallback_report(prefetch, scores, analyst_texts=analyst_texts)
         chunks.append(fallback)
         yield {"type": "team", "agent": "chief", "kind": "delta", "content": fallback}
@@ -243,7 +243,7 @@ def _stream_deep_analysts(
                         "content": piece,
                     }
                 )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             fb = _rule_fallback_text(agent, scores)
             texts_buf[agent] = [fb]
             fallbacks[agent] = True
@@ -364,7 +364,7 @@ def stream_team_analysis_with_persist(
                 "scores": last_done.get("scores") or {},
             },
         )
-    except Exception:  # noqa: BLE001
+    except Exception:
         _logger = __import__("logging").getLogger(__name__)
         _logger.exception("team report persist failed")
         return

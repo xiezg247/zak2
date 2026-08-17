@@ -56,7 +56,7 @@ class QuoteNotifyHub:
         for ws in clients:
             try:
                 await ws.send_json(payload)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 dead.append(ws)
         if dead:
             async with self._lock:
@@ -69,7 +69,7 @@ class QuoteNotifyHub:
             return
         try:
             asyncio.run_coroutine_threadsafe(self.broadcast_seq(seq), loop)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug("notify_from_thread failed seq=%s", seq, exc_info=True)
 
     def _listen_loop(self) -> None:
@@ -93,19 +93,19 @@ class QuoteNotifyHub:
                     continue
                 if seq > 0:
                     self.notify_from_thread(seq)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.warning("quote notify listener stopped / redis unavailable", exc_info=True)
         finally:
             try:
                 if pubsub is not None:
                     pubsub.unsubscribe(QUOTE_NOTIFY_CHANNEL)
                     pubsub.close()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
             try:
                 if client is not None:
                     client.close()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
 
 

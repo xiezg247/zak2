@@ -132,7 +132,7 @@ def _index_above_ma5(db: Session) -> bool | None:
         from app.services.bars import load_bars
 
         resp = load_bars(db, symbol="000001", exchange="SSE", interval="d", limit=8)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
     bars = sorted(list(resp.bars or []), key=lambda b: b.datetime)
     if len(bars) < 5:

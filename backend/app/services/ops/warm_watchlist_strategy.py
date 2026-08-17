@@ -36,7 +36,7 @@ def _redis_client():
     store = get_quote_store()
     if not store.available():
         return None
-    return store._client  # noqa: SLF001
+    return store._client
 
 
 def _today() -> str:

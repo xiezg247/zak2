@@ -56,7 +56,7 @@ def get_watchlist(db: Session, user_id: str, args: dict[str, Any]) -> Any:
                     target["last_price"] = q.last_price
                     target["change_pct"] = q.change_pct
                     target["name"] = target["name"] or q.name
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
     return {"count": len(rows), "items": rows}
 
@@ -154,7 +154,7 @@ def get_positions(db: Session, user_id: str, args: dict[str, Any]) -> Any:
                 target["change_pct"] = q.change_pct
                 if getattr(q, "name", None):
                     target["name"] = q.name
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
     return {"count": len(items), "items": items}
 

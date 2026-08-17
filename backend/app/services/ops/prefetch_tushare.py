@@ -64,7 +64,7 @@ def prefetch_tushare(db: Session) -> dict[str, Any]:
 
     try:
         basic_rows = fetch_daily_basic_rows(trade_date)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         message = f"daily_basic 失败: {exc}"
         save_job_run_meta(db, JOB_ID, last_message=message[:500], last_success=False)
         return {"success": False, "skipped": True, "message": message, "trade_date": trade_date}
@@ -83,7 +83,7 @@ def prefetch_tushare(db: Session) -> dict[str, Any]:
         if flow_rows:
             _upsert_dataset(db, dataset="moneyflow", trade_date=trade_date, rows=flow_rows, fetched_at=fetched_at)
             written += 1
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         notes.append(f"moneyflow 失败: {exc}")
 
     db.commit()

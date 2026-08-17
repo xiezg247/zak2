@@ -283,7 +283,7 @@ class WatchlistGroupMemberRepository(BaseRepository[WatchlistGroupMember]):
         for raw in symbols:
             try:
                 symbol, exch = parse_flexible_symbol(raw)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 errors.append({"symbol": raw, "detail": "无法解析代码"})
                 continue
 

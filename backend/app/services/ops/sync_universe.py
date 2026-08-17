@@ -114,6 +114,6 @@ def sync_universe(db: Session) -> dict[str, Any]:
         detail = exc.detail
         message = detail if isinstance(detail, str) else str(detail)
         return _fail(db, message)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         db.rollback()
         return _fail(db, f"同步 A 股列表失败：{exc}")

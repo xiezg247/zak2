@@ -6,7 +6,7 @@ import json
 import os
 import time
 from contextlib import suppress
-from typing import Any
+from typing import Any, cast
 
 import redis
 
@@ -40,7 +40,7 @@ def cache_get() -> dict[str, Any] | None:
         try:
             raw = client.get(CACHE_KEY)
             if raw:
-                parsed = json.loads(raw)
+                parsed = json.loads(cast(str, raw))
                 if isinstance(parsed, dict):
                     return parsed
         except (redis.RedisError, TypeError, ValueError, json.JSONDecodeError):

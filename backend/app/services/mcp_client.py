@@ -82,7 +82,7 @@ def _load_mcp_sdk() -> tuple[Any, Any, Any]:
         if _mcp_sdk is not None:
             return _mcp_sdk
         try:
-            import anyio  # noqa: F401
+            import anyio  # noqa: F401  # 仅探测 anyio 是否可导入
             from mcp import ClientSession
             from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
         except ImportError as ex:
@@ -196,7 +196,7 @@ def _serialize_tool_result(result: Any) -> str:
             else:
                 try:
                     parts.append(json.dumps(block.model_dump(), ensure_ascii=False, default=str))
-                except Exception:  # noqa: BLE001
+                except Exception:
                     parts.append(str(block))
     if structured is not None and not parts:
         parts.append(json.dumps(structured, ensure_ascii=False, default=str))
@@ -361,7 +361,7 @@ def probe_connection(settings: Settings | None = None, *, timeout: float = 8.0) 
             "tool_count": 0,
             "error": str(ex),
         }
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:
         return {
             "configured": True,
             "enabled": True,

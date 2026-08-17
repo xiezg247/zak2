@@ -321,7 +321,7 @@ def sync_watchlist_financials(db: Session) -> dict[str, Any]:
         try:
             _sync_one(db, symbol=symbol, exchange=exchange)
             ok += 1
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             failed += 1
             label = to_ts_code(symbol, exchange)
             err = f"{label}: {exc}"
@@ -339,7 +339,7 @@ def sync_watchlist_financials(db: Session) -> dict[str, Any]:
                     periods_count=0,
                 )
                 db.commit()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 db.rollback()
         if idx < len(pool) - 1:
             time.sleep(SYNC_DELAY_SECONDS)

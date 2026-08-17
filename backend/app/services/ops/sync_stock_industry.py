@@ -168,6 +168,6 @@ def sync_stock_industry(db: Session) -> dict[str, Any]:
         detail = exc.detail
         message = detail if isinstance(detail, str) else str(detail)
         return _fail(db, message)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         db.rollback()
         return _fail(db, f"同步行业映射失败：{exc}")

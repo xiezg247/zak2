@@ -153,7 +153,7 @@ def _redis_client():
     store = get_quote_store()
     if not store.available():
         return None
-    return store._client  # noqa: SLF001 — 与 QuoteStore 共用连接
+    return store._client
 
 
 def _load_signal_redis(config_key: str, vt_symbol: str) -> dict[str, Any] | None:
@@ -163,7 +163,7 @@ def _load_signal_redis(config_key: str, vt_symbol: str) -> dict[str, Any] | None
     key = f"{KEY_PREFIX}:cache:signal:latest:{config_key}:{vt_symbol}"
     try:
         raw = client.get(key)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8", errors="ignore")
@@ -191,7 +191,7 @@ def _scan_signal_redis(config_key: str, *, limit: int = 30) -> list[tuple[str, d
                 out.append((vt, snap))
             if len(out) >= limit:
                 break
-    except Exception:  # noqa: BLE001
+    except Exception:
         return out
     return out
 
@@ -233,7 +233,7 @@ def _load_position_signal_redis(config_key: str, vt_symbol: str, position_key: s
     key = f"{KEY_PREFIX}:cache:position:latest:{config_key}:{vt_symbol}:{position_key}"
     try:
         raw = client.get(key)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8", errors="ignore")
@@ -379,12 +379,12 @@ def load_strategy_board(
             tf = to_tf_symbol(code, exch)
             tfs.append(tf)
             tf_to_vt[tf] = vt
-        for q in store.get_quotes(tfs):
-            vt = tf_to_vt.get(q.symbol)
-            if vt:
-                quote_by_vt[vt] = q
-                if not name_by_vt.get(vt) and q.name:
-                    name_by_vt[vt] = q.name
+        for quote in store.get_quotes(tfs):
+            mapped_vt = tf_to_vt.get(quote.symbol)
+            if mapped_vt:
+                quote_by_vt[mapped_vt] = quote
+                if not name_by_vt.get(mapped_vt) and quote.name:
+                    name_by_vt[mapped_vt] = quote.name
 
     source = "none"
     signals: list[dict[str, Any]] = []

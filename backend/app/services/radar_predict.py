@@ -92,7 +92,7 @@ def vt_with_min_daily_bars(db: Session, vt_symbols: list[str], *, min_bars: int 
     for vt in vt_symbols:
         try:
             symbol, exchange = resolve_symbol_pair(vt)
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
         pairs.append((vt, symbol, exchange))
     if not pairs:

@@ -158,7 +158,7 @@ def test_load_strategy_board_empty() -> None:
 
     db = MagicMock()
 
-    def _execute(stmt, params=None):  # noqa: ANN001
+    def _execute(stmt, params=None):
         _ = params
         result = MagicMock()
         sql = str(stmt)
@@ -218,7 +218,7 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
 
     db = MagicMock()
 
-    def _execute(stmt, params=None):  # noqa: ANN001
+    def _execute(stmt, params=None):
         _ = params
         result = MagicMock()
         sql = str(stmt)
@@ -330,7 +330,7 @@ def test_load_strategy_board_note_panel_no_signals() -> None:
 
     db = MagicMock()
 
-    def _execute(stmt, params=None):  # noqa: ANN001
+    def _execute(stmt, params=None):
         _ = params
         result = MagicMock()
         sql = str(stmt)
@@ -384,7 +384,7 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
 
     db = MagicMock()
 
-    def _execute(stmt, params=None):  # noqa: ANN001
+    def _execute(stmt, params=None):
         _ = params
         result = MagicMock()
         sql = str(stmt)
@@ -451,7 +451,7 @@ def test_note_empty_mentions_heuristic_job() -> None:
 
     db = MagicMock()
 
-    def _execute(stmt, params=None):  # noqa: ANN001
+    def _execute(stmt, params=None):
         _ = params
         result = MagicMock()
         sql = str(stmt)

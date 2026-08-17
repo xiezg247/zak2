@@ -44,7 +44,7 @@ def test_fetch_batches(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[list[str]] = []
 
     class FakeQuotes:
-        def get(self, symbols, as_dataframe=True):  # noqa: ANN001
+        def get(self, symbols, as_dataframe=True):
             calls.append(list(symbols))
             import pandas as pd
 

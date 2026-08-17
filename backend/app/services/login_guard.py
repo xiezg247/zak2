@@ -6,6 +6,8 @@ Redis 不可用时 fail-open（不阻断登录），避免登录路径被 Redis 
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import redis
 
 from app.core.redis_keys import AUTH_FAIL_IP_KEY_FMT, AUTH_FAIL_USER_KEY_FMT
@@ -28,7 +30,7 @@ def _is_locked(client: redis.Redis, key: str, threshold: int) -> bool:
     if raw is None:
         return False
     try:
-        return int(raw) >= threshold
+        return int(cast(Any, raw)) >= threshold
     except (TypeError, ValueError):
         return False
 

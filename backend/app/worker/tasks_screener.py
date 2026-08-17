@@ -38,7 +38,7 @@ def _run_condition(user_id: str, payload: dict) -> dict[str, Any]:
             result=result,
         )
         return {"success": True, "result_ref": run.id}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _fail(exc)
     finally:
         db.close()
@@ -56,7 +56,7 @@ def _run_recipe(user_id: str, payload: dict) -> dict[str, Any]:
             result=result,
         )
         return {"success": True, "result_ref": run.id}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _fail(exc)
     finally:
         db.close()
@@ -74,7 +74,7 @@ def _run_pattern(user_id: str, payload: dict) -> dict[str, Any]:
             result=result,
         )
         return {"success": True, "result_ref": run.id}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _fail(exc)
     finally:
         db.close()
@@ -92,7 +92,7 @@ def _run_reference_peer(user_id: str, payload: dict) -> dict[str, Any]:
             result=result,
         )
         return {"success": True, "result_ref": run.id}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _fail(exc)
     finally:
         db.close()

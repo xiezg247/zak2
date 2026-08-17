@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Any
 
 from app.integrations.bilibili.client import BilibiliApiError, BilibiliClient
@@ -33,7 +34,7 @@ def search_users(client: BilibiliClient, keyword: str, *, limit: int = 8) -> lis
     return users
 
 
-def _iter_search_user_items(result: Any):
+def _iter_search_user_items(result: Any) -> Iterator[dict[str, Any]]:
     if not isinstance(result, list):
         return
     for item in result:

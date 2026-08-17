@@ -41,7 +41,7 @@ def test_attach_first_time_fields_desktop_vt_resolves_tf_map() -> None:
 def test_load_first_time_map_from_db() -> None:
     db = MagicMock()
 
-    def _execute(stmt, params=None):  # noqa: ANN001
+    def _execute(stmt, params=None):
         result = MagicMock()
         if "limit_list_daily" in str(stmt):
             result.mappings.return_value = [
@@ -61,7 +61,7 @@ def test_load_first_time_map_lazy_fetch() -> None:
     db = MagicMock()
     calls = {"read": 0}
 
-    def _execute(stmt, params=None):  # noqa: ANN001
+    def _execute(stmt, params=None):
         result = MagicMock()
         sql = str(stmt)
         if "SELECT vt_symbol" in sql or ("limit_list_daily" in sql and "SELECT" in sql.upper()):
@@ -89,7 +89,7 @@ def test_load_first_time_map_no_token_silent() -> None:
 
     db = MagicMock()
 
-    def _execute(stmt, params=None):  # noqa: ANN001
+    def _execute(stmt, params=None):
         result = MagicMock()
         result.mappings.return_value = []
         return result

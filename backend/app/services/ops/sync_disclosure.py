@@ -52,7 +52,7 @@ def sync_disclosure_calendar(db: Session) -> dict[str, Any]:
     end_date = latest_report_end_yyyymmdd()
     try:
         rows = ts.query("disclosure_date", {"end_date": end_date}, fields=_FIELDS)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         message = f"disclosure_date 失败: {exc}"
         save_job_run_meta(db, JOB_ID, last_message=message[:500], last_success=False)
         return {"success": False, "skipped": True, "message": message, "end_date": end_date}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import redis
 
@@ -151,7 +151,7 @@ class QuoteStore:
             client = self._conn()
             return {
                 "updated_at": client.get(META_UPDATED_AT_KEY),
-                "quote_count": int(client.get(META_QUOTE_COUNT_KEY) or 0),
+                "quote_count": int(cast(Any, client.get(META_QUOTE_COUNT_KEY)) or 0),
                 "available": True,
             }
         except redis.RedisError:
@@ -160,7 +160,7 @@ class QuoteStore:
     def list_rank(self, field: str, *, top_n: int = 200) -> list[tuple[str, float]]:
         client = self._conn()
         key = RANK_KEY_FMT.format(field=field)
-        raw = client.zrevrange(key, 0, max(0, top_n - 1), withscores=True)
+        raw = cast(list[Any], client.zrevrange(key, 0, max(0, top_n - 1), withscores=True))
         return [(str(member), float(score)) for member, score in raw]
 
     def get_quotes(self, symbols: list[str]) -> list[QuoteRow]:

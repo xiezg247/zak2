@@ -31,7 +31,7 @@ def prefetch_moneyflow(db: Session) -> dict[str, Any]:
     trade_date = latest_open_yyyymmdd(db)
     try:
         rows = fetch_moneyflow_rows(trade_date)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         message = f"moneyflow 失败: {exc}"
         save_job_run_meta(db, JOB_ID, last_message=message[:500], last_success=False)
         return {"success": False, "skipped": True, "message": message, "trade_date": trade_date}

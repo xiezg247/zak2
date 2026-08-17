@@ -36,7 +36,7 @@ def normalize_symbols(symbols: list[str], *, max_count: int = SIGNAL_PANEL_MAX_S
         try:
             symbol, exchange = resolve_symbol_pair(text_sym)
             vt = to_vt_symbol(symbol, exchange)
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
         if vt not in seen:
             seen.add(vt)
@@ -103,7 +103,7 @@ class SignalPanelRepository:
         try:
             symbol, exchange = resolve_symbol_pair(raw)
             vt = to_vt_symbol(symbol, exchange)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise HTTPException(status_code=400, detail=f"标的无效：{exc}") from exc
         if vt in current:
             return current
@@ -115,7 +115,7 @@ class SignalPanelRepository:
         try:
             symbol, exchange = resolve_symbol_pair(raw)
             vt = to_vt_symbol(symbol, exchange)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise HTTPException(status_code=400, detail=f"标的无效：{exc}") from exc
         current = self.load_symbols()
         if vt not in current:

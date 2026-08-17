@@ -68,7 +68,7 @@ def sync_bilibili_feed(db: Session, *, force: bool = False) -> dict[str, Any]:
             except BilibiliApiError as exc:
                 label = sub.display_name or sub.source_id
                 errors.append(f"{label}: {exc}")
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 label = sub.display_name or sub.source_id
                 errors.append(f"{label}: {exc}")
             if index < len(subs) - 1:

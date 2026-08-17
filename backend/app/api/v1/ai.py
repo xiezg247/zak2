@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
@@ -135,7 +136,7 @@ def post_team_stream(
     user_id = str(user.id)
     vt_symbol = body.vt_symbol.strip()
     session_id = (body.session_id or "").strip() or None
-    mode = "deep" if (body.mode or "").strip().lower() == "deep" else "fast"
+    mode: Literal["fast", "deep"] = "deep" if (body.mode or "").strip().lower() == "deep" else "fast"
 
     def event_gen():
         report = ""
@@ -159,7 +160,7 @@ def post_team_stream(
                 yield f"data: {json.dumps({'type': 'done', 'message': msg.model_dump(mode='json')}, ensure_ascii=False)}\n\n"
             else:
                 yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)}, ensure_ascii=False)}\n\n"
         finally:
             db.close()
@@ -199,7 +200,7 @@ def post_chat_stream(
                     reply = str(event.get("content") or "")
             msg = repo.ChatRepository(db2, user_id).finalize_stream(session_id, reply)
             yield f"data: {json.dumps({'type': 'done', 'message': msg.model_dump(mode='json')}, ensure_ascii=False)}\n\n"
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)}, ensure_ascii=False)}\n\n"
         finally:
             db2.close()

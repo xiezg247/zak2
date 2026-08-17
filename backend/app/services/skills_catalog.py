@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Any
 
 MAX_SKILL_CHARS = 12000
 
@@ -58,7 +59,7 @@ def _safe_skill_dir(skill_id: str) -> Path:
     return skill_dir
 
 
-def _load_skill_meta(skill_id: str, text: str) -> dict[str, str]:
+def _load_skill_meta(skill_id: str, text: str) -> dict[str, Any]:
     meta, body = _parse_frontmatter(text)
     return {
         "id": skill_id,

@@ -72,7 +72,7 @@ def load_first_time_map(
 
     try:
         result = _read_first_time_map(db, td)
-    except Exception:  # noqa: BLE001
+    except Exception:
         result = {}
 
     if result or not lazy_fetch:
@@ -86,12 +86,12 @@ def load_first_time_map(
     try:
         sync_one_day(db, td)
         db.commit()
-    except Exception:  # noqa: BLE001
+    except Exception:
         return {}
 
     try:
         return _read_first_time_map(db, td)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return {}
 
 
@@ -149,7 +149,7 @@ def list_limit_list(
 
     try:
         result_rows = _read_rows()
-    except Exception:  # noqa: BLE001
+    except Exception:
         result_rows = []
 
     if not result_rows and lazy_fetch:
@@ -161,7 +161,7 @@ def list_limit_list(
             sync_one_day(db, td)
             db.commit()
             result_rows = _read_rows()
-        except Exception:  # noqa: BLE001
+        except Exception:
             result_rows = []
 
     return {"trade_date": td, "total": len(result_rows), "rows": result_rows}

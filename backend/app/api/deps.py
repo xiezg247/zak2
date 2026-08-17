@@ -20,7 +20,7 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
     try:
         payload = decode_access_token(credentials.credentials)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效令牌") from exc
     user_id = str(payload.get("sub") or "")
     if not user_id:

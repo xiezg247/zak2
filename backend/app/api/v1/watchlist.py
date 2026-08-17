@@ -53,8 +53,8 @@ def _enrich(items: list, *, with_quotes: bool, db: Session | None = None) -> lis
         store = get_quote_store()
         if store.available():
             tfs = [to_tf_symbol(i.symbol, i.exchange) for i in items]
-            for q in store.get_quotes(tfs):
-                quote_map[q.symbol] = q
+            for quote in store.get_quotes(tfs):
+                quote_map[quote.symbol] = quote
 
     rows: list[QuoteRow] = []
     if with_quotes and items:

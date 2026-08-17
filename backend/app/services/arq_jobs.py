@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import redis
 from arq import create_pool
@@ -108,7 +108,7 @@ async def _clear_arq_job_keys(pool: ArqRedis, job_id: str) -> None:
     await pool.delete(result_key_prefix + job_id)
     try:
         await pool.zrem(queue, job_id)
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.warning("清理 ARQ job 键失败: %s", job_id)
 
 
@@ -280,7 +280,7 @@ def _job_out_from_arq(
 
 async def get_job_out(job_id: str) -> JobOut | None:
     client = _sync_redis()
-    meta = client.hgetall(ARQ_JOBS_META_KEY_FMT.format(job_id=job_id)) or {}
+    meta = cast(dict[str, Any], client.hgetall(ARQ_JOBS_META_KEY_FMT.format(job_id=job_id))) or {}
     kind = str(meta.get("kind") or "")
     created_at = str(meta.get("created_at") or datetime.now(UTC).isoformat())
 
@@ -327,7 +327,7 @@ async def get_ops_job_out(job_id: str) -> JobOut | None:
 
 async def list_job_outs(*, limit: int = 50) -> list[JobOut]:
     client = _sync_redis()
-    ids = client.zrevrange(ARQ_JOBS_RECENT_ZSET, 0, max(limit - 1, 0)) or []
+    ids = cast(list[str], client.zrevrange(ARQ_JOBS_RECENT_ZSET, 0, max(limit - 1, 0))) or []
     out: list[JobOut] = []
     for arq_id in ids:
         row = await get_job_out(str(arq_id))

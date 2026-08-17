@@ -62,7 +62,7 @@ def _try_valuation(symbol: str, exchange: str) -> dict[str, Any]:
         token = ""
         try:
             token = ts.require_token()
-        except Exception:  # noqa: BLE001
+        except Exception:
             return {}
         _ = token
         exch = exchange.upper()
@@ -87,7 +87,7 @@ def _try_valuation(symbol: str, exchange: str) -> dict[str, Any]:
                     {"ts_code": ts_code, "trade_date": trade_date},
                     fields="ts_code,trade_date,pe_ttm,pb,total_mv",
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 rows = []
             if rows:
                 item = rows[0]
@@ -102,7 +102,7 @@ def _try_valuation(symbol: str, exchange: str) -> dict[str, Any]:
                     "source": "tushare_daily_basic",
                 }
             day -= timedelta(days=1)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": str(exc)}
     return {}
 
@@ -110,7 +110,7 @@ def _try_valuation(symbol: str, exchange: str) -> dict[str, Any]:
 def prefetch_team(db: Session, user_id: str, raw_symbol: str) -> dict[str, Any]:
     try:
         symbol, exchange = watchlist_repo.resolve_symbol_pair(raw_symbol)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": f"标的解析失败：{exc}", "vt_symbol": raw_symbol}
 
     vt = to_vt_symbol(symbol, exchange)
@@ -145,7 +145,7 @@ def prefetch_team(db: Session, user_id: str, raw_symbol: str) -> dict[str, Any]:
                 "high": max(float(b.high) for b in ordered),
                 "low": min(float(b.low) for b in ordered),
             }
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         bars_payload = {"error": str(exc)}
 
     vol, dd = _volatility_and_dd(closes)
@@ -168,7 +168,7 @@ def prefetch_team(db: Session, user_id: str, raw_symbol: str) -> dict[str, Any]:
                 signal = str(row.get("signal") or "na")
                 signal_label = str(row.get("signal_label") or "—")
                 break
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.warning("加载策略信号失败，信号置为 na: vt=%s", vt, exc_info=True)
 
     valuation = _try_valuation(symbol, exchange)

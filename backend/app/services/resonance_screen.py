@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.schemas.market import RadarResonanceEntry
 from app.schemas.screener import HardFilterPrefs
 from app.services.quotes import QuoteRow
 from app.services.radar import list_radar_cards
@@ -14,7 +15,7 @@ from app.services.radar_resonance import list_radar_resonance
 from app.services.symbols import parse_flexible_symbol, to_tf_symbol
 
 
-def _entry_to_quote_row(entry) -> QuoteRow:
+def _entry_to_quote_row(entry: RadarResonanceEntry) -> QuoteRow:
     code, exch = parse_flexible_symbol(entry.vt_symbol)
     tf = to_tf_symbol(code, exch)
     row = QuoteRow(

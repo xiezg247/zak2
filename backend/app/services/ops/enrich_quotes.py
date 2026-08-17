@@ -51,7 +51,7 @@ def enrich_market_quotes(db: Session) -> dict[str, Any]:
 
     try:
         basic_rows = fetch_daily_basic_rows(trade_date)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         basic_rows = []
         notes.append(f"daily_basic 失败: {exc}")
 
@@ -71,7 +71,7 @@ def enrich_market_quotes(db: Session) -> dict[str, Any]:
 
     try:
         flow_rows = fetch_moneyflow_rows(trade_date)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         flow_rows = []
         notes.append(f"moneyflow 失败: {exc}")
 

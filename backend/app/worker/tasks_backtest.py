@@ -10,6 +10,7 @@ import sys
 from typing import Any
 
 from fastapi import HTTPException
+from sqlalchemy.orm import Session
 
 from app.core.db import SessionLocal
 from app.core.settings import get_settings
@@ -64,14 +65,14 @@ def _run_single(user_id: str, payload: dict) -> dict[str, Any]:
         if out.status == "failed":
             return {"success": False, "error": out.error_message or "failed", "result_ref": out.id}
         return {"success": True, "result_ref": out.id}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _fail(exc)
     finally:
         db.close()
 
 
 def _execute_with_optional_subprocess(
-    db,
+    db: Session,
     user_id: str,
     req: BacktestRunRequest,
     *,
@@ -131,7 +132,7 @@ def _execute_with_optional_subprocess(
             status="success",
         )
         return repo.BacktestRepository(db, user_id).to_out(row, detail=True)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         detail = str(exc.detail) if isinstance(exc, HTTPException) else str(exc)
         row = repo.BacktestRepository(db, user_id).save_run(
             vt_symbol=req.vt_symbol,
@@ -183,7 +184,7 @@ def _run_batch(user_id: str, payload: dict, batch_id: str) -> dict[str, Any]:
             "result_ref": last_id or batch_id,
             "failed_count": failed_count,
         }
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _fail(exc)
     finally:
         db.close()
@@ -224,7 +225,7 @@ def _run_optimize(user_id: str, payload: dict, batch_id: str) -> dict[str, Any]:
             "failed_count": failed_count,
             "combo_count": len(combos),
         }
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _fail(exc)
     finally:
         db.close()

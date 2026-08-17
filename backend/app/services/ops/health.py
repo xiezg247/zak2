@@ -24,7 +24,7 @@ def _mask_url(url: str) -> str:
         path = p.path or ""
         user = f"{p.username}@" if p.username else ""
         return f"{p.scheme}://{user}{host}{port}{path}"
-    except Exception:  # noqa: BLE001
+    except Exception:
         return "(invalid)"
 
 
@@ -35,7 +35,7 @@ def health_snapshot(db: Session) -> dict[str, Any]:
     try:
         db.execute(text("SELECT 1"))
         pg_ok = True
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         pg_error = str(exc)
 
     store = get_quote_store()

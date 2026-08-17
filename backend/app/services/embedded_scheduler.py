@@ -80,7 +80,7 @@ def _run_job(job_id: str) -> None:
         # 定时 bilibili 亦 force=False（worker 内尊重时段窗口）
         arq_id = enqueue_ops_job_sync(job_id, user_id=user_id, force=False)
         _logger.info("embedded scheduler enqueued %s -> %s", job_id, arq_id)
-    except Exception:  # noqa: BLE001
+    except Exception:
         _logger.exception("embedded scheduler %s failed", job_id)
     finally:
         scheduler_lock.release(job_id, token)

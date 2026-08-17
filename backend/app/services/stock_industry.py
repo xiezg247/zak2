@@ -22,7 +22,7 @@ _LIST_INDUSTRY_NAMES_SQL = text(
 def load_industry_map(db: Session) -> dict[str, str]:
     try:
         rows = db.execute(_LOAD_SQL).mappings()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         _logger.warning("load_industry_map failed: %s", exc)
         return {}
 
@@ -39,7 +39,7 @@ def load_industry_map(db: Session) -> dict[str, str]:
 def list_industry_names(db: Session) -> list[str]:
     try:
         return [str(name).strip() for name in db.execute(_LIST_INDUSTRY_NAMES_SQL).scalars().all()]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         _logger.warning("list_industry_names failed: %s", exc)
         return []
 

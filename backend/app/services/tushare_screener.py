@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Any
 
@@ -103,7 +104,7 @@ def _basic_to_row(item: dict[str, Any]) -> QuoteRow | None:
 
 def _fetch_with_lookback(
     db: Session | None,
-    fetcher,
+    fetcher: Callable[[str], Any],
     *,
     max_lookback: int = 8,
     empty_detail: str,

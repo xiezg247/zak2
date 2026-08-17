@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 
 from vnpy.trader.constant import Offset
 from vnpy.trader.object import BarData, OrderData, TickData, TradeData
@@ -20,7 +21,7 @@ class AShareCtaTemplate(CtaTemplate):
     parameters = ["trade_volume"]
     variables: list[str] = []
 
-    def __init__(self, cta_engine, strategy_name, vt_symbol, setting) -> None:
+    def __init__(self, cta_engine: Any, strategy_name: str, vt_symbol: str, setting: dict[str, Any]) -> None:
         super().__init__(cta_engine, strategy_name, vt_symbol, setting)
         self._lot_buy_dates: dict[date, int] = {}
         self._pending_buy_date: date | None = None

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -104,12 +104,12 @@ def _get_bars_summary(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         return {"error": "需要 vt_symbol 或 symbol，例如 600519.SSE"}
     try:
         symbol, exchange = watchlist_repo.resolve_symbol_pair(raw, args.get("exchange"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": f"标的解析失败：{exc}"}
     limit = max(20, min(int(args.get("limit") or 60), 120))
     try:
         resp = bars.load_bars(db, symbol=symbol, exchange=exchange, interval="d", limit=limit)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": str(exc)}
     bar_rows = list(resp.bars or [])
     if not bar_rows:
@@ -208,7 +208,7 @@ def _add_watchlist(db: Session, user_id: str, args: dict[str, Any]) -> Any:
             name=name,
             exchange=args.get("exchange"),
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": str(getattr(exc, "detail", None) or exc)}
     return {
         "ok": True,
@@ -225,7 +225,7 @@ def _remove_watchlist(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         return {"error": "需要 symbol，例如 600519.SSE"}
     try:
         symbol, exchange = watchlist_repo.resolve_symbol_pair(raw, args.get("exchange"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": f"标的解析失败：{exc}"}
     ok = watchlist_repo.WatchlistItemRepository(db, user_id).remove_item(symbol, exchange)
     if not ok:
@@ -236,7 +236,7 @@ def _remove_watchlist(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         vt = to_vt_symbol(symbol, exchange)
         if vt in panel:
             signal_panel_repo.SignalPanelRepository(db, user_id).save_symbols([s for s in panel if s != vt])
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.warning("同步移出信号名单失败: vt=%s", to_vt_symbol(symbol, exchange), exc_info=True)
     return {"ok": True, "vt_symbol": to_vt_symbol(symbol, exchange), "removed": True}
 
@@ -250,7 +250,7 @@ def _upsert_note_memo(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         return {"error": "备忘内容 body 不能为空"}
     try:
         memo = notes.upsert_memo(db, user_id, raw, body)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": str(getattr(exc, "detail", None) or exc)}
     return {
         "ok": True,
@@ -269,7 +269,7 @@ def _add_note_entry(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         return {"error": "流水内容 body 不能为空"}
     try:
         entry = notes.add_entry(db, user_id, raw, body)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": str(getattr(exc, "detail", None) or exc)}
     return {
         "ok": True,
@@ -285,8 +285,8 @@ def _upsert_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     if not raw:
         return {"error": "需要 symbol，例如 600519.SSE"}
     try:
-        cost_price = float(args.get("cost_price"))
-        volume = int(args.get("volume"))
+        cost_price = float(cast(Any, args.get("cost_price")))
+        volume = int(cast(Any, args.get("volume")))
     except (TypeError, ValueError):
         return {"error": "cost_price / volume 无效"}
     buy_date = str(args.get("buy_date") or "").strip()
@@ -326,7 +326,7 @@ def _upsert_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
                 plan_pct=plan_pct,
             )
             action = "created"
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": str(getattr(exc, "detail", None) or exc)}
     vt = str(row.get("vt_symbol") or to_vt_symbol(symbol, exchange))
     return {
@@ -346,7 +346,7 @@ def _delete_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     try:
         symbol, exchange = watchlist_repo.resolve_symbol_pair(raw, args.get("exchange"))
         ok = positions_repo.PositionRepository(db, user_id).delete_position(symbol=symbol, exchange=exchange)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": str(getattr(exc, "detail", None) or exc)}
     if not ok:
         return {"error": "持仓不存在"}
@@ -359,7 +359,7 @@ def _add_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any:
         return {"error": "需要 symbol，例如 600519.SSE"}
     try:
         symbols = signal_panel_repo.SignalPanelRepository(db, user_id).add_symbol(raw)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": str(getattr(exc, "detail", None) or exc)}
     return {"ok": True, "symbols": symbols}
 
@@ -370,7 +370,7 @@ def _remove_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any
         return {"error": "需要 symbol，例如 600519.SSE"}
     try:
         symbols = signal_panel_repo.SignalPanelRepository(db, user_id).remove_symbol(raw)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": str(getattr(exc, "detail", None) or exc)}
     return {"ok": True, "symbols": symbols}
 
@@ -766,7 +766,7 @@ def _mcp_tool_definitions() -> list[dict[str, Any]]:
         return []
     try:
         tools = mcp_client.list_allowed_tools()
-    except Exception:  # noqa: BLE001
+    except Exception:
         return []
     defs: list[dict[str, Any]] = []
     for tool in tools:
@@ -814,7 +814,7 @@ def execute_write_tool(db: Session, user_id: str, name: str, arguments: dict[str
     args = _parse_args(arguments)
     try:
         return handler(db, user_id, args)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": str(exc)}
 
 
@@ -829,7 +829,7 @@ def _execute_mcp_tool(name: str, arguments: dict[str, Any] | str | None) -> str:
         return mcp_client.call_allowed_tool(remote, args)
     except mcp_client.McpClientError as exc:
         return _truncate({"error": str(exc)})
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _truncate({"error": str(exc)})
 
 
@@ -849,6 +849,6 @@ def execute_tool(db: Session, user_id: str, name: str, arguments: dict[str, Any]
     args = _parse_args(arguments)
     try:
         result = handler(db, user_id, args)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         result = {"error": str(exc)}
     return _truncate(result)

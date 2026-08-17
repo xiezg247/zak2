@@ -91,7 +91,7 @@ def collect_once(
             "message": f"写入 {count} 条行情",
             "count": count,
         }
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         duration_ms = int((time.perf_counter() - started) * 1000)
         logger.exception("collect_once failed")
         write_heartbeat(
@@ -123,13 +123,13 @@ def _listen_force(client: Any, force_event: threading.Event, stop: threading.Eve
             text = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw or "")
             if text.strip().lower() == "force":
                 force_event.set()
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception("force listener stopped")
     finally:
         try:
             pubsub.unsubscribe(CMD_CHANNEL)
             pubsub.close()
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug("force listener cleanup failed", exc_info=True)
 
 
@@ -195,7 +195,7 @@ def run_forever() -> None:
             client = None
             time.sleep(backoff)
             backoff = min(60, backoff * 2)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception("run_forever iteration failed: %s", exc)
             time.sleep(backoff)
             backoff = min(60, max(interval, backoff * 2))

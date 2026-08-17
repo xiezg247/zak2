@@ -71,7 +71,7 @@ def _load_sw_name_map(db: Session) -> dict[str, str]:
             code = str(row.get("index_code") or "").strip()
             if name and code:
                 mapping[name] = code
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.warning("Tushare index_classify 获取失败，回退库内行业映射", exc_info=True)
     if mapping:
         return mapping
@@ -85,9 +85,9 @@ def _load_sw_name_map(db: Session) -> dict[str, str]:
             """
         )
     ).mappings()
-    for row in existing:
-        name = str(row["name"] or "").strip()
-        sid = str(row["sector_id"] or "").strip()
+    for srow in existing:
+        name = str(srow["name"] or "").strip()
+        sid = str(srow["sector_id"] or "").strip()
         if name and sid:
             mapping[name] = sid
     return mapping
@@ -139,7 +139,7 @@ def _sync_one_day(db: Session, trade_date: str, sw_map: dict[str, str]) -> str |
             {"trade_date": trade_date, "content_type": "行业"},
             fields="trade_date,content_type,ts_code,name,pct_change,net_amount",
         )
-    except Exception:  # noqa: BLE001
+    except Exception:
         dc_rows = []
 
     industry_n = 0
@@ -170,7 +170,7 @@ def _sync_one_day(db: Session, trade_date: str, sw_map: dict[str, str]) -> str |
             {"trade_date": trade_date},
             fields="trade_date,ts_code,name,pct_change,net_amount",
         )
-    except Exception:  # noqa: BLE001
+    except Exception:
         ths_rows = []
 
     concept_n = 0
@@ -200,7 +200,7 @@ def _sync_one_day(db: Session, trade_date: str, sw_map: dict[str, str]) -> str |
                 {"trade_date": trade_date, "content_type": "概念"},
                 fields="trade_date,content_type,ts_code,name,pct_change,net_amount",
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             dc_concept = []
         for row in dc_concept:
             name = str(row.get("name") or "").strip()

@@ -80,7 +80,7 @@ def scan_horizon_outlook(db: Session) -> dict[str, Any]:
     ft = load_first_time_map(db)
     scanned_total, excluded_count = resonance_scan_stats(cards, min_cards=MIN_CARDS)
     resonance = compute_resonance(cards, min_cards=MIN_CARDS, top_n=TOP_N, first_time_map=ft)
-    rows = [
+    rows: list[dict[str, Any]] = [
         {
             "vt_symbol": e.vt_symbol,
             "name": e.name,
@@ -118,7 +118,7 @@ def scan_horizon_outlook(db: Session) -> dict[str, Any]:
         )
         db.commit()
         predict_written = len(predict_rows)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         db.rollback()
         predict_error = str(exc)[:200]
 
@@ -146,5 +146,5 @@ def scan_horizon_outlook(db: Session) -> dict[str, Any]:
         "strategy_key": STRATEGY_KEY,
         "model_label": MODEL_LABEL,
     }
-    save_job_run_meta(db, JOB_ID, last_success=True, message=message)
+    save_job_run_meta(db, JOB_ID, last_success=True, last_message=message)
     return out

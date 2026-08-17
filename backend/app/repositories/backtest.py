@@ -13,7 +13,7 @@ from app.repositories.base import BaseRepository
 from app.repositories.pagination import Page, paginate
 from app.repositories.watchlist import resolve_symbol_pair
 from app.schemas.backtest import BacktestRunOut, BacktestRunRequest, OptimizeSummaryOut
-from app.services.backtest_bars import bars_to_records, load_bars
+from app.services.backtest_bars import Bar, bars_to_records, load_bars
 from app.services.backtest_optimize import pick_best
 from app.services.backtest_settings import build_strategy_setting, min_bars_for_request
 from app.services.symbols import to_vt_symbol
@@ -172,7 +172,7 @@ class BacktestRepository(BaseRepository[BacktestRun]):
             params=_params_dict(row),
         )
 
-    def load_bars_for_request(self, req: BacktestRunRequest):
+    def load_bars_for_request(self, req: BacktestRunRequest) -> list[Bar]:
         interval = req.interval or "d"
         return load_bars(
             self.db,
@@ -184,7 +184,7 @@ class BacktestRepository(BaseRepository[BacktestRun]):
             max_trading_days=req.max_trading_days if interval == "1m" else None,
         )
 
-    def run_vnpy(self, req: BacktestRunRequest, bars) -> dict[str, Any]:
+    def run_vnpy(self, req: BacktestRunRequest, bars: list[Bar]) -> dict[str, Any]:
         try:
             from app.services.backtest_vnpy import run_cta_backtest
         except ImportError as exc:
@@ -276,7 +276,7 @@ class BacktestRepository(BaseRepository[BacktestRun]):
             if source == "single":
                 raise
             return self.to_out(row, detail=True)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             row = self.save_run(
                 vt_symbol=req.vt_symbol,
                 strategy=req.strategy,

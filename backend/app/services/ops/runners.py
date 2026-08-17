@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
+
+from sqlalchemy.orm import Session
 
 from app.services.ops import (
     auto_screen as ops_auto_screen,
@@ -71,7 +74,7 @@ from app.services.ops import (
 SCREEN_JOB_IDS = frozenset({"screen_intraday", "screen_post_close"})
 
 
-def _run_sync_bilibili_feed(db, **_kwargs) -> dict:
+def _run_sync_bilibili_feed(db: Session, **_kwargs: Any) -> dict:
     """Ops 手动跑：force=True，绕过时段窗口。定时走 embedded_scheduler（force=False）。"""
     return ops_sync_bilibili_feed.sync_bilibili_feed(db, force=True)
 

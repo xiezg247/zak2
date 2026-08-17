@@ -20,7 +20,7 @@ router = APIRouter(tags=["ws"])
 def _user_id_from_token(token: str) -> str | None:
     try:
         payload = decode_access_token(token)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
     user_id = str(payload.get("sub") or "")
     return user_id or None
@@ -56,11 +56,11 @@ async def ws_quotes(websocket: WebSocket, token: str = Query(default="")) -> Non
             except TimeoutError:
                 try:
                     await websocket.send_json({"type": "ping"})
-                except Exception:  # noqa: BLE001
+                except Exception:
                     break
     except WebSocketDisconnect:
         pass
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.debug("ws_quotes ended", exc_info=True)
     finally:
         await hub.unregister(websocket)

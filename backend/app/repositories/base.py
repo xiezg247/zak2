@@ -10,7 +10,7 @@ paginate/create/update/delete 骨架；复合主键或特殊写逻辑请在子�
 from __future__ import annotations
 
 from abc import ABC
-from typing import Any, ClassVar, Generic, TypeVar
+from typing import Any, ClassVar, Generic, TypeVar, cast
 from uuid import uuid4
 
 from sqlalchemy import Select, select
@@ -44,7 +44,7 @@ class BaseRepository(ABC, Generic[ModelT]):
     # ---- 查询 ----
 
     def _select(self) -> Select:
-        return select(self.model).where(self.model.user_id == self.user_id)
+        return select(self.model).where(cast(Any, self.model).user_id == self.user_id)
 
     def list_all(self, *, limit: int | None = None) -> list[ModelT]:
         stmt = self._select()
@@ -55,11 +55,14 @@ class BaseRepository(ABC, Generic[ModelT]):
         return list(self.db.scalars(stmt))
 
     def get(self, key: Any) -> ModelT | None:
-        return self.db.scalar(
-            select(self.model).where(
-                self.model.user_id == self.user_id,
-                getattr(self.model, self.id_attr) == key,
-            )
+        return cast(
+            ModelT | None,
+            self.db.scalar(
+                select(self.model).where(
+                    cast(Any, self.model).user_id == self.user_id,
+                    getattr(self.model, self.id_attr) == key,
+                )
+            ),
         )
 
     def exists(self, key: Any) -> bool:
@@ -87,7 +90,7 @@ class BaseRepository(ABC, Generic[ModelT]):
         values.setdefault("user_id", self.user_id)
         if self.id_attr not in values and not self._id_is_autoincrement():
             values[self.id_attr] = self._new_id()
-        row = self.model(**values)
+        row = cast(ModelT, self.model(**values))
         self.db.add(row)
         self.db.commit()
         self.db.refresh(row)

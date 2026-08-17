@@ -60,7 +60,7 @@ class AShareBacktestingEngine(BacktestingEngine):
         else:
             self.daily_results[d] = AShareDailyResult(d, price)
 
-    def calculate_result(self):  # noqa: ANN201
+    def calculate_result(self):
         self.output("开始计算逐日盯市盈亏")
         if not self.trades:
             self.output("回测成交记录为空")

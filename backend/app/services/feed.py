@@ -116,7 +116,7 @@ def add_bilibili_up(
             profile = get_user_profile(client, mid)
             display_name = profile.get("name") or mid
             avatar_url = profile.get("avatar") or ""
-        except Exception:  # noqa: BLE001 — profile 失败仍创建
+        except Exception:
             logger.warning("获取 UP 资料失败，仍创建订阅: mid=%s", mid)
 
         now = _now()
@@ -144,7 +144,7 @@ def add_bilibili_up(
         if sync_now:
             try:
                 sync_one_subscription(db, client, row)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 sync_error = str(exc)
 
         db.commit()

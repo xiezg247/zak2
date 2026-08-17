@@ -165,7 +165,7 @@ def sync_limit_list(db: Session) -> dict[str, Any]:
     for trade_date in dates:
         try:
             n = sync_one_day(db, trade_date)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             summaries.append(f"{trade_date}:失败({exc})")
             continue
         total_rows += n

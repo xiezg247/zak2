@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 
@@ -268,7 +269,7 @@ PATTERN_META = (
 QUOTE_ONLY_PATTERNS = frozenset({"theme_hot"})
 
 
-def get_matcher(pattern_id: str):
+def get_matcher(pattern_id: str) -> Callable[[BarSeries], PatternMatch | None] | None:
     return PATTERN_MATCHERS.get(pattern_id.strip())
 
 

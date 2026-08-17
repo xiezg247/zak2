@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -22,9 +22,6 @@ async def test_list_jobs_delegates() -> None:
     with patch.object(jobs_api, "list_job_outs", new_callable=AsyncMock, return_value=rows):
         out = await jobs_api.list_jobs(user=MagicMock())  # type: ignore[arg-type]
     assert out.data == rows
-
-
-from unittest.mock import MagicMock  # noqa: E402
 
 
 @pytest.mark.asyncio

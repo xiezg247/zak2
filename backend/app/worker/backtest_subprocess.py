@@ -30,7 +30,7 @@ def main() -> None:
     try:
         out = run_one_payload(payload)
         json.dump({"ok": True, "result": out}, sys.stdout)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         json.dump({"ok": False, "error": str(exc)}, sys.stdout)
         sys.exit(1)
 

@@ -24,7 +24,7 @@ def _env_int(key: str, default: int) -> int:
 
 def _delete_count(db: Session, sql: str, params: dict[str, str]) -> int:
     result = db.execute(text(sql), params)
-    return int(result.rowcount or 0)
+    return int(getattr(result, "rowcount", 0) or 0)
 
 
 def purge_stale_cache(db: Session) -> dict[str, Any]:

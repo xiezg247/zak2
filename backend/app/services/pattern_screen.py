@@ -45,7 +45,7 @@ def _parse_tf_symbol(tf_symbol: str) -> tuple[str, str] | None:
         code, exch_raw = left, right
     try:
         return code, normalize_exchange(exch_raw)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
 
 

@@ -33,7 +33,7 @@ def _make_user() -> User:
 def test_list_limit_list_empty_no_raise() -> None:
     db = MagicMock()
 
-    def _execute(stmt, params=None):  # noqa: ANN001
+    def _execute(stmt, params=None):
         result = MagicMock()
         sql = str(stmt)
         if "CREATE TABLE" in sql:
@@ -62,7 +62,7 @@ def test_list_limit_list_empty_no_raise() -> None:
 def test_list_limit_list_returns_rows() -> None:
     db = MagicMock()
 
-    def _execute(stmt, params=None):  # noqa: ANN001
+    def _execute(stmt, params=None):
         result = MagicMock()
         sql = str(stmt)
         if "CREATE TABLE" in sql:
