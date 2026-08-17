@@ -362,9 +362,8 @@ def test_append_rejects_when_full() -> None:
         s.exchange = "SSE"
         fake.append(s)
     db.scalars.return_value = fake
-    with patch.object(pd, "resolve_next_trade_date", return_value=("2026-08-17", False)):
-        with pytest.raises(HTTPException) as ei:
-            pd.append_symbol_to_draft(db, "u1", vt_symbol="600519.SSE")
+    with patch.object(pd, "resolve_next_trade_date", return_value=("2026-08-17", False)), pytest.raises(HTTPException) as ei:
+        pd.append_symbol_to_draft(db, "u1", vt_symbol="600519.SSE")
     assert ei.value.status_code == 400
     assert "最多" in str(ei.value.detail)
 

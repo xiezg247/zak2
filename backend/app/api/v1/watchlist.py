@@ -429,7 +429,7 @@ def get_quotes(
         meta.append((symbol, normalize_exchange(exchange), tf))
     quotes = {q.symbol: q for q in store.get_quotes(tf_list)}
     rows: list[QuoteRow] = []
-    for symbol, exchange, tf in meta:
+    for _, _, tf in meta:
         q = quotes.get(tf)
         rows.append(
             QuoteRow(

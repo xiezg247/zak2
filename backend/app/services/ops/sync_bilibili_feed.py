@@ -33,10 +33,7 @@ _SYNC_END_HOUR = 20
 def in_sync_window(now: datetime | None = None) -> bool:
     """是否在每日 08:00–20:00（Asia/Shanghai）同步窗口内（不含 20:00）。"""
     dt = now or datetime.now(_TZ)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=_TZ)
-    else:
-        dt = dt.astimezone(_TZ)
+    dt = dt.replace(tzinfo=_TZ) if dt.tzinfo is None else dt.astimezone(_TZ)
     return _SYNC_START_HOUR <= dt.hour < _SYNC_END_HOUR
 
 

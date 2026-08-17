@@ -45,9 +45,8 @@ def test_rename_conflict() -> None:
     g = _group(name="旧")
     other = _group(name="已有")
     db.scalar.return_value = g
-    with patch.object(repo.WatchlistGroupRepository, "list_groups", return_value=[g, other]):
-        with pytest.raises(HTTPException) as ei:
-            repo.WatchlistGroupRepository(db, "u1").rename_group(g.id, "已有")
+    with patch.object(repo.WatchlistGroupRepository, "list_groups", return_value=[g, other]), pytest.raises(HTTPException) as ei:
+        repo.WatchlistGroupRepository(db, "u1").rename_group(g.id, "已有")
     assert ei.value.status_code == 409
 
 

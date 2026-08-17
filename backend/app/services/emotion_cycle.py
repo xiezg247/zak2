@@ -218,13 +218,12 @@ def _prev_leader_limit_down(db: Session, today_quotes_by_vt: dict[str, float]) -
     if not leader:
         return False
     change = today_quotes_by_vt.get(leader)
-    if change is None:
-        if "." in leader:
-            code, _exch = leader.rsplit(".", 1)
-            for vt, cp in today_quotes_by_vt.items():
-                if vt.endswith(f".{code}") or vt.startswith(f"{code}."):
-                    change = cp
-                    break
+    if change is None and "." in leader:
+        code, _exch = leader.rsplit(".", 1)
+        for vt, cp in today_quotes_by_vt.items():
+            if vt.endswith(f".{code}") or vt.startswith(f"{code}."):
+                change = cp
+                break
     return change is not None and change <= LIMIT_DOWN_PCT
 
 

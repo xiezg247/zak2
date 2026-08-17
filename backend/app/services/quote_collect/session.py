@@ -16,15 +16,10 @@ _AFTERNOON_END = time(15, 5)
 def is_ashare_trading_session(now: datetime | None = None) -> bool:
     """工作日且落在 09:15–11:30 或 13:00–15:05（Asia/Shanghai）。"""
     dt = now or datetime.now(TZ_SH)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=TZ_SH)
-    else:
-        dt = dt.astimezone(TZ_SH)
+    dt = dt.replace(tzinfo=TZ_SH) if dt.tzinfo is None else dt.astimezone(TZ_SH)
     if dt.weekday() >= 5:
         return False
     t = dt.time()
     if _MORNING_START <= t <= _MORNING_END:
         return True
-    if _AFTERNOON_START <= t <= _AFTERNOON_END:
-        return True
-    return False
+    return _AFTERNOON_START <= t <= _AFTERNOON_END

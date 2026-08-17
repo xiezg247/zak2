@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+from contextlib import suppress
 from typing import Any
 
 from sqlalchemy import text
@@ -281,15 +282,11 @@ def compute_resonance(
             bucket["card_count"] = int(bucket["card_count"]) + 1
             bucket["weight_score"] = float(bucket["weight_score"]) + weight
             if row.get("change_pct") is not None and bucket["change_pct"] is None:
-                try:
+                with suppress(TypeError, ValueError):
                     bucket["change_pct"] = float(row["change_pct"])
-                except (TypeError, ValueError):
-                    pass
             if row.get("last_price") is not None and bucket["last_price"] is None:
-                try:
+                with suppress(TypeError, ValueError):
                     bucket["last_price"] = float(row["last_price"])
-                except (TypeError, ValueError):
-                    pass
             if not bucket["seal_time_label"]:
                 bucket["seal_time_label"] = _row_seal_label(row, ft_map)
 

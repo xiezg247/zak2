@@ -111,23 +111,22 @@ def chat_completion_stream(messages: list[dict[str, Any]]) -> Iterator[str]:
 
 
 def _stream(url: str, payload: dict[str, Any]) -> Iterator[str]:
-    with httpx.Client(timeout=120.0) as client:
-        with client.stream("POST", url, headers=_headers(), json=payload) as resp:
-            if resp.status_code >= 400:
-                body = resp.read().decode("utf-8", errors="ignore")
-                raise HTTPException(status_code=502, detail=f"LLM 错误：{resp.status_code} {body[:300]}")
-            for line in resp.iter_lines():
-                if not line:
+    with httpx.Client(timeout=120.0) as client, client.stream("POST", url, headers=_headers(), json=payload) as resp:
+        if resp.status_code >= 400:
+            body = resp.read().decode("utf-8", errors="ignore")
+            raise HTTPException(status_code=502, detail=f"LLM 错误：{resp.status_code} {body[:300]}")
+        for line in resp.iter_lines():
+            if not line:
+                continue
+            if line.startswith("data: "):
+                data = line[6:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    obj = json.loads(data)
+                    delta = obj["choices"][0].get("delta") or {}
+                    content = delta.get("content")
+                    if content:
+                        yield str(content)
+                except (json.JSONDecodeError, KeyError, IndexError, TypeError):
                     continue
-                if line.startswith("data: "):
-                    data = line[6:].strip()
-                    if data == "[DONE]":
-                        break
-                    try:
-                        obj = json.loads(data)
-                        delta = obj["choices"][0].get("delta") or {}
-                        content = delta.get("content")
-                        if content:
-                            yield str(content)
-                    except (json.JSONDecodeError, KeyError, IndexError, TypeError):
-                        continue

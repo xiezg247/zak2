@@ -37,9 +37,8 @@ async def test_enqueue_ops_returns_existing_when_in_progress() -> None:
         inst = AsyncMock()
         inst.status = AsyncMock(return_value=JobStatus.in_progress)
         JobCls.return_value = inst
-        with patch.object(m, "_sync_redis", return_value=MagicMock()):
-            with patch.object(m, "index_job"):
-                out = await m.enqueue_ops_job("sync_universe", user_id="u1")
+        with patch.object(m, "_sync_redis", return_value=MagicMock()), patch.object(m, "index_job"):
+            out = await m.enqueue_ops_job("sync_universe", user_id="u1")
     assert out == "ops:sync_universe"
     fake_pool.enqueue_job.assert_not_called()
 

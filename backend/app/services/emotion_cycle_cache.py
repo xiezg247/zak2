@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from contextlib import suppress
 from typing import Any
 
 import redis
@@ -59,10 +60,8 @@ def cache_set(payload: dict) -> None:
     ttl = cache_ttl_sec()
     client = _redis_client()
     if client is not None:
-        try:
+        with suppress(redis.RedisError):
             client.setex(CACHE_KEY, ttl, json.dumps(payload, ensure_ascii=False))
-        except redis.RedisError:
-            pass
         return
 
     _mem = (time.monotonic() + ttl, dict(payload))
@@ -72,8 +71,6 @@ def cache_invalidate() -> None:
     global _mem
     client = _redis_client()
     if client is not None:
-        try:
+        with suppress(redis.RedisError):
             client.delete(CACHE_KEY)
-        except redis.RedisError:
-            pass
     _mem = None

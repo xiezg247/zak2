@@ -31,7 +31,6 @@ from unittest.mock import MagicMock  # noqa: E402
 async def test_get_job_404() -> None:
     from fastapi import HTTPException
 
-    with patch.object(jobs_api, "get_job_out", new_callable=AsyncMock, return_value=None):
-        with pytest.raises(HTTPException) as ei:
-            await jobs_api.get_job("missing", user=MagicMock())  # type: ignore[arg-type]
+    with patch.object(jobs_api, "get_job_out", new_callable=AsyncMock, return_value=None), pytest.raises(HTTPException) as ei:
+        await jobs_api.get_job("missing", user=MagicMock())  # type: ignore[arg-type]
     assert ei.value.status_code == 404

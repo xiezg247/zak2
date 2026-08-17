@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import Any
 
 import redis
@@ -67,10 +68,8 @@ def collector_health(client: Any | None = None) -> dict[str, Any]:
         }
     finally:
         if own and client is not None:
-            try:
+            with suppress(Exception):
                 client.close()
-            except Exception:  # noqa: BLE001
-                pass
 
 
 def force_collect_from_settings() -> dict[str, Any]:
@@ -85,7 +84,5 @@ def force_collect_from_settings() -> dict[str, Any]:
     try:
         return force_collect(client)
     finally:
-        try:
+        with suppress(Exception):
             client.close()
-        except Exception:  # noqa: BLE001
-            pass

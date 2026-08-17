@@ -128,10 +128,9 @@ def _run_async(coro: Any) -> Any:
 
 
 def _is_retriable_network_error(exc: BaseException) -> bool:
-    for item in _iter_exceptions(exc):
-        if type(item).__name__ in _NETWORK_ERROR_NAMES | _STREAM_ERROR_NAMES:
-            return True
-    return False
+    return any(
+        type(item).__name__ in _NETWORK_ERROR_NAMES | _STREAM_ERROR_NAMES for item in _iter_exceptions(exc)
+    )
 
 
 async def _with_retry(coro_factory: Any, *, attempts: int = 3, base_delay: float = 0.25) -> Any:
@@ -224,16 +223,15 @@ async def _session_call(
 ) -> Any:
     streamable_http_client, create_mcp_http_client, ClientSession = _load_mcp_sdk()
 
-    async with create_mcp_http_client(headers=headers or None) as http_client:
-        async with streamable_http_client(
-            url,
-            http_client=http_client,
-            terminate_on_close=True,
-        ) as streams:
-            read, write = streams[0], streams[1]
-            async with ClientSession(read, write, read_timeout_seconds=timeout) as session:
-                await session.initialize()
-                return await action(session)
+    async with create_mcp_http_client(headers=headers or None) as http_client, streamable_http_client(
+        url,
+        http_client=http_client,
+        terminate_on_close=True,
+    ) as streams:
+        read, write = streams[0], streams[1]
+        async with ClientSession(read, write, read_timeout_seconds=timeout) as session:
+            await session.initialize()
+            return await action(session)
 
 
 async def _list_tools_async(

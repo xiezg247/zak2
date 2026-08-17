@@ -42,9 +42,11 @@ line-length = 120
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP"]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 # 行长度交给 formatter 处理（长 SQL / 长 docstring / 测试数据字面量不强制拆行）
 ignore = ["E501"]
+# B008：FastAPI 依赖注入惯用法 Depends(...) 作为参数默认值（官方推荐）
+extend-ignore = ["B008"]
 
 [build-system]
 requires = ["hatchling"]

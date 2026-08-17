@@ -23,10 +23,7 @@ def build_strategy_setting(req: BacktestRunRequest) -> dict:
 
 
 def min_bars_for_request(req: BacktestRunRequest) -> int:
-    if req.strategy == "trend_ma":
-        base = max(30, req.slow_window + req.adx_period * 2 + 5)
-    else:
-        base = 30
+    base = max(30, req.slow_window + req.adx_period * 2 + 5) if req.strategy == "trend_ma" else 30
     if req.interval == "1m":
         return max(base, 100)
     return base

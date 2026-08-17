@@ -66,9 +66,8 @@ def normalize_prefs(raw: dict[str, Any]) -> dict[str, Any]:
 
 def _validate_merged(prefs: dict[str, Any]) -> None:
     total = prefs.get("total_capital")
-    if total is not None:
-        if not isinstance(total, (int, float)) or total <= 0:
-            raise ValueError("总资金须为空或大于 0")
+    if total is not None and (not isinstance(total, (int, float)) or total <= 0):
+        raise ValueError("总资金须为空或大于 0")
 
     stop_loss = prefs.get("stop_loss_pct")
     if not isinstance(stop_loss, (int, float)) or stop_loss <= 0 or stop_loss > 0.5:

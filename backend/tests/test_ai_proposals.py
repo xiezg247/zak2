@@ -63,7 +63,7 @@ def test_summarize_write_tool() -> None:
 
 
 def test_write_tools_registered() -> None:
-    assert WRITE_TOOL_NAMES == {
+    assert {
         "add_watchlist",
         "remove_watchlist",
         "upsert_note_memo",
@@ -72,7 +72,7 @@ def test_write_tools_registered() -> None:
         "delete_position",
         "add_signal_panel",
         "remove_signal_panel",
-    }
+    } == WRITE_TOOL_NAMES
 
 
 def test_execute_tool_blocks_all_writes() -> None:

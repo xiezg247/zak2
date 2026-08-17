@@ -29,7 +29,7 @@ def test_catalog_runnable_jobs() -> None:
     assert "prefetch_concept_board" in RUNNABLE_JOB_IDS
     assert "fill_focus_pool_minute" in RUNNABLE_JOB_IDS
     ids = {s.job_id for s in JOB_SPECS}
-    assert RUNNABLE_JOB_IDS <= ids
+    assert ids >= RUNNABLE_JOB_IDS
 
 
 def test_runners_match_runnable() -> None:

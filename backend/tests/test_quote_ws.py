@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from app.core.security import create_access_token
 from app.main import app
@@ -12,9 +13,8 @@ from app.services.quote_notify_hub import QuoteNotifyHub, get_quote_notify_hub
 
 def test_ws_rejects_missing_token() -> None:
     client = TestClient(app)
-    with pytest.raises(Exception):
-        with client.websocket_connect("/api/v1/ws/quotes"):
-            pass
+    with pytest.raises(WebSocketDisconnect), client.websocket_connect("/api/v1/ws/quotes"):
+        pass
 
 
 def test_ws_hello_with_valid_token() -> None:
