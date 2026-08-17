@@ -100,9 +100,7 @@ async def post_run(body: BacktestRunRequest, user: User = Depends(get_current_us
 
 
 @router.post("/runs/batch", response_model=ApiResponse[JobAccepted])
-async def post_batch(
-    body: BatchBacktestRequest, user: User = Depends(get_current_user)
-) -> ApiResponse[JobAccepted]:
+async def post_batch(body: BatchBacktestRequest, user: User = Depends(get_current_user)) -> ApiResponse[JobAccepted]:
     _validate_ma_windows(body.fast_window, body.slow_window)
     batch_id = uuid4().hex
     kind = "backtest.batch"

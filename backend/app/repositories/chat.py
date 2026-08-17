@@ -19,9 +19,7 @@ def _now() -> str:
 
 
 def _session_out(row: ChatSession) -> SessionOut:
-    return SessionOut(
-        id=row.id, title=row.title, scene=row.scene, created_at=row.created_at, updated_at=row.updated_at
-    )
+    return SessionOut(id=row.id, title=row.title, scene=row.scene, created_at=row.created_at, updated_at=row.updated_at)
 
 
 def _message_out(row: ChatMessage) -> MessageOut:
@@ -66,9 +64,7 @@ class ChatRepository(BaseRepository[ChatSession]):
             raise HTTPException(status_code=404, detail="会话不存在")
         return row
 
-    def update_session(
-        self, session_id: str, *, title: str | None = None, scene: str | None = None
-    ) -> SessionOut:
+    def update_session(self, session_id: str, *, title: str | None = None, scene: str | None = None) -> SessionOut:
         row = self.get_session(session_id)
         if title is not None:
             row.title = title.strip() or row.title
@@ -81,7 +77,9 @@ class ChatRepository(BaseRepository[ChatSession]):
 
     def delete_session(self, session_id: str) -> None:
         self.get_session(session_id)
-        self.db.execute(delete(ChatMessage).where(ChatMessage.session_id == session_id, ChatMessage.user_id == self.user_id))
+        self.db.execute(
+            delete(ChatMessage).where(ChatMessage.session_id == session_id, ChatMessage.user_id == self.user_id)
+        )
         self.db.execute(delete(ChatSession).where(ChatSession.id == session_id, ChatSession.user_id == self.user_id))
         self.db.commit()
 

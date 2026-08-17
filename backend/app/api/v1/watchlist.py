@@ -135,9 +135,7 @@ def get_strategy_board(
 ) -> ApiResponse[StrategyBoardOut]:
     return ApiResponse(
         data=StrategyBoardOut(
-            **strategy_board.load_strategy_board(
-                db, str(user.id), config_key=config_key, signal_mode=signal_mode
-            )
+            **strategy_board.load_strategy_board(db, str(user.id), config_key=config_key, signal_mode=signal_mode)
         )
     )
 
@@ -237,7 +235,9 @@ def get_positions(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[PositionOut]]:
-    return ApiResponse(data=[PositionOut(**row) for row in positions_repo.PositionRepository(db, str(user.id)).list_positions()])
+    return ApiResponse(
+        data=[PositionOut(**row) for row in positions_repo.PositionRepository(db, str(user.id)).list_positions()]
+    )
 
 
 @router.post("/watchlist/positions", response_model=ApiResponse[PositionOut])
@@ -297,7 +297,9 @@ def post_watchlist(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[WatchlistItemOut]:
-    row = repo.WatchlistItemRepository(db, str(user.id)).add_item(raw_symbol=body.symbol, name=body.name, exchange=body.exchange)
+    row = repo.WatchlistItemRepository(db, str(user.id)).add_item(
+        raw_symbol=body.symbol, name=body.name, exchange=body.exchange
+    )
     return ApiResponse(data=_enrich([row], with_quotes=True, db=db)[0])
 
 
@@ -314,7 +316,10 @@ def put_reorder(
 @router.get("/watchlist/groups", response_model=ApiResponse[list[GroupOut]])
 def get_groups(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ApiResponse[list[GroupOut]]:
     return ApiResponse(
-        data=[GroupOut(id=g.id, name=g.name, sort_order=g.sort_order) for g in repo.WatchlistGroupRepository(db, str(user.id)).list_groups()]
+        data=[
+            GroupOut(id=g.id, name=g.name, sort_order=g.sort_order)
+            for g in repo.WatchlistGroupRepository(db, str(user.id)).list_groups()
+        ]
     )
 
 

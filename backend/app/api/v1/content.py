@@ -74,9 +74,7 @@ def put_discipline(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[DisciplineCheckOut]:
-    return ApiResponse(
-        data=playbook_svc.set_discipline(db, str(user.id), check_id, body.checked, trade_date)
-    )
+    return ApiResponse(data=playbook_svc.set_discipline(db, str(user.id), check_id, body.checked, trade_date))
 
 
 @router.get("/playbook/plans", response_model=ApiResponse[list[PlanOut]])
@@ -298,9 +296,7 @@ def get_feed_items(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[FeedItemOut]]:
-    return ApiResponse(
-        data=feed_svc.list_feed_items(db, str(user.id), subscription_id=subscription_id, limit=limit)
-    )
+    return ApiResponse(data=feed_svc.list_feed_items(db, str(user.id), subscription_id=subscription_id, limit=limit))
 
 
 @router.get("/feed/items/page", response_model=ApiResponse[PageOut[FeedItemOut]])

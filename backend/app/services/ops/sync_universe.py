@@ -87,9 +87,7 @@ def sync_universe(db: Session) -> dict[str, Any]:
                 params[f"e{j}"] = row["exchange"]
                 params[f"n{j}"] = row["name"]
             db.execute(
-                text(
-                    f"INSERT INTO app.universe (symbol, exchange, name) VALUES {', '.join(placeholders)}"
-                ),
+                text(f"INSERT INTO app.universe (symbol, exchange, name) VALUES {', '.join(placeholders)}"),
                 params,
             )
 

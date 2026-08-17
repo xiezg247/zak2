@@ -167,9 +167,7 @@ def get_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any:
 def get_trading_risk(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     config_key = args.get("config_key")
     prefs = trading_risk.load_trading_risk_prefs(db, user_id)
-    board = strategy_board.load_strategy_board(
-        db, user_id, config_key=str(config_key) if config_key else None
-    )
+    board = strategy_board.load_strategy_board(db, user_id, config_key=str(config_key) if config_key else None)
     raw_summary = dict(board.get("risk_summary") or {})
     plan_symbols = []
     for row in list(raw_summary.get("plan_symbols") or []):

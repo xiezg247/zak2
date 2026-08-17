@@ -97,10 +97,7 @@ class TickFlowProvider:
     def fetch(self, symbols: list[str]) -> dict[str, QuoteSnapshot]:
         if not symbols:
             return {}
-        batches = [
-            symbols[start : start + QUOTE_BATCH_SIZE]
-            for start in range(0, len(symbols), QUOTE_BATCH_SIZE)
-        ]
+        batches = [symbols[start : start + QUOTE_BATCH_SIZE] for start in range(0, len(symbols), QUOTE_BATCH_SIZE)]
         workers = quote_fetch_max_workers(batch_count=len(batches))
         result: dict[str, QuoteSnapshot] = {}
 

@@ -31,16 +31,20 @@ def parse_universe_start(raw: str | None = None) -> date:
 
 
 def list_universe_symbols(db: Session) -> list[tuple[str, str]]:
-    rows = db.execute(
-        text(
-            """
+    rows = (
+        db.execute(
+            text(
+                """
             SELECT symbol, exchange
             FROM app.universe
             WHERE symbol IS NOT NULL AND exchange IS NOT NULL
             ORDER BY exchange, symbol
             """
+            )
         )
-    ).mappings().all()
+        .mappings()
+        .all()
+    )
     return [(str(r["symbol"]), normalize_exchange(str(r["exchange"]))) for r in rows]
 
 
@@ -57,7 +61,6 @@ def select_universe_daily_targets(
         if start is None or start > unified_start:
             out.append(key)
     return out
-
 
 
 def to_ts_code(symbol: str, exchange: str) -> str:
@@ -106,25 +109,30 @@ def get_overview_row(
     exchange: str,
     interval: str = INTERVAL_DAILY,
 ) -> dict[str, Any] | None:
-    row = db.execute(
-        text(
-            """
+    row = (
+        db.execute(
+            text(
+                """
             SELECT symbol, exchange, interval, start, "end", count
             FROM public.dbbaroverview
             WHERE symbol = :s AND exchange = :e AND interval = :iv
             """
-        ),
-        {"s": symbol, "e": normalize_exchange(exchange), "iv": interval},
-    ).mappings().first()
+            ),
+            {"s": symbol, "e": normalize_exchange(exchange), "iv": interval},
+        )
+        .mappings()
+        .first()
+    )
     return dict(row) if row else None
 
 
 def list_stale_overviews(db: Session, *, as_of: date, limit: int) -> list[tuple[str, str, date | None]]:
     """返回 (symbol, exchange, end_date) 过期列表。"""
     limit = max(1, min(int(limit), 5000))
-    rows = db.execute(
-        text(
-            """
+    rows = (
+        db.execute(
+            text(
+                """
             SELECT symbol, exchange, "end"
             FROM public.dbbaroverview
             WHERE interval = :iv
@@ -136,9 +144,12 @@ def list_stale_overviews(db: Session, *, as_of: date, limit: int) -> list[tuple[
             ORDER BY ("end")::date ASC
             LIMIT :lim
             """
-        ),
-        {"iv": INTERVAL_DAILY, "as_of": as_of.isoformat(), "lim": limit},
-    ).mappings().all()
+            ),
+            {"iv": INTERVAL_DAILY, "as_of": as_of.isoformat(), "lim": limit},
+        )
+        .mappings()
+        .all()
+    )
     out: list[tuple[str, str, date | None]] = []
     for row in rows:
         out.append((str(row["symbol"]), normalize_exchange(str(row["exchange"])), overview_end_date(row["end"])))
@@ -165,16 +176,20 @@ def refresh_overview(
     interval: str = INTERVAL_DAILY,
 ) -> None:
     exch = normalize_exchange(exchange)
-    stats = db.execute(
-        text(
-            """
+    stats = (
+        db.execute(
+            text(
+                """
             SELECT MIN(datetime) AS start_dt, MAX(datetime) AS end_dt, COUNT(*) AS n
             FROM public.dbbardata
             WHERE symbol = :s AND exchange = :e AND interval = :iv
             """
-        ),
-        {"s": symbol, "e": exch, "iv": interval},
-    ).mappings().first()
+            ),
+            {"s": symbol, "e": exch, "iv": interval},
+        )
+        .mappings()
+        .first()
+    )
     db.execute(
         text(
             """

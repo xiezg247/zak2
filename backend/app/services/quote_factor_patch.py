@@ -33,11 +33,7 @@ def apply_factor_patches(client: Any, patches: dict[str, dict[str, float]]) -> d
         key = QUOTE_KEY_FMT.format(symbol=tf)
         if not client.exists(key):
             continue
-        mapping = {
-            k: str(float(v))
-            for k, v in fields.items()
-            if k in FACTOR_FIELDS and v is not None
-        }
+        mapping = {k: str(float(v)) for k, v in fields.items() if k in FACTOR_FIELDS and v is not None}
         if not mapping:
             continue
         client.hset(key, mapping=mapping)

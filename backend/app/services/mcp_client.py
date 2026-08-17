@@ -24,9 +24,7 @@ class McpToolInfo:
     input_schema: dict[str, Any]
 
 
-_NETWORK_ERROR_NAMES = frozenset(
-    {"ConnectError", "ConnectTimeout", "ReadTimeout", "WriteTimeout", "TimeoutException"}
-)
+_NETWORK_ERROR_NAMES = frozenset({"ConnectError", "ConnectTimeout", "ReadTimeout", "WriteTimeout", "TimeoutException"})
 _STREAM_ERROR_NAMES = frozenset({"BrokenResourceError", "ClosedResourceError"})
 
 _mcp_import_lock = threading.Lock()
@@ -128,9 +126,7 @@ def _run_async(coro: Any) -> Any:
 
 
 def _is_retriable_network_error(exc: BaseException) -> bool:
-    return any(
-        type(item).__name__ in _NETWORK_ERROR_NAMES | _STREAM_ERROR_NAMES for item in _iter_exceptions(exc)
-    )
+    return any(type(item).__name__ in _NETWORK_ERROR_NAMES | _STREAM_ERROR_NAMES for item in _iter_exceptions(exc))
 
 
 async def _with_retry(coro_factory: Any, *, attempts: int = 3, base_delay: float = 0.25) -> Any:
@@ -223,11 +219,14 @@ async def _session_call(
 ) -> Any:
     streamable_http_client, create_mcp_http_client, ClientSession = _load_mcp_sdk()
 
-    async with create_mcp_http_client(headers=headers or None) as http_client, streamable_http_client(
-        url,
-        http_client=http_client,
-        terminate_on_close=True,
-    ) as streams:
+    async with (
+        create_mcp_http_client(headers=headers or None) as http_client,
+        streamable_http_client(
+            url,
+            http_client=http_client,
+            terminate_on_close=True,
+        ) as streams,
+    ):
         read, write = streams[0], streams[1]
         async with ClientSession(read, write, read_timeout_seconds=timeout) as session:
             await session.initialize()
@@ -294,9 +293,7 @@ def call_remote_tool(
     *,
     timeout: float = 60.0,
 ) -> str:
-    result = _run_async(
-        _call_tool_async(url, headers or {}, tool_name, arguments, timeout=timeout)
-    )
+    result = _run_async(_call_tool_async(url, headers or {}, tool_name, arguments, timeout=timeout))
     return _serialize_tool_result(result)
 
 

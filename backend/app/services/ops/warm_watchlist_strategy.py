@@ -45,14 +45,18 @@ def _today() -> str:
 
 def _list_config_keys(db: Session) -> list[str]:
     keys = {DEFAULT_CONFIG_KEY}
-    rows = db.execute(
-        text(
-            """
+    rows = (
+        db.execute(
+            text(
+                """
             SELECT value_json FROM auth.user_preferences
             WHERE namespace = 'watchlist' AND key = 'signal_config'
             """
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for row in rows:
         if not isinstance(row, dict):
             continue

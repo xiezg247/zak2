@@ -68,7 +68,9 @@ def patch_session(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[SessionOut]:
-    return ApiResponse(data=repo.ChatRepository(db, str(user.id)).update_session(session_id, title=body.title, scene=body.scene))
+    return ApiResponse(
+        data=repo.ChatRepository(db, str(user.id)).update_session(session_id, title=body.title, scene=body.scene)
+    )
 
 
 @router.delete("/sessions/{session_id}", response_model=ApiResponse[OkOut])
@@ -142,9 +144,7 @@ def post_team_stream(
         vt = vt_symbol
         db = SessionLocal()
         try:
-            for event in team_orchestrator.stream_team_analysis_with_persist(
-                db, user_id, vt_symbol, mode=mode
-            ):
+            for event in team_orchestrator.stream_team_analysis_with_persist(db, user_id, vt_symbol, mode=mode):
                 if event.get("agent") == "system" and event.get("kind") == "done":
                     report = str(event.get("report") or "")
                     weighted = event.get("weighted")

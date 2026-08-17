@@ -201,9 +201,7 @@ class WatchlistGroupMemberRepository(BaseRepository[WatchlistGroupMember]):
 
     def _group(self, group_id: str) -> WatchlistGroup:
         group = self.db.scalar(
-            select(WatchlistGroup).where(
-                WatchlistGroup.user_id == self.user_id, WatchlistGroup.id == group_id
-            )
+            select(WatchlistGroup).where(WatchlistGroup.user_id == self.user_id, WatchlistGroup.id == group_id)
         )
         if not group:
             raise HTTPException(status_code=404, detail="分组不存在")
@@ -219,9 +217,7 @@ class WatchlistGroupMemberRepository(BaseRepository[WatchlistGroupMember]):
             )
         )
 
-    def add_group_member(
-        self, group_id: str, raw_symbol: str, exchange: str | None = None
-    ) -> WatchlistGroupMember:
+    def add_group_member(self, group_id: str, raw_symbol: str, exchange: str | None = None) -> WatchlistGroupMember:
         self._group(group_id)
         if exchange:
             symbol, exch = raw_symbol.strip(), normalize_exchange(exchange)
@@ -312,11 +308,7 @@ class WatchlistGroupMemberRepository(BaseRepository[WatchlistGroupMember]):
                 if existing:
                     skipped += 1
                     continue
-                self.db.add(
-                    WatchlistGroupMember(
-                        user_id=self.user_id, group_id=group_id, symbol=symbol, exchange=exch
-                    )
-                )
+                self.db.add(WatchlistGroupMember(user_id=self.user_id, group_id=group_id, symbol=symbol, exchange=exch))
                 added += 1
             else:
                 row = self.db.scalar(

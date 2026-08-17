@@ -9,9 +9,10 @@ from sqlalchemy.orm import Session
 
 
 def bars_overview(db: Session, *, interval: str = "d") -> dict[str, Any]:
-    row = db.execute(
-        text(
-            """
+    row = (
+        db.execute(
+            text(
+                """
             WITH latest AS (
               SELECT cal_date
               FROM app.trade_calendar
@@ -44,9 +45,12 @@ def bars_overview(db: Session, *, interval: str = "d") -> dict[str, Any]:
               (SELECT COUNT(*) FROM valid, latest
                WHERE end_d < CAST(latest.cal_date AS date)) AS stale_count
             """
-        ),
-        {"interval": interval},
-    ).mappings().first()
+            ),
+            {"interval": interval},
+        )
+        .mappings()
+        .first()
+    )
 
     if not row:
         return {

@@ -59,15 +59,24 @@ JOB_SPECS: tuple[JobSpec, ...] = (
         "sync_stock_industry",
     ),
     JobSpec("sync_trade_calendar", "同步交易日历", "Tushare → app.trade_calendar", "sync_trade_calendar"),
-    JobSpec("batch_download_universe", "全市场日 K", "全 A 日 K 首下/补起点（Web 可跑，单次上限）", "batch_download_universe"),
+    JobSpec(
+        "batch_download_universe",
+        "全市场日 K",
+        "全 A 日 K 首下/补起点（Web 可跑，单次上限）",
+        "batch_download_universe",
+    ),
     JobSpec(
         "prefetch_moneyflow",
         "主力资金预拉",
         "moneyflow → app.tushare_factor_cache（Web 可跑）",
         "prefetch_moneyflow",
     ),
-    JobSpec("sync_sector_flow_daily", "板块资金同步", "东财/同花顺板块资金 → sector_flow_daily", "sync_sector_flow_daily"),
-    JobSpec("sync_limit_list", "涨停列表同步", "Tushare limit_list_d → limit_list_daily（封板时间）", "sync_limit_list"),
+    JobSpec(
+        "sync_sector_flow_daily", "板块资金同步", "东财/同花顺板块资金 → sector_flow_daily", "sync_sector_flow_daily"
+    ),
+    JobSpec(
+        "sync_limit_list", "涨停列表同步", "Tushare limit_list_d → limit_list_daily（封板时间）", "sync_limit_list"
+    ),
     JobSpec(
         "sync_suspend_daily",
         "停牌日同步",

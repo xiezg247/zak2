@@ -21,8 +21,7 @@ def _industry_dist(rows: list[QuoteRow]) -> list[dict[str, Any]]:
     counter = Counter(r.industry or "未知" for r in rows)
     total = sum(counter.values()) or 1
     return [
-        {"industry": name, "count": count, "ratio": round(count / total, 4)}
-        for name, count in counter.most_common()
+        {"industry": name, "count": count, "ratio": round(count / total, 4)} for name, count in counter.most_common()
     ]
 
 
@@ -277,11 +276,7 @@ def _score_ultra_short(row: QuoteRow, weights: dict[str, float] | None = None) -
     board = max(0.0, min(row.limit_times / 3.0, 1.0))
     momentum = max(0.0, min(row.change_pct / 10.0, 1.0))
     turnover = max(0.0, min(row.turnover_rate / 20.0, 1.0))
-    return (
-        w.get("board", 0.4) * board
-        + w.get("momentum", 0.35) * momentum
-        + w.get("turnover", 0.25) * turnover
-    )
+    return w.get("board", 0.4) * board + w.get("momentum", 0.35) * momentum + w.get("turnover", 0.25) * turnover
 
 
 def _score_post_close_multi(row: QuoteRow, weights: dict[str, float] | None = None) -> float:

@@ -123,9 +123,7 @@ def sync_stock_industry(db: Session) -> dict[str, Any]:
             params: dict[str, Any] = {}
             placeholders: list[str] = []
             for j, row in enumerate(chunk):
-                placeholders.append(
-                    f"(:s{j}, :e{j}, :ind{j}, :l1{j}, :src{j}, :upd{j})"
-                )
+                placeholders.append(f"(:s{j}, :e{j}, :ind{j}, :l1{j}, :src{j}, :upd{j})")
                 params[f"s{j}"] = row["symbol"]
                 params[f"e{j}"] = row["exchange"]
                 params[f"ind{j}"] = row["industry"]

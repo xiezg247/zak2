@@ -169,9 +169,7 @@ def add_entry(db: Session, user_id: str, raw: str, body: str) -> NoteEntryOut:
 
 
 def delete_entry(db: Session, user_id: str, entry_id: int) -> bool:
-    row = db.scalar(
-        select(StockNoteEntry).where(StockNoteEntry.id == entry_id, StockNoteEntry.user_id == user_id)
-    )
+    row = db.scalar(select(StockNoteEntry).where(StockNoteEntry.id == entry_id, StockNoteEntry.user_id == user_id))
     if not row:
         return False
     db.delete(row)

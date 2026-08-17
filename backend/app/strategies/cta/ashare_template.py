@@ -65,9 +65,7 @@ class AShareCtaTemplate(CtaTemplate):
         self.sell(price, qty)
 
     def on_trade(self, trade: TradeData) -> None:
-        if trade.offset == Offset.OPEN or (
-            trade.direction.name == "LONG" and trade.offset == Offset.NONE
-        ):
+        if trade.offset == Offset.OPEN or (trade.direction.name == "LONG" and trade.offset == Offset.NONE):
             d = trade.datetime.date() if trade.datetime else date.today()
             self._lot_buy_dates[d] = self._lot_buy_dates.get(d, 0) + int(trade.volume)
         super().on_trade(trade)

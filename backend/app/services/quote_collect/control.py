@@ -62,9 +62,7 @@ def collector_health(client: Any | None = None) -> dict[str, Any]:
             "status": hb.get("status"),
             "last_count": int(hb.get("last_count") or 0),
             "ts": hb.get("ts"),
-            "hint": None
-            if running
-            else "心跳过期；请启动：python -m app.quote_collector",
+            "hint": None if running else "心跳过期；请启动：python -m app.quote_collector",
         }
     finally:
         if own and client is not None:

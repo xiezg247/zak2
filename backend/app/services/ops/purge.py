@@ -31,9 +31,9 @@ def purge_stale_cache(db: Session) -> dict[str, Any]:
     now = datetime.now()
     now_text = now.isoformat(timespec="seconds")
     signal_cutoff = (now - timedelta(days=_env_int("CACHE_SIGNAL_RETENTION_DAYS", 7))).isoformat(timespec="seconds")
-    radar_snapshot_cutoff = (
-        now - timedelta(days=_env_int("CACHE_RADAR_SNAPSHOT_RETENTION_DAYS", 30))
-    ).isoformat(timespec="seconds")
+    radar_snapshot_cutoff = (now - timedelta(days=_env_int("CACHE_RADAR_SNAPSHOT_RETENTION_DAYS", 30))).isoformat(
+        timespec="seconds"
+    )
 
     deleted: dict[str, int] = {
         "radar_ai_hint": _delete_count(

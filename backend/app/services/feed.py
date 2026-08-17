@@ -51,9 +51,7 @@ def list_subscriptions(db: Session, user_id: str) -> list[FeedSubOut]:
 
 
 def set_subscription_enabled(db: Session, user_id: str, sub_id: str, enabled: bool) -> FeedSubOut:
-    row = db.scalar(
-        select(FeedSubscription).where(FeedSubscription.id == sub_id, FeedSubscription.user_id == user_id)
-    )
+    row = db.scalar(select(FeedSubscription).where(FeedSubscription.id == sub_id, FeedSubscription.user_id == user_id))
     if not row:
         raise HTTPException(status_code=404, detail="订阅不存在")
     row.enabled = 1 if enabled else 0
@@ -96,11 +94,7 @@ def add_bilibili_up(
     if not mid or not mid.isdigit():
         raise HTTPException(status_code=400, detail="mid 无效")
 
-    count = db.scalar(
-        select(func.count())
-        .select_from(FeedSubscription)
-        .where(FeedSubscription.user_id == user_id)
-    )
+    count = db.scalar(select(func.count()).select_from(FeedSubscription).where(FeedSubscription.user_id == user_id))
     if int(count or 0) >= MAX_FEED_SUBSCRIPTIONS:
         raise HTTPException(status_code=400, detail="订阅数已达上限")
 
@@ -161,9 +155,7 @@ def add_bilibili_up(
 
 
 def delete_subscription(db: Session, user_id: str, sub_id: str) -> None:
-    row = db.scalar(
-        select(FeedSubscription).where(FeedSubscription.id == sub_id, FeedSubscription.user_id == user_id)
-    )
+    row = db.scalar(select(FeedSubscription).where(FeedSubscription.id == sub_id, FeedSubscription.user_id == user_id))
     if not row:
         raise HTTPException(status_code=404, detail="订阅不存在")
 
@@ -274,9 +266,7 @@ def mark_feed_read(db: Session, user_id: str, item_id: str) -> dict:
     )
     if not sub:
         raise HTTPException(status_code=404, detail="动态不存在")
-    existing = db.scalar(
-        select(FeedItemRead).where(FeedItemRead.user_id == user_id, FeedItemRead.item_id == item_id)
-    )
+    existing = db.scalar(select(FeedItemRead).where(FeedItemRead.user_id == user_id, FeedItemRead.item_id == item_id))
     if not existing:
         db.add(FeedItemRead(user_id=user_id, item_id=item_id, read_at=_now()))
         db.commit()

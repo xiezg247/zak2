@@ -27,7 +27,7 @@ class PageOut(BaseModel, Generic[T]):
     pages: int
 
     @classmethod
-    def from_page(cls, page: Any) -> "PageOut[T]":
+    def from_page(cls, page: Any) -> PageOut[T]:
         """从 repositories.pagination.Page 结果对象构造（duck-typing，避免 schema→repo 依赖）。"""
         return cls(
             items=page.items,

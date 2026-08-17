@@ -32,10 +32,38 @@ STRATEGIES = (
 )
 
 PROFILES = (
-    {"profile_id": "ultra_short", "name": "极致短线", "description": "打板/半路，持仓短", "fast_window": 3, "slow_window": 8, "capital": 100_000},
-    {"profile_id": "short_swing", "name": "短线波段", "description": "放量突破为主", "fast_window": 5, "slow_window": 20, "capital": 100_000},
-    {"profile_id": "medium_watch", "name": "中线观察", "description": "趋势跟踪辅助", "fast_window": 10, "slow_window": 30, "capital": 100_000},
-    {"profile_id": "trend", "name": "趋势", "description": "均线趋势，持仓更长", "fast_window": 20, "slow_window": 60, "capital": 100_000},
+    {
+        "profile_id": "ultra_short",
+        "name": "极致短线",
+        "description": "打板/半路，持仓短",
+        "fast_window": 3,
+        "slow_window": 8,
+        "capital": 100_000,
+    },
+    {
+        "profile_id": "short_swing",
+        "name": "短线波段",
+        "description": "放量突破为主",
+        "fast_window": 5,
+        "slow_window": 20,
+        "capital": 100_000,
+    },
+    {
+        "profile_id": "medium_watch",
+        "name": "中线观察",
+        "description": "趋势跟踪辅助",
+        "fast_window": 10,
+        "slow_window": 30,
+        "capital": 100_000,
+    },
+    {
+        "profile_id": "trend",
+        "name": "趋势",
+        "description": "均线趋势，持仓更长",
+        "fast_window": 20,
+        "slow_window": 60,
+        "capital": 100_000,
+    },
 )
 
 

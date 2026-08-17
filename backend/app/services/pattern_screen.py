@@ -88,8 +88,7 @@ def _industry_dist(rows: list[QuoteRow]) -> list[dict[str, Any]]:
     counter = Counter(r.industry or "未知" for r in rows)
     total = sum(counter.values()) or 1
     return [
-        {"industry": name, "count": count, "ratio": round(count / total, 4)}
-        for name, count in counter.most_common()
+        {"industry": name, "count": count, "ratio": round(count / total, 4)} for name, count in counter.most_common()
     ]
 
 

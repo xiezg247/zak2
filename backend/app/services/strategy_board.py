@@ -199,18 +199,22 @@ def _scan_signal_redis(config_key: str, *, limit: int = 30) -> list[tuple[str, d
 def _load_signals_pg(db: Session, config_key: str, vt_symbols: list[str]) -> dict[str, dict[str, Any]]:
     if not vt_symbols:
         return {}
-    rows = db.execute(
-        text(
-            """
+    rows = (
+        db.execute(
+            text(
+                """
             SELECT DISTINCT ON (vt_symbol)
               vt_symbol, bar_as_of, payload, updated_at
             FROM cache.watchlist_signal_cache
             WHERE config_key = :ck AND vt_symbol = ANY(:vts)
             ORDER BY vt_symbol, updated_at DESC
             """
-        ),
-        {"ck": config_key, "vts": vt_symbols},
-    ).mappings().all()
+            ),
+            {"ck": config_key, "vts": vt_symbols},
+        )
+        .mappings()
+        .all()
+    )
     out: dict[str, dict[str, Any]] = {}
     for row in rows:
         snap = _parse_payload(row["payload"])
@@ -236,21 +240,23 @@ def _load_position_signal_redis(config_key: str, vt_symbol: str, position_key: s
     return _parse_payload(raw if isinstance(raw, str) else None)
 
 
-def _load_position_signal_pg(
-    db: Session, config_key: str, vt_symbol: str, position_key: str
-) -> dict[str, Any] | None:
-    row = db.execute(
-        text(
-            """
+def _load_position_signal_pg(db: Session, config_key: str, vt_symbol: str, position_key: str) -> dict[str, Any] | None:
+    row = (
+        db.execute(
+            text(
+                """
             SELECT payload, bar_as_of, updated_at
             FROM cache.watchlist_position_cache
             WHERE config_key = :ck AND vt_symbol = :vt AND position_key = :pk
             ORDER BY updated_at DESC
             LIMIT 1
             """
-        ),
-        {"ck": config_key, "vt": vt_symbol, "pk": position_key},
-    ).mappings().first()
+            ),
+            {"ck": config_key, "vt": vt_symbol, "pk": position_key},
+        )
+        .mappings()
+        .first()
+    )
     if not row:
         return None
     snap = _parse_payload(row["payload"])
@@ -353,9 +359,7 @@ def load_strategy_board(
         mode = SIGNAL_MODE_HEURISTIC
     ck = resolve_board_config_key(db, user_id, signal_mode=mode, override=config_key)
     items = repo.WatchlistItemRepository(db, user_id).list_items()
-    name_by_vt = {
-        to_vt_symbol(i.symbol, i.exchange): (i.name or "") for i in items
-    }
+    name_by_vt = {to_vt_symbol(i.symbol, i.exchange): (i.name or "") for i in items}
     watchlist_vts = list(name_by_vt.keys())
     panel_symbols = signal_panel_repo.SignalPanelRepository(db, user_id).load_symbols()
     # 名单优先；空则回退自选
@@ -535,9 +539,7 @@ def load_strategy_board(
         "total_capital": prefs.get("total_capital"),
         "actual_position_pct": compute_actual_position_pct(total_mv, prefs.get("total_capital")),
         "plan_max_pct": (
-            normalize_plan_max_pct(float(plan_snap["max_position_pct"]))
-            if plan_snap is not None
-            else None
+            normalize_plan_max_pct(float(plan_snap["max_position_pct"])) if plan_snap is not None else None
         ),
         "off_plan_count": len(off_set),
         "off_plan_symbols": sorted(off_set),
@@ -557,16 +559,11 @@ def load_strategy_board(
             "或确认 Redis/PG 已有信号缓存；亦可先维护信号名单与持仓记账。"
         )
     elif not signals:
-        note = (
-            "持仓来自记账表；信号 cache 为空"
-            "（可 Ops 跑 warm_watchlist_strategy_cache，或确认 cache 已写入）。"
-        )
+        note = "持仓来自记账表；信号 cache 为空（可 Ops 跑 warm_watchlist_strategy_cache，或确认 cache 已写入）。"
     if mode == SIGNAL_MODE_DOUBLE_MA:
         mode_note = "模式：回测双均线（当日交叉，规则对齐 /backtest double_ma，非 vnpy 进程）。"
     elif mode == SIGNAL_MODE_TREND_MA:
-        mode_note = (
-            "模式：趋势均线（入场对齐 CTA trend_ma；卖点不含追踪止损；非 vnpy 进程）。"
-        )
+        mode_note = "模式：趋势均线（入场对齐 CTA trend_ma；卖点不含追踪止损；非 vnpy 进程）。"
     else:
         mode_note = "模式：启发式确认（交叉次日确认 N=2）。"
     note = f"{mode_note} {note}".strip() if note else mode_note

@@ -81,9 +81,7 @@ def prefetch_tushare(db: Session) -> dict[str, Any]:
     try:
         flow_rows = fetch_moneyflow_rows(trade_date)
         if flow_rows:
-            _upsert_dataset(
-                db, dataset="moneyflow", trade_date=trade_date, rows=flow_rows, fetched_at=fetched_at
-            )
+            _upsert_dataset(db, dataset="moneyflow", trade_date=trade_date, rows=flow_rows, fetched_at=fetched_at)
             written += 1
     except Exception as exc:  # noqa: BLE001
         notes.append(f"moneyflow 失败: {exc}")

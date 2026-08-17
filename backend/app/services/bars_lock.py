@@ -13,9 +13,7 @@ from app.services.scheduler_lock import clamp_ttl, make_token
 
 _logger = logging.getLogger(__name__)
 
-BARS_JOBS = frozenset(
-    {"fill_watchlist_bars", "batch_fill_stale", "batch_download_universe"}
-)
+BARS_JOBS = frozenset({"fill_watchlist_bars", "batch_fill_stale", "batch_download_universe"})
 
 _RELEASE_LUA = """
 if redis.call("get", KEYS[1]) == ARGV[1] then

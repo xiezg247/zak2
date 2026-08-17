@@ -12,13 +12,10 @@ from app.services.symbols import to_tf_symbol
 
 _logger = logging.getLogger(__name__)
 
-_LOAD_SQL = text(
-    "SELECT symbol, exchange, industry FROM app.stock_industry"
-)
+_LOAD_SQL = text("SELECT symbol, exchange, industry FROM app.stock_industry")
 
 _LIST_INDUSTRY_NAMES_SQL = text(
-    "SELECT DISTINCT industry FROM app.stock_industry "
-    "WHERE TRIM(industry) <> '' ORDER BY industry"
+    "SELECT DISTINCT industry FROM app.stock_industry WHERE TRIM(industry) <> '' ORDER BY industry"
 )
 
 

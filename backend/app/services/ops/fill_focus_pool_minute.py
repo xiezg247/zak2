@@ -83,9 +83,10 @@ def _count_overview(
         return 0
     syms = [s for s, _ in pool]
     exchs = [normalize_exchange(e) for _, e in pool]
-    row = db.execute(
-        text(
-            """
+    row = (
+        db.execute(
+            text(
+                """
             SELECT COUNT(*)::int AS n
             FROM public.dbbaroverview o
             WHERE o.interval = :iv
@@ -95,9 +96,12 @@ def _count_overview(
                 WHERE p.symbol = o.symbol AND p.exchange = o.exchange
               )
             """
-        ),
-        {"iv": interval, "syms": syms, "exchs": exchs},
-    ).mappings().first()
+            ),
+            {"iv": interval, "syms": syms, "exchs": exchs},
+        )
+        .mappings()
+        .first()
+    )
     return int((row or {}).get("n") or 0)
 
 
@@ -144,10 +148,7 @@ def fill_focus_pool_minute(db: Session) -> dict[str, Any]:
 
     pool = list_watchlist_symbols(db)[:max_n]
     if not pool:
-        msg = (
-            f"关注池 1m：pool=0 downloaded=0 bars=0 failed=0 lookback={lookback} "
-            f"daily=0 1m=0 missing_1m=0"
-        )
+        msg = f"关注池 1m：pool=0 downloaded=0 bars=0 failed=0 lookback={lookback} daily=0 1m=0 missing_1m=0"
         save_job_run_meta(db, JOB_ID, last_message=msg, last_success=True)
         return _empty_result(
             success=True,
@@ -167,9 +168,7 @@ def fill_focus_pool_minute(db: Session) -> dict[str, Any]:
         if not _needs_1m_download(db, symbol, exchange, as_of=as_of):
             continue
         try:
-            n = download_minute_bars(
-                db, symbol=symbol, exchange=exchange, start=start_d, end=end_d
-            )
+            n = download_minute_bars(db, symbol=symbol, exchange=exchange, start=start_d, end=end_d)
             db.commit()
             downloaded += 1
             bars_added += n

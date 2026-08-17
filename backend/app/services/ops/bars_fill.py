@@ -37,16 +37,20 @@ def _sleep_sec() -> float:
 
 
 def list_watchlist_symbols(db: Session) -> list[tuple[str, str]]:
-    rows = db.execute(
-        text(
-            """
+    rows = (
+        db.execute(
+            text(
+                """
             SELECT DISTINCT symbol, exchange
             FROM app.watchlist
             WHERE symbol IS NOT NULL AND exchange IS NOT NULL
             ORDER BY exchange, symbol
             """
+            )
         )
-    ).mappings().all()
+        .mappings()
+        .all()
+    )
     return [(str(r["symbol"]), normalize_exchange(str(r["exchange"]))) for r in rows]
 
 
@@ -107,8 +111,7 @@ def _run_pool(db: Session, pool: list[tuple[str, str]], *, job_id: str) -> dict[
         message = "没有需要补全的标的"
     else:
         message = (
-            f"补全完成：成功 {success_count}/{attempted}，新增 {bars_added} 根，"
-            f"已最新 {up_to_date}，失败 {len(failed)}"
+            f"补全完成：成功 {success_count}/{attempted}，新增 {bars_added} 根，已最新 {up_to_date}，失败 {len(failed)}"
         )
     out = {
         "success": len(failed) == 0 or success_count > 0 or up_to_date == attempted,
@@ -139,25 +142,26 @@ def batch_fill_stale(db: Session) -> dict[str, Any]:
     return _run_pool(db, pool, job_id=JOB_STALE)
 
 
-def _is_missing_overview(
-    sym_ex: tuple[str, str], starts: dict[tuple[str, str], date | None]
-) -> bool:
+def _is_missing_overview(sym_ex: tuple[str, str], starts: dict[tuple[str, str], date | None]) -> bool:
     return sym_ex not in starts or starts.get(sym_ex) is None
 
 
 def _load_overview_starts(db: Session) -> dict[tuple[str, str], date | None]:
-    rows = db.execute(
-        text(
-            """
+    rows = (
+        db.execute(
+            text(
+                """
             SELECT symbol, exchange, start
             FROM public.dbbaroverview
             WHERE interval = 'd'
             """
+            )
         )
-    ).mappings().all()
+        .mappings()
+        .all()
+    )
     return {
-        (str(r["symbol"]), normalize_exchange(str(r["exchange"]))): bars.overview_end_date(r["start"])
-        for r in rows
+        (str(r["symbol"]), normalize_exchange(str(r["exchange"]))): bars.overview_end_date(r["start"]) for r in rows
     }
 
 
@@ -171,9 +175,7 @@ def _download_universe_one(
 ) -> tuple[str, int]:
     """返回 (status, bars_added)：ok|skip|fail。"""
     try:
-        n = bars.download_daily_bars(
-            db, symbol=symbol, exchange=exchange, start=unified_start, end=as_of
-        )
+        n = bars.download_daily_bars(db, symbol=symbol, exchange=exchange, start=unified_start, end=as_of)
         db.commit()
         return ("ok" if n > 0 else "skip"), n
     except Exception:  # noqa: BLE001
@@ -234,9 +236,7 @@ def batch_download_universe(db: Session) -> dict[str, Any]:
 
     for symbol, exchange in pool:
         attempted += 1
-        status, n = _download_universe_one(
-            db, symbol=symbol, exchange=exchange, unified_start=unified, as_of=as_of
-        )
+        status, n = _download_universe_one(db, symbol=symbol, exchange=exchange, unified_start=unified, as_of=as_of)
         label = f"{symbol}.{exchange}"
         if status == "ok":
             success_count += 1

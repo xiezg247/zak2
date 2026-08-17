@@ -22,9 +22,7 @@ def _now() -> str:
 
 
 def get_user_plan(db: Session, user_id: str, plan_id: str) -> TradingPlan:
-    plan = db.scalar(
-        select(TradingPlan).where(TradingPlan.id == plan_id, TradingPlan.user_id == user_id)
-    )
+    plan = db.scalar(select(TradingPlan).where(TradingPlan.id == plan_id, TradingPlan.user_id == user_id))
     if plan is None:
         raise HTTPException(status_code=404, detail="计划不存在")
     return plan

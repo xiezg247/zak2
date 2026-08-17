@@ -72,7 +72,9 @@ def list_discipline(db: Session, user_id: str, trade_date: str | None = None) ->
     ]
 
 
-def set_discipline(db: Session, user_id: str, check_id: str, checked: bool, trade_date: str | None = None) -> DisciplineCheckOut:
+def set_discipline(
+    db: Session, user_id: str, check_id: str, checked: bool, trade_date: str | None = None
+) -> DisciplineCheckOut:
     labels = dict(DEFAULT_DISCIPLINE_CHECKS)
     if check_id not in labels:
         raise HTTPException(status_code=400, detail="未知检查项")

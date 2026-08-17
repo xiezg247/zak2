@@ -44,10 +44,14 @@ def _run_hint_for(kind: JobKind) -> str | None:
 
 
 def load_scheduler_config(db: Session) -> dict[str, Any]:
-    row = db.execute(
-        text("SELECT config_json, updated_at FROM system.scheduler_config WHERE id = :id"),
-        {"id": _CONFIG_ID},
-    ).mappings().first()
+    row = (
+        db.execute(
+            text("SELECT config_json, updated_at FROM system.scheduler_config WHERE id = :id"),
+            {"id": _CONFIG_ID},
+        )
+        .mappings()
+        .first()
+    )
     if not row:
         return {"id": _CONFIG_ID, "config": {}, "updated_at": None}
     raw = row["config_json"]
@@ -179,8 +183,6 @@ def list_scheduler_jobs(db: Session) -> list[dict[str, Any]]:
             row["cron_minute"] = job_cfg.get("cron_minute", resolved["minute"])
             row["cron_day_of_week"] = job_cfg.get("cron_day_of_week", resolved["day_of_week"])
             if resolved.get("hours"):
-                row["cron_hours"] = job_cfg.get("cron_hours") or ",".join(
-                    map(str, resolved["hours"])
-                )
+                row["cron_hours"] = job_cfg.get("cron_hours") or ",".join(map(str, resolved["hours"]))
         out.append(row)
     return out

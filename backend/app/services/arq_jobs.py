@@ -188,11 +188,7 @@ async def enqueue_app_job(
 ) -> str:
     pool = await _arq_pool()
     settings = get_settings()
-    queue = (
-        settings.arq_backtest_queue_name
-        if kind.startswith("backtest.")
-        else settings.arq_queue_name
-    )
+    queue = settings.arq_backtest_queue_name if kind.startswith("backtest.") else settings.arq_queue_name
     kwargs: dict[str, Any] = {"user_id": user_id, "payload": payload}
     if batch_id is not None:
         kwargs["batch_id"] = batch_id
@@ -292,9 +288,7 @@ async def get_job_out(job_id: str) -> JobOut | None:
     queue = str(meta.get("queue") or "")
     if not queue:
         queue = (
-            get_settings().arq_backtest_queue_name
-            if kind.startswith("backtest.")
-            else get_settings().arq_queue_name
+            get_settings().arq_backtest_queue_name if kind.startswith("backtest.") else get_settings().arq_queue_name
         )
     job = Job(job_id, redis=pool, _queue_name=queue)
     st = await job.status()

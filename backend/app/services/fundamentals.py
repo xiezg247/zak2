@@ -25,42 +25,54 @@ def get_fundamentals(db: Session, vt_symbol: str) -> dict[str, Any]:
     vt = to_vt_symbol(symbol, exchange)
     ts = to_ts_code(symbol, exchange)
 
-    snap = db.execute(
-        text(
-            """
+    snap = (
+        db.execute(
+            text(
+                """
             SELECT end_date, revenue, net_income, revenue_yoy, net_income_yoy, roe, debt_ratio
             FROM app.financial_snapshots
             WHERE ts_code = :ts
             ORDER BY end_date DESC
             LIMIT 1
             """
-        ),
-        {"ts": ts},
-    ).mappings().first()
+            ),
+            {"ts": ts},
+        )
+        .mappings()
+        .first()
+    )
 
-    sync = db.execute(
-        text(
-            """
+    sync = (
+        db.execute(
+            text(
+                """
             SELECT last_sync_at, latest_end_date, periods_count, sync_status, error_message
             FROM app.financial_sync_meta
             WHERE ts_code = :ts
             """
-        ),
-        {"ts": ts},
-    ).mappings().first()
+            ),
+            {"ts": ts},
+        )
+        .mappings()
+        .first()
+    )
 
-    discs = db.execute(
-        text(
-            """
+    discs = (
+        db.execute(
+            text(
+                """
             SELECT end_date, pre_date, ann_date, actual_date
             FROM app.disclosure_calendar
             WHERE ts_code = :ts
             ORDER BY end_date DESC
             LIMIT :lim
             """
-        ),
-        {"ts": ts, "lim": DISCLOSURE_LIMIT},
-    ).mappings().all()
+            ),
+            {"ts": ts, "lim": DISCLOSURE_LIMIT},
+        )
+        .mappings()
+        .all()
+    )
 
     return {
         "vt_symbol": vt,

@@ -144,9 +144,7 @@ def get_sector_intraday(
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[SectorIntradayPoint]]:
     _ = user
-    return ApiResponse(
-        data=sector_svc.sector_intraday(db, sector_id=sector_id, kind=kind, trade_date=trade_date)
-    )
+    return ApiResponse(data=sector_svc.sector_intraday(db, sector_id=sector_id, kind=kind, trade_date=trade_date))
 
 
 @router.get("/radar/cards", response_model=ApiResponse[list[RadarCardOut]])
@@ -200,9 +198,7 @@ def get_radar_resonance(
     db: Session = Depends(get_db),
 ) -> ApiResponse[RadarResonanceOut]:
     return ApiResponse(
-        data=resonance_svc.list_radar_resonance(
-            db, user_id=str(user.id), min_cards=min_cards, top_n=top_n
-        )
+        data=resonance_svc.list_radar_resonance(db, user_id=str(user.id), min_cards=min_cards, top_n=top_n)
     )
 
 

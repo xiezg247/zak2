@@ -19,16 +19,20 @@ def resolve_suspend_cal_date(db: Session) -> str:
 
 def load_suspended_vt_symbols(db: Session, cal_date: str | None = None) -> set[str]:
     day = cal_date or resolve_suspend_cal_date(db)
-    rows = db.execute(
-        text(
-            """
+    rows = (
+        db.execute(
+            text(
+                """
             SELECT symbol, exchange
             FROM app.symbol_suspend_days
             WHERE cal_date = :d
             """
-        ),
-        {"d": day},
-    ).mappings().all()
+            ),
+            {"d": day},
+        )
+        .mappings()
+        .all()
+    )
     out: set[str] = set()
     for r in rows:
         sym = str(r.get("symbol") or "").strip()

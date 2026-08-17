@@ -24,7 +24,10 @@ def _hold_stage(stage: str, inputs: dict[str, Any], thresholds: Any) -> bool:
     ladder = int(inputs.get("limit_ladder_depth") or 0)
 
     if stage == "startup":
-        return limit_up >= thresholds.startup_limit_up - _HOLD_STARTUP_LIMIT_UP_DELTA or max_boards >= thresholds.startup_max_boards
+        return (
+            limit_up >= thresholds.startup_limit_up - _HOLD_STARTUP_LIMIT_UP_DELTA
+            or max_boards >= thresholds.startup_max_boards
+        )
     if stage == "climax":
         return limit_up >= thresholds.climax_limit_up - _HOLD_CLIMAX_LIMIT_UP_DELTA and ladder >= max(
             0, thresholds.climax_ladder_depth - _HOLD_CLIMAX_LADDER_DELTA

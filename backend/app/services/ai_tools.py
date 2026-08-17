@@ -22,17 +22,18 @@ MAX_RESULT_CHARS = 6000
 
 ToolHandler = Callable[[Session, str, dict[str, Any]], Any]
 
-WRITE_TOOL_NAMES = frozenset({
-    "add_watchlist",
-    "remove_watchlist",
-    "upsert_note_memo",
-    "add_note_entry",
-    "upsert_position",
-    "delete_position",
-    "add_signal_panel",
-    "remove_signal_panel",
-})
-
+WRITE_TOOL_NAMES = frozenset(
+    {
+        "add_watchlist",
+        "remove_watchlist",
+        "upsert_note_memo",
+        "add_note_entry",
+        "upsert_position",
+        "delete_position",
+        "add_signal_panel",
+        "remove_signal_panel",
+    }
+)
 
 
 def _truncate(payload: Any) -> str:

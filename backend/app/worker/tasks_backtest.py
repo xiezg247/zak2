@@ -174,9 +174,7 @@ def _run_batch(user_id: str, payload: dict, batch_id: str) -> dict[str, Any]:
                 trailing_stop_pct=req.trailing_stop_pct,
                 max_trading_days=req.max_trading_days,
             )
-            out = _execute_with_optional_subprocess(
-                db, user_id, single, batch_id=batch_id, source="batch"
-            )
+            out = _execute_with_optional_subprocess(db, user_id, single, batch_id=batch_id, source="batch")
             last_id = out.id
             if out.status == "failed":
                 failed_count += 1
@@ -216,9 +214,7 @@ def _run_optimize(user_id: str, payload: dict, batch_id: str) -> dict[str, Any]:
                 trailing_stop_pct=req.trailing_stop_pct,
                 max_trading_days=req.max_trading_days,
             )
-            out = _execute_with_optional_subprocess(
-                db, user_id, single, batch_id=batch_id, source="optimize"
-            )
+            out = _execute_with_optional_subprocess(db, user_id, single, batch_id=batch_id, source="optimize")
             last_id = out.id
             if out.status == "failed":
                 failed_count += 1

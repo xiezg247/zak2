@@ -32,7 +32,9 @@ BUILTIN_PRESETS: tuple[PresetDef, ...] = (
 _PRESET_MAP = {p.name: p for p in BUILTIN_PRESETS}
 
 BUILTIN_RECIPES: tuple[BuiltinRecipeOut, ...] = (
-    BuiltinRecipeOut(recipe_id="intraday_multi", name="盘中多因子", trigger_kind="intraday", top_n=20, implemented=True),
+    BuiltinRecipeOut(
+        recipe_id="intraday_multi", name="盘中多因子", trigger_kind="intraday", top_n=20, implemented=True
+    ),
     BuiltinRecipeOut(
         recipe_id="ultra_short_unified",
         name="极致短线·雷达统一",

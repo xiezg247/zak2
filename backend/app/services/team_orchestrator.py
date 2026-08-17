@@ -177,9 +177,7 @@ def _stream_chief(
     yield {"type": "team", "agent": "chief", "kind": "started", "label": AGENT_LABELS["chief"]}
     chunks: list[str] = []
     try:
-        for piece in llm_svc.stream_completion(
-            _chief_messages(prefetch, scores, analyst_texts=analyst_texts)
-        ):
+        for piece in llm_svc.stream_completion(_chief_messages(prefetch, scores, analyst_texts=analyst_texts)):
             chunks.append(piece)
             yield {"type": "team", "agent": "chief", "kind": "delta", "content": piece}
     except Exception as exc:  # noqa: BLE001
@@ -396,16 +394,13 @@ def _fallback_report(
         "规则/分析师兜底摘要，供参考。",
         "",
         "### 财务",
-        (analyst_texts or {}).get("financial")
-        or str((scores.get("financial") or {}).get("summary") or "—"),
+        (analyst_texts or {}).get("financial") or str((scores.get("financial") or {}).get("summary") or "—"),
         "",
         "### 风险",
-        (analyst_texts or {}).get("risk")
-        or str((scores.get("risk") or {}).get("summary") or "—"),
+        (analyst_texts or {}).get("risk") or str((scores.get("risk") or {}).get("summary") or "—"),
         "",
         "### 策略与情绪",
-        (analyst_texts or {}).get("strategy")
-        or str((scores.get("strategy") or {}).get("summary") or "—"),
+        (analyst_texts or {}).get("strategy") or str((scores.get("strategy") or {}).get("summary") or "—"),
         f"情绪阶段：{emo.get('stage_label') or emo.get('stage') or '—'}",
         "",
         "> 未调用 LLM 或首席失败，以上为规则/分析师兜底摘要。禁止视为买卖建议。",

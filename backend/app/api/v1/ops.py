@@ -64,9 +64,7 @@ def collector_force(user: User = Depends(get_current_user)) -> ApiResponse[SyncR
     from app.services.quote_collect.control import force_collect_from_settings
 
     result = force_collect_from_settings()
-    return ApiResponse(
-        data=SyncResult(success=bool(result.get("success")), message=str(result.get("message") or ""))
-    )
+    return ApiResponse(data=SyncResult(success=bool(result.get("success")), message=str(result.get("message") or "")))
 
 
 @router.get("/mcp/tools", response_model=ApiResponse[McpToolsOut])
@@ -172,11 +170,7 @@ def patch_scheduler_job(
         raise HTTPException(status_code=404, detail="未知任务")
     kind = ops_scheduler.job_kind_for(job_id)
     if kind != "runnable" and body.enabled:
-        detail = (
-            "独立进程请启动 quote-collector"
-            if kind == "process"
-            else "未实现任务不可启用"
-        )
+        detail = "独立进程请启动 quote-collector" if kind == "process" else "未实现任务不可启用"
         raise HTTPException(status_code=400, detail=detail)
     try:
         ops_scheduler.patch_job_enabled(db, job_id, body.enabled)
@@ -189,16 +183,10 @@ def patch_scheduler_job(
 
 
 @router.post("/scheduler/jobs/{job_id}/run", response_model=ApiResponse[JobAccepted])
-async def run_scheduler_job(
-    job_id: str, user: User = Depends(get_current_user)
-) -> ApiResponse[JobAccepted]:
+async def run_scheduler_job(job_id: str, user: User = Depends(get_current_user)) -> ApiResponse[JobAccepted]:
     kind = ops_scheduler.job_kind_for(job_id)
     if kind != "runnable":
-        detail = (
-            "独立进程请启动 quote-collector"
-            if kind == "process"
-            else "未实现任务不可执行"
-        )
+        detail = "独立进程请启动 quote-collector" if kind == "process" else "未实现任务不可执行"
         raise HTTPException(status_code=400, detail=detail)
     if job_id not in RUNNERS:
         raise HTTPException(

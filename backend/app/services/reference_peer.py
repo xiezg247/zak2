@@ -185,8 +185,7 @@ def _industry_dist_from_packed(rows: list[dict[str, Any]]) -> list[dict[str, Any
     counter = Counter(str(r.get("industry") or "未知") for r in rows)
     total = sum(counter.values()) or 1
     return [
-        {"industry": name, "count": count, "ratio": round(count / total, 4)}
-        for name, count in counter.most_common()
+        {"industry": name, "count": count, "ratio": round(count / total, 4)} for name, count in counter.most_common()
     ]
 
 
@@ -388,9 +387,7 @@ def run_reference_peer(
             "trade_date": trade_date,
             "reference_industry": ref_industry,
             "hard_filter_resolved": prefs.model_dump(),
-            "weights": {
-                key: round(value, 4) for key, value in weights.items()
-            },
+            "weights": {key: round(value, 4) for key, value in weights.items()},
         },
         "rows": packed,
         "industry_dist": _industry_dist_from_packed(packed),

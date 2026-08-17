@@ -26,11 +26,7 @@ def compute_position_risk_tags(
             hit.add("急跌")
         elif cp >= INTRADAY_SURGE_PCT:
             hit.add("大涨")
-        if (
-            volume_ratio is not None
-            and float(volume_ratio) >= VOLUME_RATIO_ACTIVE
-            and abs(cp) >= VOLUME_CHANGE_ABS_MIN
-        ):
+        if volume_ratio is not None and float(volume_ratio) >= VOLUME_RATIO_ACTIVE and abs(cp) >= VOLUME_CHANGE_ABS_MIN:
             hit.add("放量")
     if unrealized_pnl_pct is not None:
         pnl = float(unrealized_pnl_pct)

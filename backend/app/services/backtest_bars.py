@@ -79,8 +79,7 @@ def load_bars(
     if len(bars) < need:
         if interval == "1m":
             detail = (
-                f"分钟 K 不足（{len(bars)}，需要至少 {need} 根），"
-                "请先在 Ops 跑 fill_focus_pool_minute 补全关注池 1m"
+                f"分钟 K 不足（{len(bars)}，需要至少 {need} 根），请先在 Ops 跑 fill_focus_pool_minute 补全关注池 1m"
             )
         else:
             detail = f"日 K 不足（{len(bars)}，需要至少 {need} 根），请先在 Ops 补全日 K"

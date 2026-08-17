@@ -233,7 +233,6 @@ class FundamentalsOut(BaseModel):
     disclosures: list[DisclosureOut] = Field(default_factory=list)
 
 
-
 class PositionOut(BaseModel):
     symbol: str
     exchange: str

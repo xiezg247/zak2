@@ -31,7 +31,9 @@ def _headers() -> dict[str, str]:
     }
 
 
-def _base_payload(messages: list[dict[str, Any]], *, stream: bool, tools: list[dict[str, Any]] | None) -> dict[str, Any]:
+def _base_payload(
+    messages: list[dict[str, Any]], *, stream: bool, tools: list[dict[str, Any]] | None
+) -> dict[str, Any]:
     s = get_settings()
     payload: dict[str, Any] = {
         "model": s.llm_model,

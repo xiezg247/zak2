@@ -39,9 +39,7 @@ class BacktestRepository(BaseRepository[BacktestRun]):
 
     # ---- 查询 ----
 
-    def list_runs(
-        self, *, limit: int = 50, batch_id: str | None = None
-    ) -> list[BacktestRunOut]:
+    def list_runs(self, *, limit: int = 50, batch_id: str | None = None) -> list[BacktestRunOut]:
         stmt = select(BacktestRun).where(BacktestRun.user_id == self.user_id)
         if batch_id:
             stmt = stmt.where(BacktestRun.batch_id == batch_id)
@@ -143,7 +141,9 @@ class BacktestRepository(BaseRepository[BacktestRun]):
         try:
             raw = json.loads(row.raw_statistics_json or "{}")
             if isinstance(raw, dict):
-                stats = dict(raw.get("statistics") or {k: v for k, v in raw.items() if k not in {"equity_curve", "trades"}})
+                stats = dict(
+                    raw.get("statistics") or {k: v for k, v in raw.items() if k not in {"equity_curve", "trades"}}
+                )
                 if detail:
                     equity = list(raw.get("equity_curve") or [])
                     trades = list(raw.get("trades") or [])

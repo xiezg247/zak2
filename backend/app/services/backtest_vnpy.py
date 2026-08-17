@@ -76,9 +76,7 @@ class AShareBacktestingEngine(BacktestingEngine):
         start_pos = 0.0
         for daily_result in self.daily_results.values():
             if isinstance(daily_result, AShareDailyResult):
-                daily_result.calculate_pnl(
-                    pre_close, start_pos, self.size, self.rate, self.slippage, self.stamp_duty
-                )
+                daily_result.calculate_pnl(pre_close, start_pos, self.size, self.rate, self.slippage, self.stamp_duty)
             else:
                 daily_result.calculate_pnl(pre_close, start_pos, self.size, self.rate, self.slippage)
             pre_close = daily_result.close_price

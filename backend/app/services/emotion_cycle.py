@@ -87,11 +87,7 @@ def classify_stage(
         return "recession"
     if limit_break_rate is not None and limit_break_rate >= t.recession_break_rate:
         return "recession"
-    if (
-        max_limit_times <= t.ice_max_boards
-        and limit_down_count >= t.ice_limit_down
-        and up_ratio < t.ice_up_ratio_max
-    ):
+    if max_limit_times <= t.ice_max_boards and limit_down_count >= t.ice_limit_down and up_ratio < t.ice_up_ratio_max:
         return "ice"
     if limit_ladder_depth >= t.climax_ladder_depth and limit_up_count >= t.climax_limit_up:
         return "climax"
@@ -116,9 +112,7 @@ def estimate_fear_greed_proxy(*, up_ratio: float, limit_up_count: int, limit_dow
 
 def _ladder_rows(db: Session, *, limit: int = 2) -> list[EmotionLimitLadderDaily]:
     return list(
-        db.scalars(
-            select(EmotionLimitLadderDaily).order_by(EmotionLimitLadderDaily.trade_date.desc()).limit(limit)
-        )
+        db.scalars(select(EmotionLimitLadderDaily).order_by(EmotionLimitLadderDaily.trade_date.desc()).limit(limit))
     )
 
 

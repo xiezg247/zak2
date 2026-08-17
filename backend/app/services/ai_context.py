@@ -16,10 +16,7 @@ def build_context_brief(db: Session, user_id: str) -> str:
 
     wl = list(
         db.scalars(
-            select(WatchlistItem)
-            .where(WatchlistItem.user_id == user_id)
-            .order_by(WatchlistItem.sort_order)
-            .limit(20)
+            select(WatchlistItem).where(WatchlistItem.user_id == user_id).order_by(WatchlistItem.sort_order).limit(20)
         )
     )
     if wl:
@@ -34,21 +31,13 @@ def build_context_brief(db: Session, user_id: str) -> str:
         )
 
     run = db.scalar(
-        select(ScreenerRun)
-        .where(ScreenerRun.user_id == user_id)
-        .order_by(desc(ScreenerRun.created_at))
-        .limit(1)
+        select(ScreenerRun).where(ScreenerRun.user_id == user_id).order_by(desc(ScreenerRun.created_at)).limit(1)
     )
     if run:
-        parts.append(
-            f"最近选股：{run.condition} / {run.source}，命中 {run.row_count}，时间 {run.created_at}"
-        )
+        parts.append(f"最近选股：{run.condition} / {run.source}，命中 {run.row_count}，时间 {run.created_at}")
 
     bt = db.scalar(
-        select(BacktestRun)
-        .where(BacktestRun.user_id == user_id)
-        .order_by(desc(BacktestRun.created_at))
-        .limit(1)
+        select(BacktestRun).where(BacktestRun.user_id == user_id).order_by(desc(BacktestRun.created_at)).limit(1)
     )
     if bt:
         parts.append(
