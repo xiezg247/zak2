@@ -54,10 +54,10 @@ def test_normalize_prefs_defaults_bad_values() -> None:
             "realized_pnl_today": 100.0,
         }
     )
-    assert out["total_capital"] is None
-    assert out["stop_loss_pct"] == tr.DEFAULT_STOP_LOSS_PCT
-    assert out["caution_float_pct"] == tr.DEFAULT_CAUTION_FLOAT_PCT
-    assert out["realized_pnl_today"] == 100.0
+    assert out.total_capital is None
+    assert out.stop_loss_pct == tr.DEFAULT_STOP_LOSS_PCT
+    assert out.caution_float_pct == tr.DEFAULT_CAUTION_FLOAT_PCT
+    assert out.realized_pnl_today == 100.0
 
 
 def test_normalize_prefs_keeps_valid() -> None:
@@ -68,9 +68,9 @@ def test_normalize_prefs_keeps_valid() -> None:
             "caution_float_pct": -3.5,
         }
     )
-    assert out["total_capital"] == 100000.0
-    assert out["stop_loss_pct"] == 0.08
-    assert out["caution_float_pct"] == -3.5
+    assert out.total_capital == 100000.0
+    assert out.stop_loss_pct == 0.08
+    assert out.caution_float_pct == -3.5
 
 
 def test_save_rejects_bad_total_capital() -> None:
@@ -99,9 +99,9 @@ def test_save_upserts_and_returns_normalized() -> None:
         "550e8400-e29b-41d4-a716-446655440000",
         {"total_capital": 200000, "stop_loss_pct": 0.1, "caution_float_pct": -4.0},
     )
-    assert out["total_capital"] == 200000
-    assert out["stop_loss_pct"] == 0.1
-    assert out["caution_float_pct"] == -4.0
+    assert out.total_capital == 200000
+    assert out.stop_loss_pct == 0.1
+    assert out.caution_float_pct == -4.0
     db.execute.assert_called()
     db.commit.assert_called_once()
     call_params = db.execute.call_args[0][1]
@@ -113,9 +113,9 @@ def test_load_returns_defaults_when_missing() -> None:
     db = MagicMock()
     db.execute.return_value.scalar.return_value = None
     out = tr.load_trading_risk_prefs(db, "uid")
-    assert out["stop_loss_pct"] == tr.DEFAULT_STOP_LOSS_PCT
-    assert out["caution_float_pct"] == tr.DEFAULT_CAUTION_FLOAT_PCT
-    assert out["total_capital"] is None
+    assert out.stop_loss_pct == tr.DEFAULT_STOP_LOSS_PCT
+    assert out.caution_float_pct == tr.DEFAULT_CAUTION_FLOAT_PCT
+    assert out.total_capital is None
 
 
 def test_compute_actual_position_pct() -> None:

@@ -533,8 +533,8 @@ def load_strategy_board(
         name_by_vt={k: (v or "") for k, v in name_by_vt.items()},
     )
     risk_summary = {
-        "total_capital": prefs.get("total_capital"),
-        "actual_position_pct": compute_actual_position_pct(total_mv, prefs.get("total_capital")),
+        "total_capital": prefs.total_capital,
+        "actual_position_pct": compute_actual_position_pct(total_mv, prefs.total_capital),
         "plan_max_pct": (
             normalize_plan_max_pct(float(plan_snap["max_position_pct"])) if plan_snap is not None else None
         ),

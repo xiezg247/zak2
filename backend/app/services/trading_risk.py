@@ -9,6 +9,8 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.watchlist import TradingRiskPrefsOut
+
 NAMESPACE = "trading"
 PREF_KEY = "risk"
 
@@ -27,41 +29,39 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def _default_prefs() -> dict[str, Any]:
-    return {
-        "total_capital": None,
-        "stop_loss_pct": DEFAULT_STOP_LOSS_PCT,
-        "caution_float_pct": DEFAULT_CAUTION_FLOAT_PCT,
-        "realized_pnl_today": None,
-    }
+def _default_prefs() -> TradingRiskPrefsOut:
+    return TradingRiskPrefsOut(
+        total_capital=None,
+        stop_loss_pct=DEFAULT_STOP_LOSS_PCT,
+        caution_float_pct=DEFAULT_CAUTION_FLOAT_PCT,
+        realized_pnl_today=None,
+    )
 
 
-def normalize_prefs(raw: dict[str, Any]) -> dict[str, Any]:
-    base = _default_prefs()
-    merged = {**base, **{k: raw.get(k, base[k]) for k in _PREF_FIELDS}}
+def normalize_prefs(raw: dict[str, Any]) -> TradingRiskPrefsOut:
+    total = raw.get("total_capital")
+    stop_loss = raw.get("stop_loss_pct", DEFAULT_STOP_LOSS_PCT)
+    caution = raw.get("caution_float_pct", DEFAULT_CAUTION_FLOAT_PCT)
+    realized = raw.get("realized_pnl_today")
 
-    stop_loss = merged["stop_loss_pct"]
     if not isinstance(stop_loss, (int, float)) or stop_loss <= 0 or stop_loss > 0.5:
         stop_loss = DEFAULT_STOP_LOSS_PCT
 
-    total = merged["total_capital"]
     if total is not None and (not isinstance(total, (int, float)) or total <= 0):
         total = None
 
-    caution = merged["caution_float_pct"]
     if not isinstance(caution, (int, float)) or caution >= 0:
         caution = DEFAULT_CAUTION_FLOAT_PCT
 
-    realized = merged["realized_pnl_today"]
     if realized is not None and not isinstance(realized, (int, float)):
         realized = None
 
-    return {
-        "total_capital": float(total) if total is not None else None,
-        "stop_loss_pct": float(stop_loss),
-        "caution_float_pct": float(caution),
-        "realized_pnl_today": float(realized) if realized is not None else None,
-    }
+    return TradingRiskPrefsOut(
+        total_capital=float(total) if total is not None else None,
+        stop_loss_pct=float(stop_loss),
+        caution_float_pct=float(caution),
+        realized_pnl_today=float(realized) if realized is not None else None,
+    )
 
 
 def _validate_merged(prefs: dict[str, Any]) -> None:
@@ -82,7 +82,7 @@ def _validate_merged(prefs: dict[str, Any]) -> None:
         raise ValueError("当日已实现盈亏须为数值或空")
 
 
-def load_trading_risk_prefs(db: Session, user_id: str) -> dict[str, Any]:
+def load_trading_risk_prefs(db: Session, user_id: str) -> TradingRiskPrefsOut:
     row = db.execute(
         text(
             """
@@ -99,9 +99,9 @@ def load_trading_risk_prefs(db: Session, user_id: str) -> dict[str, Any]:
     return normalize_prefs(row)
 
 
-def save_trading_risk_prefs(db: Session, user_id: str, body: dict[str, Any]) -> dict[str, Any]:
+def save_trading_risk_prefs(db: Session, user_id: str, body: dict[str, Any]) -> TradingRiskPrefsOut:
     current = load_trading_risk_prefs(db, user_id)
-    merged = {**current, **{k: body[k] for k in body if k in _PREF_FIELDS}}
+    merged = {**current.model_dump(), **{k: body[k] for k in body if k in _PREF_FIELDS}}
     _validate_merged(merged)
     normalized = normalize_prefs(merged)
     db.execute(
@@ -117,7 +117,7 @@ def save_trading_risk_prefs(db: Session, user_id: str, body: dict[str, Any]) -> 
             "uid": user_id,
             "ns": NAMESPACE,
             "key": PREF_KEY,
-            "val": json.dumps(normalized, ensure_ascii=False),
+            "val": json.dumps(normalized.model_dump(), ensure_ascii=False),
             "now": _now_iso(),
         },
     )

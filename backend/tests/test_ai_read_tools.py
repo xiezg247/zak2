@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from app.schemas.watchlist import TradingRiskPrefsOut
 from app.services import ai_read_tools as art
 from app.services.ai_tools import WRITE_TOOL_NAMES, execute_tool
 
@@ -247,12 +248,12 @@ def test_run_skill_positions_section_signals() -> None:
 
 
 def test_get_trading_risk_prefs_and_summary() -> None:
-    prefs = {
-        "total_capital": 100000.0,
-        "stop_loss_pct": 0.05,
-        "caution_float_pct": -5.0,
-        "realized_pnl_today": None,
-    }
+    prefs = TradingRiskPrefsOut(
+        total_capital=100000.0,
+        stop_loss_pct=0.05,
+        caution_float_pct=-5.0,
+        realized_pnl_today=None,
+    )
     board = {
         "risk_summary": {
             "total_capital": 100000.0,

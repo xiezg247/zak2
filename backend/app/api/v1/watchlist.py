@@ -147,7 +147,7 @@ def get_trading_risk(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[TradingRiskPrefsOut]:
-    return ApiResponse(data=TradingRiskPrefsOut(**trading_risk.load_trading_risk_prefs(db, str(user.id))))
+    return ApiResponse(data=trading_risk.load_trading_risk_prefs(db, str(user.id)))
 
 
 @router.get("/watchlist/notify-log", response_model=ApiResponse[NotifyLogOut])
@@ -173,7 +173,7 @@ def put_trading_risk(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ApiResponse(data=TradingRiskPrefsOut(**prefs))
+    return ApiResponse(data=prefs)
 
 
 @router.get("/watchlist/signal-panel", response_model=ApiResponse[SignalPanelOut])

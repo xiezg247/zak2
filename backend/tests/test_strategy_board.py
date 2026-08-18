@@ -177,12 +177,12 @@ def test_load_strategy_board_empty() -> None:
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
             "app.services.strategy_board.load_trading_risk_prefs",
-            return_value={
-                "total_capital": None,
-                "stop_loss_pct": 0.05,
-                "caution_float_pct": -5.0,
-                "realized_pnl_today": None,
-            },
+            return_value=SimpleNamespace(
+                total_capital=None,
+                stop_loss_pct=0.05,
+                caution_float_pct=-5.0,
+                realized_pnl_today=None,
+            ),
         ),
         patch(
             "app.services.strategy_board.load_active_plan_snapshot",
@@ -269,12 +269,12 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
             "app.services.strategy_board.load_trading_risk_prefs",
-            return_value={
-                "total_capital": 100_000.0,
-                "stop_loss_pct": 0.05,
-                "caution_float_pct": -5.0,
-                "realized_pnl_today": None,
-            },
+            return_value=SimpleNamespace(
+                total_capital=100_000.0,
+                stop_loss_pct=0.05,
+                caution_float_pct=-5.0,
+                realized_pnl_today=None,
+            ),
         ),
         patch(
             "app.services.strategy_board.load_active_plan_snapshot",
@@ -351,12 +351,12 @@ def test_load_strategy_board_note_panel_no_signals() -> None:
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
             "app.services.strategy_board.load_trading_risk_prefs",
-            return_value={
-                "total_capital": None,
-                "stop_loss_pct": 0.05,
-                "caution_float_pct": -5.0,
-                "realized_pnl_today": None,
-            },
+            return_value=SimpleNamespace(
+                total_capital=None,
+                stop_loss_pct=0.05,
+                caution_float_pct=-5.0,
+                realized_pnl_today=None,
+            ),
         ),
         patch(
             "app.services.strategy_board.load_active_plan_snapshot",
@@ -417,12 +417,12 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
             "app.services.strategy_board.load_trading_risk_prefs",
-            return_value={
-                "total_capital": None,
-                "stop_loss_pct": 0.05,
-                "caution_float_pct": -5.0,
-                "realized_pnl_today": None,
-            },
+            return_value=SimpleNamespace(
+                total_capital=None,
+                stop_loss_pct=0.05,
+                caution_float_pct=-5.0,
+                realized_pnl_today=None,
+            ),
         ),
         patch(
             "app.services.strategy_board.load_active_plan_snapshot",
@@ -467,12 +467,12 @@ def test_note_empty_mentions_heuristic_job() -> None:
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
             "app.services.strategy_board.load_trading_risk_prefs",
-            return_value={
-                "total_capital": None,
-                "stop_loss_pct": 0.05,
-                "caution_float_pct": -5.0,
-                "realized_pnl_today": None,
-            },
+            return_value=SimpleNamespace(
+                total_capital=None,
+                stop_loss_pct=0.05,
+                caution_float_pct=-5.0,
+                realized_pnl_today=None,
+            ),
         ),
         patch(
             "app.services.strategy_board.load_active_plan_snapshot",
