@@ -20,6 +20,7 @@ class MarketOverview(BaseModel):
     redis_available: bool
     quote_count: int
     updated_at: str | None = None
+    is_trading: bool = False
     emotion: EmotionSnapshot | None = None
     emotion_cycle: EmotionCycleOut | None = None
     ranks_available: list[str] = Field(default_factory=list)

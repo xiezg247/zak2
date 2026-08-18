@@ -79,6 +79,17 @@ export type AsyncJob = {
   kind: string
 }
 
+export type OpsJob = {
+  id: string
+  kind: string
+  status: string
+  progress: number
+  error: string | null
+  result_ref: string | null
+  created_at: string
+  updated_at: string
+}
+
 export const opsApi = {
   health: () => api<Health>('/api/v1/ops/health'),
   forceCollector: () =>
@@ -96,6 +107,7 @@ export const opsApi = {
     api<AsyncJob>(`/api/v1/ops/scheduler/jobs/${encodeURIComponent(jobId)}/run`, {
       method: 'POST',
     }),
+  jobsRecent: () => api<OpsJob[]>('/api/v1/ops/jobs/recent'),
   purge: () =>
     api<PurgeResult>('/api/v1/ops/cache/purge', {
       method: 'POST',

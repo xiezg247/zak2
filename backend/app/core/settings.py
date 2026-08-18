@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     arq_queue_name: str = "zak2:arq"
     arq_backtest_queue_name: str = "zak2:arq:backtest"
     backtest_task_timeout_s: int = 120
+    ops_job_timeout_s: int = 7200
     backtest_max_workers: int = 4
     backtest_subprocess: bool = False
     tushare_token: str = ""

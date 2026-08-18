@@ -108,9 +108,10 @@ def get_market_ranks(
     field: str = Query(default="change_pct"),
     top_n: int = Query(default=50, ge=1, le=200),
     user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> ApiResponse[list[RankRow]]:
     _ = user
-    return ApiResponse(data=market_svc.market_ranks(field, top_n=top_n))
+    return ApiResponse(data=market_svc.market_ranks(db, field, top_n=top_n))
 
 
 @router.get("/sectors/dates", response_model=ApiResponse[list[str]])

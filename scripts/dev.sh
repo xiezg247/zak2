@@ -62,7 +62,7 @@ PIDS+=($!)
 echo "==> 启动 Ops ARQ worker（arq app.worker.settings.WorkerSettings）"
 (
   cd backend
-  uv run arq app.worker.settings.WorkerSettings
+  uv run arq app.worker.settings.WorkerSettings --custom-log-dict app.worker.logconfig.LOG_CONFIG
 ) &
 PIDS+=($!)
 

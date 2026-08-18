@@ -9,14 +9,9 @@ import {
   type Bar,
   type Fundamentals,
   type GroupMembersBatchResult,
-  type PlanSymbolStatus,
-  type PositionItem,
-  type StrategyBoard,
   type WatchlistGroup,
   type WatchlistItem,
 } from '../api/watchlist'
-import { backtestApi } from '../api/backtest'
-import { buildAlignedBacktestQuery, buildEnqueueRunBody } from '../lib/boardBacktestParams'
 import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
 
 const route = useRoute()
@@ -53,54 +48,7 @@ const fundLoading = ref(false)
 const fundError = ref('')
 const fund = ref<Fundamentals | null>(null)
 const lastRefresh = ref('')
-const board = ref<StrategyBoard | null>(null)
-const boardError = ref('')
-const SIGNAL_MODE_KEY = 'zak2:watchlist:signal_mode'
-type SignalMode = 'heuristic_v2' | 'double_ma' | 'trend_ma'
-const VALID_SIGNAL_MODES: SignalMode[] = ['heuristic_v2', 'double_ma', 'trend_ma']
-
-function loadSignalMode(): SignalMode {
-  try {
-    const v = localStorage.getItem(SIGNAL_MODE_KEY)
-    if (v && (VALID_SIGNAL_MODES as string[]).includes(v)) return v as SignalMode
-  } catch {
-    /* ignore */
-  }
-  return 'heuristic_v2'
-}
-
-function saveSignalMode(mode: SignalMode) {
-  localStorage.setItem(SIGNAL_MODE_KEY, mode)
-}
-
-const signalMode = ref<SignalMode>(loadSignalMode())
-const enqueueing = ref(false)
-const positions = ref<PositionItem[]>([])
-const posError = ref('')
-const posMsg = ref('')
-const editingVt = ref('')
-const signalAdd = ref('')
-const signalError = ref('')
-const signalMsg = ref('')
-const riskForm = ref({
-  total_capital: '',
-  stop_loss_pct: '',
-  caution_float_pct: '',
-})
-const prefsReady = ref(false)
-const riskError = ref('')
-const riskMsg = ref('')
-const riskSaving = ref(false)
-const showOffPlanChips = ref(false)
-const form = ref({
-  symbol: '',
-  cost_price: '',
-  volume: '100',
-  buy_date: new Date().toISOString().slice(0, 10),
-  notes: '',
-})
 let timer: number | undefined
-let boardTimer: number | undefined
 
 const { connected } = useQuoteNotify({
   onQuotesUpdated: () => {
@@ -116,17 +64,6 @@ function restartPoll() {
 }
 
 watch(connected, () => restartPoll())
-
-const panelSymbols = computed(() => board.value?.panel_symbols || [])
-const panelMax = 10
-const riskSummary = computed(() => board.value?.risk_summary ?? null)
-const planSymbols = computed(() => riskSummary.value?.plan_symbols ?? [])
-
-function planSymbolLabel(row: PlanSymbolStatus): string {
-  if (row.in_position) return '持仓'
-  if (row.in_watchlist) return '自选'
-  return '仅计划'
-}
 
 const subtitle = computed(() => {
   const n = items.value.length
@@ -271,278 +208,7 @@ function sortMark(key: Exclude<SortKey, null>): string {
   return sortDir.value === 'asc' ? ' ▲' : ' ▼'
 }
 
-function applyRiskPrefs(prefs: {
-  total_capital: number | null
-  stop_loss_pct: number
-  caution_float_pct: number
-}) {
-  riskForm.value = {
-    total_capital: prefs.total_capital != null ? String(prefs.total_capital) : '',
-    stop_loss_pct: String(Number((prefs.stop_loss_pct * 100).toFixed(4))),
-    caution_float_pct: String(prefs.caution_float_pct),
-  }
-  prefsReady.value = true
-}
-
-function formatPctRatio(v: number | null | undefined): string {
-  if (v == null || Number.isNaN(v)) return '—'
-  return `${(v * 100).toFixed(1)}%`
-}
-
-function formatMarketValue(v: number | null | undefined): string {
-  if (v == null || Number.isNaN(v)) return '—'
-  return v.toLocaleString()
-}
-
-function toggleOffPlanChips() {
-  if (!riskSummary.value || riskSummary.value.off_plan_count <= 0) return
-  showOffPlanChips.value = !showOffPlanChips.value
-}
-
-async function refreshBoard(quiet = false) {
-  if (!quiet) boardError.value = ''
-  const loadPrefs = !quiet || !prefsReady.value
-  try {
-    const [b, pos, prefs] = await Promise.all([
-      watchlistApi.strategyBoard({ signalMode: signalMode.value }),
-      watchlistApi.listPositions(),
-      loadPrefs ? watchlistApi.tradingRisk() : Promise.resolve(null),
-    ])
-    board.value = b
-    positions.value = pos
-    if (prefs) applyRiskPrefs(prefs)
-  } catch (e) {
-    boardError.value = e instanceof Error ? e.message : '策略看板加载失败'
-  }
-}
-
-function setSignalMode(mode: SignalMode) {
-  if (signalMode.value === mode) return
-  signalMode.value = mode
-  saveSignalMode(mode)
-  void refreshBoard()
-}
-
-function resolveBoardVtSymbol(): string {
-  return (
-    selected.value?.vt_symbol ||
-    board.value?.signals[0]?.vt_symbol ||
-    items.value[0]?.vt_symbol ||
-    ''
-  )
-}
-
-function openAlignedBacktest() {
-  const vt = resolveBoardVtSymbol()
-  if (!vt) {
-    boardError.value = '无可用标的，请先选中自选或等待信号'
-    return
-  }
-  void router.push({
-    path: '/backtest',
-    query: buildAlignedBacktestQuery(signalMode.value, vt, board.value?.config_key || ''),
-  })
-}
-
-async function enqueueAlignedBacktest() {
-  const vt = resolveBoardVtSymbol()
-  if (!vt) {
-    boardError.value = '无可用标的，请先选中自选或等待信号'
-    return
-  }
-  const body = buildEnqueueRunBody(signalMode.value, vt, board.value?.config_key || '')
-  const ok = await confirmDialog({
-    title: '入队回测',
-    message: `对 ${vt} 入队 ${body.strategy} ${body.fast_window}/${body.slow_window}，区间 ${body.start_date}～${body.end_date}，资金 ${body.capital}？`,
-  })
-  if (!ok) return
-  enqueueing.value = true
-  boardError.value = ''
-  try {
-    const { job_id } = await backtestApi.start(body)
-    void router.push({ path: '/backtest', query: { job_id } })
-  } catch (e) {
-    boardError.value = e instanceof Error ? e.message : '入队回测失败'
-  } finally {
-    enqueueing.value = false
-  }
-}
-
-async function saveTradingRisk() {
-  if (!prefsReady.value) return
-  riskError.value = ''
-  riskMsg.value = ''
-  const capitalRaw = riskForm.value.total_capital.trim()
-  const stopRaw = Number(riskForm.value.stop_loss_pct)
-  const cautionRaw = Number(riskForm.value.caution_float_pct)
-  if (capitalRaw && !(Number(capitalRaw) > 0)) {
-    riskError.value = '总资金须为空或大于 0'
-    return
-  }
-  if (!(stopRaw > 0) || stopRaw > 50) {
-    riskError.value = '止损%须在 (0, 50] 范围内'
-    return
-  }
-  if (!(cautionRaw < 0)) {
-    riskError.value = '浮亏警戒须为负数（如 -5）'
-    return
-  }
-  riskSaving.value = true
-  try {
-    const prefs = await watchlistApi.putTradingRisk({
-      total_capital: capitalRaw ? Number(capitalRaw) : null,
-      stop_loss_pct: stopRaw / 100,
-      caution_float_pct: cautionRaw,
-    })
-    applyRiskPrefs(prefs)
-    riskMsg.value = '风控偏好已保存'
-    await refreshBoard()
-  } catch (e) {
-    riskError.value = e instanceof Error ? e.message : '保存失败'
-  } finally {
-    riskSaving.value = false
-  }
-}
-
-function resetPosForm() {
-  editingVt.value = ''
-  form.value = {
-    symbol: selected.value?.vt_symbol || '',
-    cost_price: selected.value?.last_price != null ? selected.value.last_price.toFixed(2) : '',
-    volume: '100',
-    buy_date: new Date().toISOString().slice(0, 10),
-    notes: '',
-  }
-  posMsg.value = ''
-  posError.value = ''
-}
-
-function fillPosForm(row: PositionItem) {
-  editingVt.value = row.vt_symbol
-  form.value = {
-    symbol: row.vt_symbol,
-    cost_price: String(row.cost_price),
-    volume: String(row.volume),
-    buy_date: row.buy_date.slice(0, 10),
-    notes: row.notes || '',
-  }
-  posMsg.value = ''
-  posError.value = ''
-}
-
-function editBoardPosition(row: {
-  vt_symbol: string
-  cost_price: number
-  volume: number
-  buy_date: string
-}) {
-  const full = positions.value.find((p) => p.vt_symbol === row.vt_symbol)
-  if (full) {
-    fillPosForm(full)
-    return
-  }
-  fillPosForm({
-    symbol: row.vt_symbol.split('.')[0] || row.vt_symbol,
-    exchange: row.vt_symbol.split('.')[1] || 'SSE',
-    vt_symbol: row.vt_symbol,
-    cost_price: row.cost_price,
-    volume: row.volume,
-    buy_date: row.buy_date,
-    notes: '',
-    source: 'manual',
-    plan_pct: null,
-    sort_order: 0,
-    created_at: '',
-    updated_at: '',
-  })
-}
-
-async function savePosition() {
-  posError.value = ''
-  posMsg.value = ''
-  const symbol = form.value.symbol.trim() || selected.value?.vt_symbol || ''
-  const cost = Number(form.value.cost_price)
-  const volume = Number(form.value.volume)
-  if (!symbol) {
-    posError.value = '请填写代码（须已在自选）'
-    return
-  }
-  if (!(cost > 0) || !(volume > 0)) {
-    posError.value = '成本价与数量须大于 0'
-    return
-  }
-  const body = {
-    symbol,
-    cost_price: cost,
-    volume,
-    buy_date: form.value.buy_date,
-    notes: form.value.notes.trim(),
-  }
-  try {
-    if (editingVt.value) {
-      await watchlistApi.updatePosition(editingVt.value, body)
-      posMsg.value = '已更新持仓'
-    } else {
-      await watchlistApi.addPosition(body)
-      posMsg.value = '已录入持仓'
-    }
-    resetPosForm()
-    await refreshBoard()
-  } catch (e) {
-    posError.value = e instanceof Error ? e.message : '保存失败'
-  }
-}
-
-async function removePosition(vt: string) {
-  posError.value = ''
-  try {
-    await watchlistApi.removePosition(vt)
-    if (editingVt.value === vt) resetPosForm()
-    posMsg.value = '已删除持仓'
-    await refreshBoard()
-  } catch (e) {
-    posError.value = e instanceof Error ? e.message : '删除失败'
-  }
-}
-
-function useSelectedForPos() {
-  if (!selected.value) return
-  form.value.symbol = selected.value.vt_symbol
-  if (selected.value.last_price != null && !form.value.cost_price) {
-    form.value.cost_price = selected.value.last_price.toFixed(2)
-  }
-}
-
-async function addToSignalPanel(raw?: string) {
-  signalError.value = ''
-  signalMsg.value = ''
-  const symbol = (raw || signalAdd.value || selected.value?.vt_symbol || '').trim()
-  if (!symbol) {
-    signalError.value = '请填写代码或先选中自选'
-    return
-  }
-  try {
-    await watchlistApi.addSignalPanelMember(symbol)
-    signalAdd.value = ''
-    signalMsg.value = `已加入信号名单：${symbol}`
-    await refreshBoard()
-  } catch (e) {
-    signalError.value = e instanceof Error ? e.message : '加入失败'
-  }
-}
-
-async function removeFromSignalPanel(vt: string) {
-  signalError.value = ''
-  try {
-    await watchlistApi.removeSignalPanelMember(vt)
-    signalMsg.value = `已移出信号名单：${vt}`
-    await refreshBoard()
-  } catch (e) {
-    signalError.value = e instanceof Error ? e.message : '移除失败'
-  }
-}
-
-async function refresh(quiet = false, skipBoard = false) {
+async function refresh(quiet = false) {
   if (!quiet) loading.value = true
   error.value = ''
   try {
@@ -559,7 +225,6 @@ async function refresh(quiet = false, skipBoard = false) {
     } else if (list.length) {
       selected.value = list[0]
     }
-    if (!skipBoard) void refreshBoard(true)
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败'
   } finally {
@@ -806,44 +471,10 @@ function selectRow(item: WatchlistItem) {
   selected.value = item
 }
 
-function selectVt(vt: string) {
-  const hit = items.value.find((i) => i.vt_symbol === vt)
-  if (hit) {
-    selected.value = hit
-    return
-  }
-  // 不在自选：仍可尝试用代码打开 K 线（走 query 添加逻辑外的直接 bars）
-  selected.value = {
-    symbol: vt.split('.')[0] || vt,
-    exchange: vt.split('.')[1] || 'SSE',
-    name: '',
-    sort_order: 0,
-    vt_symbol: vt,
-    tf_symbol: vt,
-    last_price: null,
-    change_pct: null,
-    turnover_rate: null,
-    volume: null,
-    amount: null,
-    volume_ratio: null,
-  }
-}
-
-function signalClass(sig: string) {
-  if (sig === 'buy') return 'up'
-  if (sig === 'sell') return 'down'
-  return ''
-}
-
 function tick() {
   if (!autoRefresh.value) return
   if (document.hidden) return
   void refresh(true)
-}
-
-function tickBoard() {
-  if (document.hidden) return
-  void refreshBoard(true)
 }
 
 watch(selected, () => {
@@ -863,8 +494,7 @@ watch([barLimit, barInterval], () => {
 
 onMounted(async () => {
   loadColPrefs()
-  await refresh(false, true)
-  await refreshBoard()
+  await refresh(false)
   const q = String(route.query.symbol || '').trim()
   if (q) {
     const hit = items.value.find((i) => i.vt_symbol === q || i.tf_symbol === q)
@@ -872,7 +502,7 @@ onMounted(async () => {
     else {
       try {
         await watchlistApi.add(q)
-        await refresh(true, true)
+        await refresh(true)
         selected.value =
           items.value.find((i) => i.vt_symbol.includes(q.split('.')[0])) || selected.value
       } catch {
@@ -881,12 +511,10 @@ onMounted(async () => {
     }
   }
   timer = window.setInterval(tick, connected.value ? POLL_SLOW_MS : POLL_FAST_MS)
-  boardTimer = window.setInterval(tickBoard, 45000)
 })
 
 onUnmounted(() => {
   if (timer) window.clearInterval(timer)
-  if (boardTimer) window.clearInterval(boardTimer)
 })
 </script>
 
@@ -896,38 +524,36 @@ onUnmounted(() => {
       <div class="workspace">
         <section class="left">
           <div class="block">
-            <label>
-              分组
+            <div class="block-head">
+              <span class="block-title">分组</span>
+              <div class="block-head-actions">
+                <button
+                  type="button"
+                  class="ghost sm"
+                  :disabled="groupIndex <= 0"
+                  @click="onMoveGroup(-1)"
+                >
+                  上移
+                </button>
+                <button
+                  type="button"
+                  class="ghost sm"
+                  :disabled="groupIndex < 0 || groupIndex >= groups.length - 1"
+                  @click="onMoveGroup(1)"
+                >
+                  下移
+                </button>
+              </div>
+            </div>
+            <div class="row group-row">
               <select v-model="groupId" @change="refresh()">
                 <option value="">全部自选</option>
                 <option v-for="g in groups" :key="g.id" :value="g.id">{{ g.name }}</option>
               </select>
-            </label>
-            <div class="row">
               <input v-model="newGroup" placeholder="新分组名" @keyup.enter="onCreateGroup" />
               <button type="button" class="ghost" @click="onCreateGroup">建组</button>
-            </div>
-            <div v-if="groupId" class="row">
-              <button type="button" class="ghost" @click="onRenameGroup">改名</button>
-              <button type="button" class="ghost" @click="onDeleteGroup">删组</button>
-            </div>
-            <div v-if="groupId" class="row">
-              <button
-                type="button"
-                class="ghost"
-                :disabled="groupIndex <= 0"
-                @click="onMoveGroup(-1)"
-              >
-                上移
-              </button>
-              <button
-                type="button"
-                class="ghost"
-                :disabled="groupIndex < 0 || groupIndex >= groups.length - 1"
-                @click="onMoveGroup(1)"
-              >
-                下移
-              </button>
+              <button v-if="groupId" type="button" class="ghost" @click="onRenameGroup">改名</button>
+              <button v-if="groupId" type="button" class="ghost" @click="onDeleteGroup">删组</button>
             </div>
             <div v-if="groupId && selected" class="row">
               <button type="button" class="ghost" @click="onAddToGroup">加入此组</button>
@@ -936,15 +562,16 @@ onUnmounted(() => {
           </div>
 
           <div class="block">
-            <div class="row">
-              <input v-model="addSymbol" placeholder="600519.SSE / 000001" @keyup.enter="onAdd" />
-              <button type="button" class="primary" @click="onAdd">添加</button>
+            <div class="block-head">
+              <span class="block-title">自选</span>
+              <label class="auto">
+                <input v-model="autoRefresh" type="checkbox" />
+                {{ connected ? 'WS 推送 + 慢轮询' : '每 15s 刷新行情' }}
+              </label>
             </div>
-            <label class="auto">
-              <input v-model="autoRefresh" type="checkbox" />
-              {{ connected ? 'WS 推送 + 慢轮询' : '每 15s 刷新行情' }}
-            </label>
-            <div class="row col-prefs-row">
+            <div class="row add-row">
+              <input v-model="addSymbol" placeholder="添加代码 600519.SSE" @keyup.enter="onAdd" />
+              <button type="button" class="primary" @click="onAdd">添加</button>
               <input v-model="listFilter" placeholder="过滤代码/名称" />
               <button v-if="sortKey" type="button" class="ghost" @click="clearSort">默认序</button>
               <button
@@ -1289,350 +916,6 @@ onUnmounted(() => {
         </section>
       </div>
 
-      <section class="strategy">
-        <div class="summary-grid">
-          <div class="pos-form risk-card">
-            <h3>仓位与风控</h3>
-            <div v-if="riskSummary" class="risk-summary muted">
-              <span>实际仓位 {{ formatPctRatio(riskSummary.actual_position_pct) }}</span>
-              <button
-                v-if="riskSummary.off_plan_count > 0"
-                type="button"
-                class="link"
-                @click="toggleOffPlanChips"
-              >
-                计划外 {{ riskSummary.off_plan_count }}
-              </button>
-              <span v-else>计划外 {{ riskSummary.off_plan_count }}</span>
-              <span>计划日 {{ riskSummary.active_plan_date || '—' }}</span>
-            </div>
-            <div v-if="showOffPlanChips && riskSummary?.off_plan_symbols?.length" class="chips">
-              <span v-for="vt in riskSummary.off_plan_symbols" :key="vt" class="chip-tag">
-                <button type="button" class="chip-link mono" @click="selectVt(vt)">{{ vt }}</button>
-              </span>
-            </div>
-            <div class="pos-grid risk-grid">
-              <label>
-                总资金
-                <input
-                  v-model="riskForm.total_capital"
-                  type="number"
-                  step="1000"
-                  min="0"
-                  placeholder="可选"
-                  :disabled="!prefsReady || riskSaving"
-                />
-              </label>
-              <label>
-                止损%
-                <input
-                  v-model="riskForm.stop_loss_pct"
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  max="50"
-                  :disabled="!prefsReady || riskSaving"
-                />
-              </label>
-              <label>
-                浮亏警戒
-                <input
-                  v-model="riskForm.caution_float_pct"
-                  type="number"
-                  step="0.5"
-                  max="-0.1"
-                  :disabled="!prefsReady || riskSaving"
-                />
-              </label>
-            </div>
-            <div class="row pos-actions">
-              <button
-                type="button"
-                class="primary"
-                :disabled="!prefsReady || riskSaving"
-                @click="saveTradingRisk"
-              >
-                {{ riskSaving ? '保存中…' : '保存风控' }}
-              </button>
-            </div>
-            <p v-if="!prefsReady" class="muted">加载风控偏好…</p>
-            <p v-else-if="riskError" class="err">{{ riskError }}</p>
-            <p v-else-if="riskMsg" class="muted">{{ riskMsg }}</p>
-            <p class="muted tip">
-              止损按百分数填写（如 5 = 5%）；浮亏警戒为负数（如 -5）。写入用户风控偏好。
-            </p>
-          </div>
-
-          <div class="pos-form plan-card">
-            <h3>
-              当日计划
-              <span v-if="riskSummary?.active_plan_date" class="muted">
-                {{ riskSummary.active_plan_date }}
-              </span>
-            </h3>
-            <p v-if="!planSymbols.length" class="muted">当日无 active 计划</p>
-            <ul v-else class="plan-list">
-              <li
-                v-for="row in planSymbols"
-                :key="row.vt_symbol"
-                :class="{ on: selected?.vt_symbol === row.vt_symbol }"
-                @click="selectVt(row.vt_symbol)"
-              >
-                <button type="button" class="chip-link mono" @click.stop="selectVt(row.vt_symbol)">
-                  {{ row.vt_symbol }}
-                </button>
-                <span class="plan-name">{{ row.name || '—' }}</span>
-                <span class="plan-tag">{{ planSymbolLabel(row) }}</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="strategy-head">
-          <h2>策略看盘</h2>
-          <span v-if="board" class="muted">
-            {{ board.config_key }} · {{ board.signal_mode || signalMode }} · {{ board.source }} ·
-            as_of
-            {{ board.as_of || '—' }}
-          </span>
-          <div class="mode-tabs">
-            <button
-              type="button"
-              class="ghost"
-              :class="{ on: signalMode === 'heuristic_v2' }"
-              @click="setSignalMode('heuristic_v2')"
-            >
-              启发式确认
-            </button>
-            <button
-              type="button"
-              class="ghost"
-              :class="{ on: signalMode === 'double_ma' }"
-              @click="setSignalMode('double_ma')"
-            >
-              回测双均线
-            </button>
-            <button
-              type="button"
-              class="ghost"
-              :class="{ on: signalMode === 'trend_ma' }"
-              @click="setSignalMode('trend_ma')"
-            >
-              趋势均线
-            </button>
-          </div>
-          <button type="button" class="ghost" @click="openAlignedBacktest()">同参回测</button>
-          <button
-            type="button"
-            class="ghost"
-            :disabled="enqueueing"
-            @click="enqueueAlignedBacktest()"
-          >
-            {{ enqueueing ? '入队中…' : '入队回测' }}
-          </button>
-          <button type="button" class="ghost" @click="refreshBoard()">刷新看板</button>
-        </div>
-        <p v-if="boardError" class="err">{{ boardError }}</p>
-        <p v-else-if="board?.note" class="muted">{{ board.note }}</p>
-
-        <div v-if="board" class="strategy-grid">
-          <div class="panel">
-            <h3>
-              信号区
-              <span class="muted">{{ board.signals.length }}</span>
-              <span class="muted"> · 名单 {{ panelSymbols.length }}/{{ panelMax }}</span>
-            </h3>
-            <div class="pos-form signal-form">
-              <div class="row">
-                <input
-                  v-model="signalAdd"
-                  placeholder="加入信号名单：600519.SSE"
-                  @keyup.enter="addToSignalPanel()"
-                />
-                <button type="button" class="ghost" @click="addToSignalPanel(selected?.vt_symbol)">
-                  用选中
-                </button>
-                <button type="button" class="primary" @click="addToSignalPanel()">加入</button>
-              </div>
-              <div v-if="panelSymbols.length" class="chips">
-                <span v-for="vt in panelSymbols" :key="vt" class="chip-tag">
-                  <button type="button" class="chip-link" @click="selectVt(vt)">{{ vt }}</button>
-                  <button type="button" class="link" @click="removeFromSignalPanel(vt)">×</button>
-                </span>
-              </div>
-              <p v-else class="muted tip">
-                名单为空时回退「自选 ∩ 策略 cache」；上限 {{ panelMax }} 只（存 PG）。
-              </p>
-              <p v-if="signalError" class="err">{{ signalError }}</p>
-              <p v-else-if="signalMsg" class="muted">{{ signalMsg }}</p>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>代码</th>
-                    <th>名称</th>
-                    <th>现价</th>
-                    <th>信号</th>
-                    <th>强度</th>
-                    <th>摘要</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="row in board.signals"
-                    :key="row.vt_symbol"
-                    :class="{ on: selected?.vt_symbol === row.vt_symbol }"
-                    @click="selectVt(row.vt_symbol)"
-                  >
-                    <td class="mono">{{ row.vt_symbol }}</td>
-                    <td>{{ row.name || '—' }}</td>
-                    <td>{{ row.last_price != null ? row.last_price.toFixed(2) : '—' }}</td>
-                    <td :class="signalClass(row.signal)">{{ row.signal_label }}</td>
-                    <td>
-                      <template v-if="row.strength_tier_label">
-                        {{ row.strength_tier_label
-                        }}<span v-if="row.strength != null"> · {{ row.strength.toFixed(1) }}</span>
-                      </template>
-                      <template v-else>
-                        {{ row.strength != null ? row.strength.toFixed(0) : '—' }}
-                      </template>
-                    </td>
-                    <td class="clip">{{ row.reason_summary || '—' }}</td>
-                    <td>
-                      <button
-                        v-if="panelSymbols.includes(row.vt_symbol)"
-                        type="button"
-                        class="link"
-                        @click.stop="removeFromSignalPanel(row.vt_symbol)"
-                      >
-                        移出
-                      </button>
-                      <button
-                        v-else
-                        type="button"
-                        class="link"
-                        @click.stop="addToSignalPanel(row.vt_symbol)"
-                      >
-                        入名单
-                      </button>
-                    </td>
-                  </tr>
-                  <tr v-if="!board.signals.length">
-                    <td colspan="7" class="empty">
-                      无信号（可先编辑名单，或确认策略 cache 已写入）
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="panel">
-            <h3>
-              持仓区 <span class="muted">{{ board.positions.length }}</span>
-            </h3>
-            <div class="pos-form">
-              <div class="pos-grid">
-                <label>
-                  代码
-                  <input v-model="form.symbol" placeholder="600519.SSE" />
-                </label>
-                <label>
-                  成本
-                  <input v-model="form.cost_price" type="number" step="0.01" min="0" />
-                </label>
-                <label>
-                  数量
-                  <input v-model="form.volume" type="number" step="100" min="100" />
-                </label>
-                <label>
-                  买入日
-                  <input v-model="form.buy_date" type="date" />
-                </label>
-              </div>
-              <label>
-                备注
-                <input v-model="form.notes" placeholder="可选" />
-              </label>
-              <div class="row pos-actions">
-                <button type="button" class="ghost" @click="useSelectedForPos">用当前选中</button>
-                <button type="button" class="ghost" @click="resetPosForm">清空</button>
-                <button type="button" class="primary" @click="savePosition">
-                  {{ editingVt ? '更新持仓' : '录入持仓' }}
-                </button>
-              </div>
-              <p v-if="posError" class="err">{{ posError }}</p>
-              <p v-else-if="posMsg" class="muted">{{ posMsg }}</p>
-              <p class="muted tip">须先加入自选；数量 100 股整手；写入持仓记账表。</p>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>代码</th>
-                    <th>成本</th>
-                    <th>数量</th>
-                    <th>现价</th>
-                    <th>市值</th>
-                    <th>浮盈%</th>
-                    <th>T+1</th>
-                    <th>退出</th>
-                    <th>风险</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="row in board.positions"
-                    :key="row.vt_symbol + row.buy_date"
-                    :class="{
-                      on: selected?.vt_symbol === row.vt_symbol,
-                      'off-plan': row.off_plan,
-                    }"
-                    @click="selectVt(row.vt_symbol)"
-                  >
-                    <td class="mono">{{ row.vt_symbol }}</td>
-                    <td>{{ row.cost_price.toFixed(2) }}</td>
-                    <td>{{ row.volume }}</td>
-                    <td>{{ row.last_price != null ? row.last_price.toFixed(2) : '—' }}</td>
-                    <td>{{ formatMarketValue(row.market_value) }}</td>
-                    <td
-                      :class="{
-                        up: (row.unrealized_pnl_pct || 0) > 0,
-                        down: (row.unrealized_pnl_pct || 0) < 0,
-                      }"
-                    >
-                      {{ row.unrealized_pnl_pct != null ? row.unrealized_pnl_pct.toFixed(2) : '—' }}
-                    </td>
-                    <td>{{ row.t1_locked ? '锁定' : '可卖' }}</td>
-                    <td :class="signalClass(row.exit_signal)">{{ row.exit_signal_label }}</td>
-                    <td :class="{ warn: row.off_plan || row.risk_tags?.includes('计划外') }">
-                      {{ row.risk_tags?.length ? row.risk_tags.join(' · ') : '—' }}
-                    </td>
-                    <td>
-                      <button type="button" class="link" @click.stop="editBoardPosition(row)">
-                        改
-                      </button>
-                      <button
-                        type="button"
-                        class="link"
-                        @click.stop="removePosition(row.vt_symbol)"
-                      >
-                        删
-                      </button>
-                    </td>
-                  </tr>
-                  <tr v-if="!board.positions.length">
-                    <td colspan="10" class="empty">无持仓，上方可录入（投研记账，非实盘）</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   </AppShell>
 </template>
@@ -1640,7 +923,7 @@ onUnmounted(() => {
 <style scoped>
 .page {
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: 1fr;
   height: 100%;
   min-height: 0;
   padding: 0;
@@ -1662,6 +945,8 @@ onUnmounted(() => {
 .left {
   border-right: 1px solid var(--line);
   background: var(--surface);
+  display: flex;
+  flex-direction: column;
 }
 .right {
   background: var(--surface-muted);
@@ -1674,165 +959,48 @@ onUnmounted(() => {
   border-radius: 0.75rem;
   background: var(--surface);
   box-shadow: var(--shadow-card);
-}
-.strategy {
-  border-top: 1px solid var(--line);
-  padding: 14px 24px 18px;
-  display: grid;
-  gap: 12px;
-  background: var(--surface);
-  box-shadow: 0 -1px 0 var(--line-soft);
-}
-.strategy-head {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line-soft);
-}
-.strategy-head h2 {
-  margin: 0;
-  font-size: 1rem;
-}
-.mode-tabs {
-  display: inline-flex;
-  gap: 4px;
-}
-.strategy-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.panel h3 {
-  margin: 0 0 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-.pos-form {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 10px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--surface-muted);
-}
-.summary-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  align-items: start;
-}
-.risk-card {
-  margin-bottom: 0;
-}
-.risk-card h3 {
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-.risk-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 0.8rem;
-}
-.risk-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.plan-card {
-  margin-bottom: 0;
-}
-.summary-grid .plan-card {
-  margin-top: 0;
-}
-.plan-card h3 {
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 600;
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-}
-.plan-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 4px;
-}
-.plan-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.plan-list li:hover,
-.plan-list li.on {
-  background: var(--brand-light);
-}
-.plan-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.85rem;
-}
-.plan-tag {
-  font-size: 0.75rem;
-  color: var(--muted);
   flex-shrink: 0;
 }
-.pos-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
-.pos-actions {
-  grid-template-columns: auto auto 1fr;
-  justify-items: start;
+.block-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
 }
-.pos-actions .primary {
-  justify-self: end;
-}
-.tip {
-  margin: 0;
-  font-size: 0.75rem;
-}
-.chips {
-  display: flex;
-  flex-wrap: wrap;
+.block-head-actions {
+  display: inline-flex;
   gap: 6px;
 }
-.chip-tag {
-  display: inline-flex;
+.ghost.sm {
+  padding: 4px 9px;
+  font-size: 0.78rem;
+  border-radius: 0.4rem;
+}
+.row.group-row,
+.row.add-row {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 2px 6px;
-  font-size: 0.8rem;
-  background: var(--bg);
 }
-.chip-link {
-  background: none;
-  border: none;
-  color: var(--text);
-  font-family: var(--mono);
-  padding: 0;
-  cursor: pointer;
+.row.group-row select,
+.row.group-row input,
+.row.add-row input {
+  flex: 1 1 0;
+  min-width: 0;
 }
-.signal-form .row {
-  grid-template-columns: 1fr auto auto;
+.row.group-row button,
+.row.add-row button {
+  flex-shrink: 0;
 }
-.clip {
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.left .table-wrap {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
 }
 .row {
   display: grid;
@@ -1968,9 +1136,6 @@ select {
   background: var(--surface);
   box-shadow: var(--shadow-card);
   max-height: 320px;
-}
-.strategy .table-wrap {
-  max-height: 220px;
 }
 th,
 td {

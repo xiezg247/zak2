@@ -56,7 +56,7 @@ uv run python -m app.quote_collector
 # 或 ./scripts/quote_collector.sh
 
 # 另开：Ops ARQ worker（否则 Ops 立即执行 / 定时入队会一直排队）
-uv run arq app.worker.settings.WorkerSettings
+uv run arq app.worker.settings.WorkerSettings --custom-log-dict app.worker.logconfig.LOG_CONFIG
 # 或 ./scripts/arq_worker.sh
 
 cd frontend && npm install && npm run dev

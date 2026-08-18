@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import AppShell from '../components/AppShell.vue'
-import { opsApi, type SchedulerJob } from '../api/ops'
+import { opsApi, type OpsJob, type SchedulerJob } from '../api/ops'
 import { filterJobs, groupJobs, KIND_TITLE, type JobFilter } from './opsJobGroups'
 
 const jobs = ref<SchedulerJob[]>([])
@@ -10,6 +10,46 @@ const jobGroups = computed(() => groupJobs(filterJobs(jobs.value, jobFilter.valu
 const error = ref('')
 const busy = ref('')
 const message = ref('')
+
+const recentJobs = ref<OpsJob[]>([])
+let pollTimer: number | undefined
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: '排队中',
+  running: '运行中',
+  success: '成功',
+  failed: '失败',
+}
+
+function statusLabel(status: string): string {
+  return STATUS_LABEL[status] || status
+}
+
+function jobNameFor(kind: string): string {
+  const jobId = kind.startsWith('ops.') ? kind.slice(4) : kind
+  return jobs.value.find((j) => j.job_id === jobId)?.name || kind
+}
+
+async function loadRecentJobs() {
+  try {
+    recentJobs.value = await opsApi.jobsRecent()
+  } catch {
+    /* 轮询失败静默，避免反复报错 */
+  }
+}
+
+function startPolling() {
+  stopPolling()
+  void loadRecentJobs()
+  pollTimer = window.setInterval(() => {
+    void loadRecentJobs()
+  }, 3000)
+}
+
+function stopPolling() {
+  if (pollTimer != null) window.clearInterval(pollTimer)
+  pollTimer = undefined
+}
 
 async function refresh() {
   error.value = ''
@@ -68,6 +108,7 @@ async function runJob(jobId: string, sync = false) {
       message.value = `已提交异步任务 ${accepted.job_id}（${accepted.kind}）`
     }
     await refresh()
+    await loadRecentJobs()
   } catch (e) {
     error.value = e instanceof Error ? e.message : '执行失败'
   } finally {
@@ -95,6 +136,11 @@ function scheduleText(j: SchedulerJob) {
 
 onMounted(() => {
   void refresh()
+  startPolling()
+})
+
+onUnmounted(() => {
+  stopPolling()
 })
 </script>
 
@@ -307,6 +353,50 @@ onMounted(() => {
           </button>
         </div>
       </section>
+
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h2>任务进度</h2>
+            <p class="muted">异步执行的 job 状态与进度，每 3 秒自动刷新</p>
+          </div>
+          <button type="button" class="ghost" @click="loadRecentJobs">刷新</button>
+        </div>
+        <table v-if="recentJobs.length">
+          <thead>
+            <tr>
+              <th>任务</th>
+              <th>状态</th>
+              <th>进度</th>
+              <th>提交时间</th>
+              <th>结果</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="job in recentJobs" :key="job.id">
+              <td>
+                <div class="name">{{ jobNameFor(job.kind) }}</div>
+                <div class="muted">{{ job.id }}</div>
+              </td>
+              <td>
+                <span class="badge" :class="job.status">{{ statusLabel(job.status) }}</span>
+              </td>
+              <td>
+                <div class="progress">
+                  <span class="progress-fill" :style="{ width: Math.round(job.progress * 100) + '%' }"></span>
+                </div>
+                <div class="muted">{{ Math.round(job.progress * 100) }}%</div>
+              </td>
+              <td class="mono">{{ job.created_at }}</td>
+              <td>
+                <div v-if="job.error" class="err">{{ job.error }}</div>
+                <div v-else class="muted">{{ job.result_ref || '—' }}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="muted">暂无任务记录</p>
+      </section>
     </div>
   </AppShell>
 </template>
@@ -429,5 +519,41 @@ th {
 }
 .tip {
   cursor: help;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+.badge.running {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.badge.success {
+  background: #ecfdf5;
+  color: #166534;
+}
+.badge.failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.progress {
+  width: 120px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
 }
 </style>

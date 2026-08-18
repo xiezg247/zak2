@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from arq.connections import RedisSettings
+from arq.worker import func
 
 from app.core.settings import get_settings
 from app.worker.tasks import run_ops_job
@@ -18,7 +19,7 @@ _settings = get_settings()
 
 class WorkerSettings:
     functions = [
-        run_ops_job,
+        func(run_ops_job, timeout=_settings.ops_job_timeout_s),
         run_screener_condition,
         run_screener_recipe,
         run_screener_pattern,

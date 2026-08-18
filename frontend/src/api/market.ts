@@ -4,6 +4,7 @@ export type MarketOverview = {
   redis_available: boolean
   quote_count: number
   updated_at: string | null
+  is_trading: boolean
   emotion: {
     trade_date: string
     max_limit_times: number

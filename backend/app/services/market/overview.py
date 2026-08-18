@@ -5,13 +5,16 @@ from __future__ import annotations
 import json
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
+from app.core.time import china_today
 from app.models.market import EmotionLimitLadderDaily
 from app.schemas.market import EmotionSnapshot, MarketOverview, RankRow
 from app.services.emotion import emotion_cycle as emotion_cycle_svc
-from app.services.market.quotes import get_quote_store
+from app.services.market.db_ranks import db_rank_fallback
+from app.services.market.quotes import QuoteStore, get_quote_store
+from app.services.quote_collect.session import is_ashare_trading_session
 from app.services.symbols import to_vt_symbol
 
 RANK_FIELDS = (
@@ -46,6 +49,21 @@ def load_emotion(db: Session) -> EmotionSnapshot | None:
     )
 
 
+def is_trading_now(db: Session) -> bool:
+    """当前是否处于 A 股交易时段。
+
+    优先查交易日历（含节假日）；日历缺今天记录时回退为「工作日 + 交易时段」判断。
+    """
+    today = china_today()
+    cal = db.scalar(
+        text("SELECT is_open FROM app.trade_calendar WHERE cal_date = :d"),
+        {"d": today.isoformat()},
+    )
+    if cal is not None and int(cal) != 1:
+        return False
+    return is_ashare_trading_session()
+
+
 def market_overview(db: Session) -> MarketOverview:
     store = get_quote_store()
     meta = store.meta()
@@ -58,6 +76,7 @@ def market_overview(db: Session) -> MarketOverview:
         redis_available=bool(meta.get("available")),
         quote_count=int(meta.get("quote_count") or 0),
         updated_at=meta.get("updated_at"),
+        is_trading=is_trading_now(db),
         emotion=load_emotion(db),
         emotion_cycle=emotion_cycle_svc.build_emotion_cycle(db),
         ranks_available=available_ranks,
@@ -74,15 +93,7 @@ def _parse_tf(tf_symbol: str) -> tuple[str, str]:
     return right, normalize_exchange(left)
 
 
-def market_ranks(field: str, *, top_n: int = 50) -> list[RankRow]:
-    if field not in RANK_FIELDS:
-        raise HTTPException(status_code=400, detail=f"不支持的排行字段：{field}")
-    store = get_quote_store()
-    if not store.available():
-        raise HTTPException(status_code=503, detail="Redis 不可用")
-    ranked = store.list_rank(field, top_n=top_n)
-    if not ranked:
-        return []
+def _redis_rank_rows(store: QuoteStore, field: str, ranked: list[tuple[str, float]]) -> list[RankRow]:
     quotes = {q.symbol: q for q in store.get_quotes([s for s, _ in ranked])}
     out: list[RankRow] = []
     for index, (tf, score) in enumerate(ranked, start=1):
@@ -106,3 +117,26 @@ def market_ranks(field: str, *, top_n: int = 50) -> list[RankRow]:
             )
         )
     return out
+
+
+def market_ranks(db: Session, field: str, *, top_n: int = 50) -> list[RankRow]:
+    if field not in RANK_FIELDS:
+        raise HTTPException(status_code=400, detail=f"不支持的排行字段：{field}")
+
+    store = get_quote_store()
+    trading = is_trading_now(db)
+
+    # 开市时优先实时 Redis 行情
+    if trading and store.available():
+        ranked = store.list_rank(field, top_n=top_n)
+        if ranked:
+            return _redis_rank_rows(store, field, ranked)
+
+    # 休市 / Redis 空 → 回退数据库收盘数据
+    rows = db_rank_fallback(db, field, top_n=top_n)
+    if rows:
+        return rows
+
+    if trading and not store.available():
+        raise HTTPException(status_code=503, detail="Redis 不可用，且数据库无收盘数据")
+    return []

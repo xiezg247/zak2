@@ -33,6 +33,8 @@ const barLimit = computed({
 const barLimitChoices = computed(() =>
   barInterval.value === '1m' ? [240, 480, 1200] : [60, 90, 120],
 )
+// 休市时数据静止，无需高频拉取；慢轮询兜底以便开市后自动切回
+const CLOSED_POLL_MS = 5 * 60_000
 const addMsg = ref('')
 const thresholdsOpen = ref(false)
 const cycleInputsOpen = ref(false)
@@ -74,13 +76,21 @@ const { connected } = useQuoteNotify({
   },
 })
 
+function pollIntervalMs(): number {
+  if (overview.value && !overview.value.is_trading) return CLOSED_POLL_MS
+  return connected.value ? POLL_SLOW_MS : POLL_FAST_MS
+}
+
 function restartPoll() {
   if (timer) window.clearInterval(timer)
-  const ms = connected.value ? POLL_SLOW_MS : POLL_FAST_MS
-  timer = window.setInterval(tick, ms)
+  timer = window.setInterval(tick, pollIntervalMs())
 }
 
 watch(connected, () => restartPoll())
+watch(
+  () => overview.value?.is_trading,
+  () => restartPoll(),
+)
 
 const fields = [
   { id: 'change_pct', label: '涨幅', col: '涨幅%' },
@@ -167,6 +177,12 @@ const subtitle = computed(() => {
   const emo = o.emotion
   const emoText = emo ? `最高板 ${emo.max_limit_times} · ${emo.max_board_vt_symbol}` : '无情绪梯队'
   return `行情 ${o.quote_count} · ${emoText}`
+})
+
+const refreshLabel = computed(() => {
+  if (!autoRefresh.value) return '已暂停自动刷新'
+  if (overview.value && !overview.value.is_trading) return '休市 · 5 分钟刷新'
+  return connected.value ? 'WS + 慢轮询' : '15 秒刷新'
 })
 
 function posPct(cycle: NonNullable<MarketOverview['emotion_cycle']>): string {
@@ -364,6 +380,9 @@ onUnmounted(() => {
           <div class="v status-line">
             <span class="dot" :class="overview.redis_available ? 'ok' : 'warn'"></span>
             {{ overview.redis_available ? '在线' : '离线' }} · {{ overview.quote_count }} 只
+            <span class="trading-badge" :class="overview.is_trading ? 'on' : 'off'">
+              {{ overview.is_trading ? '交易中' : '休市' }}
+            </span>
           </div>
           <div class="s muted">{{ overview.updated_at || '—' }}</div>
         </div>
@@ -508,7 +527,7 @@ onUnmounted(() => {
         <div class="actions">
           <label class="auto">
             <input v-model="autoRefresh" type="checkbox" />
-            {{ connected ? 'WS+慢轮询' : '15s 刷新' }}
+            {{ refreshLabel }}
           </label>
           <button class="ghost" type="button" :disabled="loading" @click="load()">刷新</button>
           <RouterLink to="/sectors" class="cross-link">板块资金 →</RouterLink>
@@ -728,6 +747,24 @@ onUnmounted(() => {
 .dot.warn {
   background: var(--danger);
   box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
+}
+.trading-badge {
+  margin-left: 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.trading-badge.on {
+  color: #fff;
+  background: var(--ok);
+}
+.trading-badge.off {
+  color: var(--ink-muted);
+  background: var(--surface-muted);
+  border: 1px solid var(--line-soft);
 }
 .s {
   margin-top: 4px;

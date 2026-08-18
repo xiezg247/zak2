@@ -3,4 +3,4 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT/backend"
-exec uv run arq app.worker.settings.WorkerSettings
+exec uv run arq app.worker.settings.WorkerSettings --custom-log-dict app.worker.logconfig.LOG_CONFIG
