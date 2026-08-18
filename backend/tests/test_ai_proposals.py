@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException
 
-from app.services import ai_proposals
-from app.services.ai_tools import WRITE_TOOL_NAMES, execute_tool, summarize_write_tool
+from app.services.ai import ai_proposals
+from app.services.ai.ai_tools import WRITE_TOOL_NAMES, execute_tool, summarize_write_tool
 
 
 @pytest.fixture(autouse=True)

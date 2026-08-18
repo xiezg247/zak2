@@ -1,4 +1,4 @@
-from app.services.radar_predict import score_predict_rows
+from app.services.radar.radar_predict import score_predict_rows
 
 
 def test_score_predict_rules_table():

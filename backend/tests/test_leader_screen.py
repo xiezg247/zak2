@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from app.schemas.screener import HardFilterPrefs, RecipeRunRequest
-from app.services.engine import run_recipe_screen
-from app.services.leader_screen import (
+from app.services.market.quotes import QuoteRow
+from app.services.screener.engine import run_recipe_screen
+from app.services.screener.leader_screen import (
     _write_seal_time_fields,
     compute_leader_score,
     infer_emotion_stage,
     rank_leader_pool,
 )
-from app.services.presets import get_builtin_recipe
-from app.services.quotes import QuoteRow
+from app.services.screener.presets import get_builtin_recipe
 
 
 def _row(symbol: str, **kwargs) -> QuoteRow:
@@ -145,15 +145,15 @@ def test_radar_leader_enriches_empty_industry_before_filter() -> None:
 
     with (
         patch(
-            "app.services.stock_industry.load_industry_map",
+            "app.services.market.stock_industry.load_industry_map",
             return_value={"SHSE.600519": "白酒"},
         ),
         patch(
-            "app.services.leader_screen.resolve_emotion_stage",
+            "app.services.screener.leader_screen.resolve_emotion_stage",
             return_value=("startup", {"stage": "startup", "stage_label": "启动"}),
         ),
-        patch("app.services.leader_screen.market_svc.load_emotion", return_value=None),
-        patch("app.services.leader_screen.load_first_time_map", return_value={}),
+        patch("app.services.screener.leader_screen.market_svc.load_emotion", return_value=None),
+        patch("app.services.screener.leader_screen.load_first_time_map", return_value={}),
     ):
         result = run_recipe_screen(
             RecipeRunRequest(

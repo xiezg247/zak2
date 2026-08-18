@@ -10,7 +10,7 @@ from app.api.errors import register_exception_handlers
 from app.api.v1 import api_router
 from app.core.logging import configure_logging
 from app.core.settings import get_settings
-from app.services.quote_notify_hub import get_quote_notify_hub
+from app.services.market.quote_notify_hub import get_quote_notify_hub
 
 
 @asynccontextmanager
@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     hub = get_quote_notify_hub()
     hub.start(asyncio.get_running_loop())
-    from app.services.embedded_scheduler import start_embedded_scheduler, stop_embedded_scheduler
+    from app.services.ops.embedded_scheduler import start_embedded_scheduler, stop_embedded_scheduler
 
     start_embedded_scheduler()
     yield

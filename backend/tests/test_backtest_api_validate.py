@@ -1,4 +1,4 @@
-from app.services.backtest_optimize import expand_ma_grid
+from app.services.backtest.backtest_optimize import expand_ma_grid
 
 
 def test_expand_over_64_message():

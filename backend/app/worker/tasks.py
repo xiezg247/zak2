@@ -8,8 +8,8 @@ from typing import Any
 from pydantic import BaseModel
 
 from app.core.db import SessionLocal
-from app.services.bars_lock import BARS_JOBS, release_bars, try_acquire_bars
 from app.services.ops import sync_bilibili_feed as ops_sync_bilibili_feed
+from app.services.ops.bars_lock import BARS_JOBS, release_bars, try_acquire_bars
 from app.services.ops.catalog import RUNNABLE_JOB_IDS
 from app.services.ops.runners import RUNNERS, needs_user_id
 

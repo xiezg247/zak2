@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import app.services.team_reports as tr
+import app.services.team.team_reports as tr
 
 
 def test_team_reports_has_no_create_table_ddl() -> None:

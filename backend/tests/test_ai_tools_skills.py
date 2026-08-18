@@ -1,7 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
-from app.services.ai_tools import WRITE_TOOL_NAMES, execute_tool
+from app.services.ai.ai_tools import WRITE_TOOL_NAMES, execute_tool
 
 
 def test_list_skills_includes_watchlist() -> None:
@@ -29,7 +29,7 @@ def test_run_skill_not_write() -> None:
 
 def test_run_skill_market_emotion_mocked() -> None:
     with patch(
-        "app.services.skill_runtime.run_skill_module",
+        "app.services.ai.skill_runtime.run_skill_module",
         return_value={"emotion": {"phase": "x"}, "overview": {}},
     ) as m:
         out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "market-emotion"})

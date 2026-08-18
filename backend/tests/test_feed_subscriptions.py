@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import HTTPException
 
-from app.services import feed as feed_svc
+from app.services.content import feed as feed_svc
 
 
 def _settings(cookies: str = "SESSDATA=x") -> SimpleNamespace:

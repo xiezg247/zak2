@@ -6,8 +6,9 @@ import pytest
 from fastapi import HTTPException
 
 from app.schemas.screener import PatternRunRequest
-from app.services import bars, engine, pattern_screen
-from app.services.backtest_engine import load_daily_bars
+from app.services.backtest.backtest_engine import load_daily_bars
+from app.services.market import bars
+from app.services.screener import engine, pattern_screen
 
 
 def test_require_quotes_empty_points_to_collector() -> None:

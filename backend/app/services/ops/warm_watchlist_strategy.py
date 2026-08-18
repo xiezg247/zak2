@@ -13,11 +13,11 @@ from app.core.redis_keys import KEY_PREFIX
 from app.core.time import china_today
 from app.models.bars import DbBarData
 from app.schemas.ops import SyncResult
+from app.services.market.quotes import get_quote_store
 from app.services.ops.bars_fill import list_watchlist_symbols
 from app.services.ops.scheduler import save_job_run_meta
-from app.services.quotes import get_quote_store
-from app.services.strategy_board import DEFAULT_CONFIG_KEY, _parse_payload
-from app.services.strategy_signal_ma import (
+from app.services.strategy.strategy_board import DEFAULT_CONFIG_KEY, _parse_payload
+from app.services.strategy.strategy_signal_ma import (
     TREND_ADX_PERIOD,
     TREND_ADX_THRESHOLD,
     TREND_MA_FAST,

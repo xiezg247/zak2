@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException
 
-from app.services import bars
+from app.services.market import bars
 
 
 def test_load_bars_empty_daily_ops_copy() -> None:

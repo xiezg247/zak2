@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.schemas.screener import HardFilterPrefs
-from app.services.hard_filters import resolve_hard_filter
+from app.services.screener.hard_filters import resolve_hard_filter
 
 
 def test_resolve_template_only() -> None:

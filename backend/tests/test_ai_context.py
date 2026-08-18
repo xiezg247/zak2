@@ -1,4 +1,4 @@
-from app.services.ai_context import SYSTEM_PROMPT, build_context_brief
+from app.services.ai.ai_context import SYSTEM_PROMPT, build_context_brief
 
 
 def test_system_prompt_nonempty() -> None:

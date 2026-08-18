@@ -8,7 +8,7 @@ from typing import Any
 
 
 def run_one_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    from app.services.backtest_vnpy import run_cta_backtest
+    from app.services.backtest.backtest_vnpy import run_cta_backtest
 
     return run_cta_backtest(
         list(payload["bar_records"]),

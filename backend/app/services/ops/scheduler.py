@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.schemas.ops import JobLastRun, SchedulerConfigOut, SchedulerJobOut
 from app.services.ops.catalog import JOB_SPECS, JOBS_BY_ID, RUNNABLE_JOB_IDS
-from app.services.scheduler_defaults import resolve_cron
+from app.services.ops.scheduler_defaults import resolve_cron
 
 JobKind = Literal["runnable", "process", "planned"]
 

@@ -15,8 +15,8 @@ from app.main import create_app
 from app.models.content import TradingPlan
 from app.models.user import User
 from app.schemas.content import PlanOut
-from app.services import feed as feed_svc
-from app.services import plan_manage as pm
+from app.services.content import feed as feed_svc
+from app.services.plan import plan_manage as pm
 
 
 def test_plan_to_out_maps_symbols() -> None:
@@ -61,8 +61,8 @@ def test_activate_replaces_same_day_active() -> None:
     db.scalar.side_effect = [draft]
     db.scalars.return_value = iter([old])
     with (
-        patch("app.services.plan_manage._now", return_value="t1"),
-        patch("app.services.plan_manage.load_plan_out", return_value=MagicMock(status="active", id="d1")),
+        patch("app.services.plan.plan_manage._now", return_value="t1"),
+        patch("app.services.plan.plan_manage.load_plan_out", return_value=MagicMock(status="active", id="d1")),
     ):
         out = pm.activate_plan(db, "u1", "d1")
     assert old.status == "abandoned"
@@ -77,7 +77,7 @@ def test_abandon_idempotent() -> None:
     db = MagicMock()
     db.scalar.return_value = abandoned
     with patch(
-        "app.services.plan_manage.load_plan_out",
+        "app.services.plan.plan_manage.load_plan_out",
         return_value=MagicMock(status="abandoned", id="p1"),
     ):
         out = pm.abandon_plan(db, "u1", "p1")
@@ -109,9 +109,9 @@ def test_update_symbols_replace() -> None:
     db.scalar.return_value = plan
     db.scalars.return_value = iter([])
     with (
-        patch("app.services.plan_manage._now", return_value="t2"),
+        patch("app.services.plan.plan_manage._now", return_value="t2"),
         patch(
-            "app.services.plan_manage.load_plan_out",
+            "app.services.plan.plan_manage.load_plan_out",
             return_value=MagicMock(id="p1", notes="hi"),
         ),
     ):
@@ -127,7 +127,7 @@ def test_update_max_pct_percent_form() -> None:
     db = MagicMock()
     db.scalar.return_value = plan
     with patch(
-        "app.services.plan_manage.load_plan_out",
+        "app.services.plan.plan_manage.load_plan_out",
         return_value=MagicMock(id="p1"),
     ):
         pm.update_plan(db, "u1", "p1", max_position_pct=30)
@@ -149,9 +149,9 @@ def test_update_symbols_empty_clears() -> None:
     db.scalar.return_value = plan
     db.scalars.return_value = iter([])
     with (
-        patch("app.services.plan_manage._now", return_value="t2"),
+        patch("app.services.plan.plan_manage._now", return_value="t2"),
         patch(
-            "app.services.plan_manage.load_plan_out",
+            "app.services.plan.plan_manage.load_plan_out",
             return_value=MagicMock(id="p1"),
         ),
     ):
@@ -174,9 +174,9 @@ def test_replace_symbols_preserves_entry_conditions() -> None:
     db.scalar.return_value = plan
     db.scalars.return_value = iter([existing])
     with (
-        patch("app.services.plan_manage._now", return_value="t2"),
+        patch("app.services.plan.plan_manage._now", return_value="t2"),
         patch(
-            "app.services.plan_manage.load_plan_out",
+            "app.services.plan.plan_manage.load_plan_out",
             return_value=MagicMock(id="p1"),
         ),
     ):
@@ -196,16 +196,16 @@ def test_replace_symbols_preserves_entry_conditions() -> None:
 
 def test_activate_then_off_plan_uses_plan_symbols() -> None:
     """activate 后 status=active；snapshot 的 vt 集合可正确驱动 list_off_plan_vt_symbols。"""
-    from app.services import off_plan as op
+    from app.services.plan import off_plan as op
 
     draft = _plan(id="d1", status="draft", trade_date="2026-08-14")
     db_act = MagicMock()
     db_act.scalar.side_effect = [draft]
     db_act.scalars.return_value = iter([])
     with (
-        patch("app.services.plan_manage._now", return_value="t1"),
+        patch("app.services.plan.plan_manage._now", return_value="t1"),
         patch(
-            "app.services.plan_manage.load_plan_out",
+            "app.services.plan.plan_manage.load_plan_out",
             return_value=MagicMock(status="active", id="d1"),
         ),
     ):
@@ -232,9 +232,9 @@ def test_update_notes_only_skips_symbols() -> None:
     db = MagicMock()
     db.scalar.return_value = plan
     with (
-        patch("app.services.plan_manage._now", return_value="t2"),
+        patch("app.services.plan.plan_manage._now", return_value="t2"),
         patch(
-            "app.services.plan_manage.load_plan_out",
+            "app.services.plan.plan_manage.load_plan_out",
             return_value=MagicMock(id="p1", notes="x"),
         ),
     ):
@@ -277,7 +277,7 @@ def test_update_rejects_invalid_symbol() -> None:
     db.scalar.return_value = plan
     with (
         patch(
-            "app.services.plan_manage.parse_flexible_symbol",
+            "app.services.plan.plan_manage.parse_flexible_symbol",
             side_effect=ValueError("无效 vt_symbol：bogus"),
         ),
         pytest.raises(HTTPException) as ei,

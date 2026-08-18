@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.services import strategy_signal_ma as m
+from app.services.strategy import strategy_signal_ma as m
 
 
 def test_parse_config_key() -> None:

@@ -1,5 +1,5 @@
 from app.schemas.backtest import StrategyProfileOut
-from app.services.backtest_engine import PROFILES
+from app.services.backtest.backtest_engine import PROFILES
 
 
 def test_profiles_have_window_and_capital() -> None:

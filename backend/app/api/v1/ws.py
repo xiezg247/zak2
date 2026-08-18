@@ -11,7 +11,7 @@ from app.core.db import SessionLocal
 from app.core.redis_keys import NOTIFY_CHANNEL
 from app.core.security import decode_access_token
 from app.repositories.user import UserRepository
-from app.services.quote_notify_hub import get_quote_notify_hub
+from app.services.market.quote_notify_hub import get_quote_notify_hub
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["ws"])

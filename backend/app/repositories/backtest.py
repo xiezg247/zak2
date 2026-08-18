@@ -13,9 +13,9 @@ from app.repositories.base import BaseRepository
 from app.repositories.pagination import Page, paginate
 from app.repositories.watchlist import resolve_symbol_pair
 from app.schemas.backtest import BacktestBatchOut, BacktestRunOut, BacktestRunRequest, OptimizeSummaryOut
-from app.services.backtest_bars import Bar, bars_to_records, load_bars
-from app.services.backtest_optimize import pick_best
-from app.services.backtest_settings import build_strategy_setting, min_bars_for_request
+from app.services.backtest.backtest_bars import Bar, bars_to_records, load_bars
+from app.services.backtest.backtest_optimize import pick_best
+from app.services.backtest.backtest_settings import build_strategy_setting, min_bars_for_request
 from app.services.symbols import to_vt_symbol
 
 
@@ -186,7 +186,7 @@ class BacktestRepository(BaseRepository[BacktestRun]):
 
     def run_vnpy(self, req: BacktestRunRequest, bars: list[Bar]) -> dict[str, Any]:
         try:
-            from app.services.backtest_vnpy import run_cta_backtest
+            from app.services.backtest.backtest_vnpy import run_cta_backtest
         except ImportError as exc:
             raise HTTPException(
                 status_code=503,

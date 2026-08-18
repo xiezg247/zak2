@@ -1,4 +1,4 @@
-from app.services.off_plan import build_plan_symbol_statuses, list_off_plan_vt_symbols
+from app.services.plan.off_plan import build_plan_symbol_statuses, list_off_plan_vt_symbols
 
 
 def test_no_plan_means_none_off() -> None:

@@ -4,7 +4,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.schemas.backtest import BacktestRunRequest
-from app.services.backtest_settings import build_strategy_setting, min_bars_for_request
+from app.services.backtest.backtest_settings import build_strategy_setting, min_bars_for_request
 from app.strategies.cta.registry import get_strategy_class
 
 
@@ -51,7 +51,7 @@ def test_registry_trend_ma():
 @pytest.mark.vnpy
 def test_run_cta_trend_ma_synthetic():
     pytest.importorskip("vnpy_ctastrategy")
-    from app.services.backtest_vnpy import run_cta_backtest
+    from app.services.backtest.backtest_vnpy import run_cta_backtest
 
     start = datetime(2020, 1, 2)
     records = []

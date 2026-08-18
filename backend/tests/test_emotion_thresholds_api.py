@@ -13,7 +13,7 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.services.emotion_cycle import DEFAULT_THRESHOLDS
+from app.services.emotion.emotion_cycle import DEFAULT_THRESHOLDS
 
 
 def _make_user() -> User:

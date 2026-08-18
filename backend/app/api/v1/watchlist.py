@@ -37,12 +37,14 @@ from app.schemas.watchlist import (
     WatchlistItemOut,
     WatchlistReorderRequest,
 )
-from app.services import fundamentals as fundamentals_svc
-from app.services import notify_log, strategy_board, trading_risk
-from app.services.bars import load_bars
-from app.services.quotes import QuoteRow, get_quote_store
-from app.services.stock_industry import enrich_rows_from_db
-from app.services.suspend import load_suspended_vt_symbols
+from app.services.content import notify_log
+from app.services.market import fundamentals as fundamentals_svc
+from app.services.market.bars import load_bars
+from app.services.market.quotes import QuoteRow, get_quote_store
+from app.services.market.stock_industry import enrich_rows_from_db
+from app.services.market.suspend import load_suspended_vt_symbols
+from app.services.plan import trading_risk
+from app.services.strategy import strategy_board
 from app.services.symbols import normalize_exchange, to_tf_symbol, to_vt_symbol
 
 router = APIRouter(tags=["watchlist"])

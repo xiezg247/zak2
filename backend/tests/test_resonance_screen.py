@@ -7,8 +7,8 @@ from fastapi import HTTPException
 
 from app.schemas.market import RadarResonanceEntry, RadarResonanceOut
 from app.schemas.screener import HardFilterPrefs, RecipeRunRequest
-from app.services.engine import run_recipe_screen
-from app.services.presets import get_builtin_recipe
+from app.services.screener.engine import run_recipe_screen
+from app.services.screener.presets import get_builtin_recipe
 
 
 def test_radar_resonance_recipe_registered() -> None:
@@ -22,10 +22,10 @@ def test_radar_resonance_recipe_registered() -> None:
 def test_run_resonance_no_cards_raises_400() -> None:
     db = MagicMock()
     with patch(
-        "app.services.resonance_screen.list_radar_cards",
+        "app.services.screener.resonance_screen.list_radar_cards",
         return_value=[],
     ):
-        from app.services.resonance_screen import run_resonance_screen
+        from app.services.screener.resonance_screen import run_resonance_screen
 
         with pytest.raises(HTTPException) as ei:
             run_resonance_screen(
@@ -54,10 +54,10 @@ def test_run_resonance_with_entries() -> None:
     ]
     out = RadarResonanceOut(min_cards=2, top_n=20, total=1, entries=entries)
     with (
-        patch("app.services.resonance_screen.list_radar_cards", return_value=[MagicMock()]),
-        patch("app.services.resonance_screen.list_radar_resonance", return_value=out) as lr,
+        patch("app.services.screener.resonance_screen.list_radar_cards", return_value=[MagicMock()]),
+        patch("app.services.screener.resonance_screen.list_radar_resonance", return_value=out) as lr,
     ):
-        from app.services.resonance_screen import run_resonance_screen
+        from app.services.screener.resonance_screen import run_resonance_screen
 
         result = run_resonance_screen(
             db=db,
@@ -86,10 +86,10 @@ def test_run_resonance_empty_entries_ok() -> None:
     db = MagicMock()
     out = RadarResonanceOut(min_cards=2, top_n=20, total=0, entries=[])
     with (
-        patch("app.services.resonance_screen.list_radar_cards", return_value=[MagicMock()]),
-        patch("app.services.resonance_screen.list_radar_resonance", return_value=out),
+        patch("app.services.screener.resonance_screen.list_radar_cards", return_value=[MagicMock()]),
+        patch("app.services.screener.resonance_screen.list_radar_resonance", return_value=out),
     ):
-        from app.services.resonance_screen import run_resonance_screen
+        from app.services.screener.resonance_screen import run_resonance_screen
 
         result = run_resonance_screen(
             db=db,
@@ -113,7 +113,7 @@ def test_run_recipe_screen_radar_resonance_branch() -> None:
         "industry_dist": [],
         "diff": None,
     }
-    with patch("app.services.resonance_screen.run_resonance_screen", return_value=fake) as run:
+    with patch("app.services.screener.resonance_screen.run_resonance_screen", return_value=fake) as run:
         result = run_recipe_screen(
             RecipeRunRequest(
                 recipe_id="radar_resonance",

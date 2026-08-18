@@ -1,4 +1,4 @@
-from app.services.backtest_engine import PROFILES, STRATEGIES, _sma
+from app.services.backtest.backtest_engine import PROFILES, STRATEGIES, _sma
 
 
 def test_sma() -> None:

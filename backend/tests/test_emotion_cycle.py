@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.services.emotion_cycle import classify_stage
+from app.services.emotion.emotion_cycle import classify_stage
 
 
 def test_classify_recession_by_limit_down() -> None:
@@ -58,7 +58,7 @@ def test_classify_divergence_default() -> None:
 
 def test_classify_divergence_with_relaxed_recession() -> None:
     """自定义阈值下可走显式分歧分支。"""
-    from app.services.emotion_cycle import Thresholds
+    from app.services.emotion.emotion_cycle import Thresholds
 
     t = Thresholds(recession_limit_down=40)
     assert (

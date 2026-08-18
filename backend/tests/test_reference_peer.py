@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from app.schemas.screener import ReferencePeerRequest
-from app.services import reference_peer as peer
+from app.services.screener import reference_peer as peer
 
 
 def test_vt_to_ts_code() -> None:

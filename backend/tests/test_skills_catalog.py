@@ -1,7 +1,7 @@
 import pytest
 
-from app.services import skills_catalog
-from app.services.skills_catalog import MAX_SKILL_CHARS, list_skills, read_skill
+from app.services.ai import skills_catalog
+from app.services.ai.skills_catalog import MAX_SKILL_CHARS, list_skills, read_skill
 
 
 def test_list_includes_positions() -> None:

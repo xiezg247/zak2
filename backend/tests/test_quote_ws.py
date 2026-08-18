@@ -8,7 +8,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from app.core.security import create_access_token
 from app.main import app
-from app.services.quote_notify_hub import QuoteNotifyHub, get_quote_notify_hub
+from app.services.market.quote_notify_hub import QuoteNotifyHub, get_quote_notify_hub
 
 
 def test_ws_rejects_missing_token() -> None:

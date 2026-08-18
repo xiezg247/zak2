@@ -4,8 +4,8 @@ import pytest
 from fastapi import HTTPException
 
 from app.schemas.backtest import BacktestRunRequest
-from app.services.backtest_bars import Bar, count_trading_days, load_bars
-from app.services.backtest_settings import min_bars_for_request
+from app.services.backtest.backtest_bars import Bar, count_trading_days, load_bars
+from app.services.backtest.backtest_settings import min_bars_for_request
 
 
 def test_count_trading_days():

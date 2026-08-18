@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.schemas.ops import SchedulerConfigOut
-from app.services import embedded_scheduler as es
+from app.services.ops import embedded_scheduler as es
 from app.services.ops.catalog import RUNNABLE_JOB_IDS
 
 

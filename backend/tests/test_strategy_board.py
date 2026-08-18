@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from app.services.strategy_board import (
+from app.services.strategy.strategy_board import (
     DEFAULT_CONFIG_KEY,
     _pack_signal_row,
     _parse_payload,
@@ -84,7 +84,7 @@ def test_resolve_config_key_from_pref() -> None:
 
 
 def test_resolve_board_config_key_double_ma_default() -> None:
-    from app.services.strategy_board import resolve_board_config_key
+    from app.services.strategy.strategy_board import resolve_board_config_key
 
     db = MagicMock()
     db.execute.return_value.scalar.return_value = None
@@ -92,7 +92,7 @@ def test_resolve_board_config_key_double_ma_default() -> None:
 
 
 def test_resolve_board_config_key_double_ma_from_pref() -> None:
-    from app.services.strategy_board import resolve_board_config_key
+    from app.services.strategy.strategy_board import resolve_board_config_key
 
     db = MagicMock()
     db.execute.return_value.scalar.return_value = {
@@ -104,7 +104,7 @@ def test_resolve_board_config_key_double_ma_from_pref() -> None:
 
 
 def test_resolve_board_config_key_trend_ma_fixed() -> None:
-    from app.services.strategy_board import resolve_board_config_key
+    from app.services.strategy.strategy_board import resolve_board_config_key
 
     db = MagicMock()
     assert resolve_board_config_key(db, "u1", signal_mode="trend_ma") == "trend_ma:20:60"
@@ -154,7 +154,7 @@ def test_enrich_position_risk_off_plan() -> None:
 
 
 def test_load_strategy_board_empty() -> None:
-    from app.services import strategy_board
+    from app.services.strategy import strategy_board
 
     db = MagicMock()
 
@@ -176,7 +176,7 @@ def test_load_strategy_board_empty() -> None:
         patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
-            "app.services.strategy_board.load_trading_risk_prefs",
+            "app.services.strategy.strategy_board.load_trading_risk_prefs",
             return_value=SimpleNamespace(
                 total_capital=None,
                 stop_loss_pct=0.05,
@@ -185,11 +185,11 @@ def test_load_strategy_board_empty() -> None:
             ),
         ),
         patch(
-            "app.services.strategy_board.load_active_plan_snapshot",
+            "app.services.strategy.strategy_board.load_active_plan_snapshot",
             return_value=None,
         ),
         patch(
-            "app.services.strategy_board.latest_open_yyyymmdd",
+            "app.services.strategy.strategy_board.latest_open_yyyymmdd",
             return_value="20260805",
         ),
     ):
@@ -214,7 +214,7 @@ def test_load_strategy_board_empty() -> None:
 
 
 def test_load_strategy_board_risk_summary_with_off_plan() -> None:
-    from app.services import strategy_board
+    from app.services.strategy import strategy_board
 
     db = MagicMock()
 
@@ -268,7 +268,7 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
         patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
-            "app.services.strategy_board.load_trading_risk_prefs",
+            "app.services.strategy.strategy_board.load_trading_risk_prefs",
             return_value=SimpleNamespace(
                 total_capital=100_000.0,
                 stop_loss_pct=0.05,
@@ -277,7 +277,7 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
             ),
         ),
         patch(
-            "app.services.strategy_board.load_active_plan_snapshot",
+            "app.services.strategy.strategy_board.load_active_plan_snapshot",
             return_value={
                 "vt_symbols": {"600519.SSE", "300750.SZSE"},
                 "ordered_vt_symbols": ["600519.SSE", "300750.SZSE"],
@@ -286,7 +286,7 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
             },
         ) as snap,
         patch(
-            "app.services.strategy_board.latest_open_yyyymmdd",
+            "app.services.strategy.strategy_board.latest_open_yyyymmdd",
             return_value="20260805",
         ),
     ):
@@ -324,7 +324,7 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
 
 
 def test_load_strategy_board_note_panel_no_signals() -> None:
-    from app.services import strategy_board
+    from app.services.strategy import strategy_board
 
     db = MagicMock()
 
@@ -350,7 +350,7 @@ def test_load_strategy_board_note_panel_no_signals() -> None:
         patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
-            "app.services.strategy_board.load_trading_risk_prefs",
+            "app.services.strategy.strategy_board.load_trading_risk_prefs",
             return_value=SimpleNamespace(
                 total_capital=None,
                 stop_loss_pct=0.05,
@@ -359,11 +359,11 @@ def test_load_strategy_board_note_panel_no_signals() -> None:
             ),
         ),
         patch(
-            "app.services.strategy_board.load_active_plan_snapshot",
+            "app.services.strategy.strategy_board.load_active_plan_snapshot",
             return_value=None,
         ),
         patch(
-            "app.services.strategy_board.latest_open_yyyymmdd",
+            "app.services.strategy.strategy_board.latest_open_yyyymmdd",
             return_value="20260805",
         ),
     ):
@@ -378,7 +378,7 @@ def test_load_strategy_board_note_panel_no_signals() -> None:
 
 
 def test_load_strategy_board_note_positions_no_signals() -> None:
-    from app.services import strategy_board
+    from app.services.strategy import strategy_board
 
     db = MagicMock()
 
@@ -416,7 +416,7 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
         patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
-            "app.services.strategy_board.load_trading_risk_prefs",
+            "app.services.strategy.strategy_board.load_trading_risk_prefs",
             return_value=SimpleNamespace(
                 total_capital=None,
                 stop_loss_pct=0.05,
@@ -425,11 +425,11 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
             ),
         ),
         patch(
-            "app.services.strategy_board.load_active_plan_snapshot",
+            "app.services.strategy.strategy_board.load_active_plan_snapshot",
             return_value=None,
         ),
         patch(
-            "app.services.strategy_board.latest_open_yyyymmdd",
+            "app.services.strategy.strategy_board.latest_open_yyyymmdd",
             return_value="20260805",
         ),
     ):
@@ -444,7 +444,7 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
 
 
 def test_note_empty_mentions_heuristic_job() -> None:
-    from app.services import strategy_board
+    from app.services.strategy import strategy_board
 
     db = MagicMock()
 
@@ -466,7 +466,7 @@ def test_note_empty_mentions_heuristic_job() -> None:
         patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
-            "app.services.strategy_board.load_trading_risk_prefs",
+            "app.services.strategy.strategy_board.load_trading_risk_prefs",
             return_value=SimpleNamespace(
                 total_capital=None,
                 stop_loss_pct=0.05,
@@ -475,11 +475,11 @@ def test_note_empty_mentions_heuristic_job() -> None:
             ),
         ),
         patch(
-            "app.services.strategy_board.load_active_plan_snapshot",
+            "app.services.strategy.strategy_board.load_active_plan_snapshot",
             return_value=None,
         ),
         patch(
-            "app.services.strategy_board.latest_open_yyyymmdd",
+            "app.services.strategy.strategy_board.latest_open_yyyymmdd",
             return_value="20260805",
         ),
     ):

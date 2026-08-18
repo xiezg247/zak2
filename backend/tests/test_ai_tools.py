@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.ai_tools import (
+from app.services.ai.ai_tools import (
     TOOL_DEFINITIONS,
     TOOL_HANDLERS,
     WRITE_TOOL_NAMES,
@@ -58,7 +58,7 @@ def test_unknown_tool_json() -> None:
 
 
 def test_get_tool_definitions_merges_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.services import mcp_client
+    from app.services.ai import mcp_client
 
     monkeypatch.setattr(mcp_client, "mcp_configured", lambda: True)
     monkeypatch.setattr(
@@ -74,7 +74,7 @@ def test_get_tool_definitions_merges_mcp(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_execute_mcp_tool(monkeypatch: pytest.MonkeyPatch) -> None:
     from unittest.mock import MagicMock
 
-    from app.services import mcp_client
+    from app.services.ai import mcp_client
 
     monkeypatch.setattr(mcp_client, "call_allowed_tool", lambda name, args: '{"ok":1}')
     out = execute_tool(MagicMock(), "u", "mcp_diagnose_x", {"a": 1})
@@ -84,7 +84,7 @@ def test_execute_mcp_tool(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_execute_mcp_tool_error(monkeypatch: pytest.MonkeyPatch) -> None:
     from unittest.mock import MagicMock
 
-    from app.services import mcp_client
+    from app.services.ai import mcp_client
 
     def boom(name: str, args: dict) -> str:
         raise mcp_client.McpClientError("连不上")

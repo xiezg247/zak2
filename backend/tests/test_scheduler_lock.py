@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import redis
 
-from app.services import scheduler_lock as sl
+from app.services.ops import scheduler_lock as sl
 
 
 def test_clamp_ttl() -> None:

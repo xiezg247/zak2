@@ -9,16 +9,16 @@ from sqlalchemy.orm import Session
 
 from app.core.settings import get_settings
 from app.schemas.ops import SyncResult
-from app.services import tushare_client as ts
-from app.services.ops.scheduler import save_job_run_meta
-from app.services.quote_factor_patch import apply_factor_patches
-from app.services.quotes import get_quote_store
-from app.services.tushare_screener import (
+from app.services.market import tushare_client as ts
+from app.services.market.quote_factor_patch import apply_factor_patches
+from app.services.market.quotes import get_quote_store
+from app.services.market.tushare_screener import (
     fetch_daily_basic_rows,
     fetch_moneyflow_rows,
     latest_open_yyyymmdd,
     ts_code_to_tf,
 )
+from app.services.ops.scheduler import save_job_run_meta
 
 JOB_ID = "enrich_market_quotes"
 

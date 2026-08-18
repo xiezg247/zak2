@@ -8,9 +8,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.repositories.pagination import Page
-from app.services import feed as feed_svc
-from app.services import notes as notes_svc
-from app.services import team_reports
+from app.services.content import feed as feed_svc
+from app.services.content import notes as notes_svc
+from app.services.team import team_reports
 
 
 def _feed_item(**kw: object) -> SimpleNamespace:

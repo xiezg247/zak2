@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.schemas.team import TeamFinancial, TeamPrefetch, TeamRisk, TeamStrategy
-from app.services.team_scoring import compute_team_scores, score_financial, score_risk, score_strategy
+from app.services.team.team_scoring import compute_team_scores, score_financial, score_risk, score_strategy
 
 
 def test_score_financial_pe() -> None:

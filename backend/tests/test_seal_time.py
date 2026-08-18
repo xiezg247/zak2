@@ -1,4 +1,4 @@
-from app.services.seal_time import format_seal_time_label, parse_clock_minutes, seal_time_score
+from app.services.market.seal_time import format_seal_time_label, parse_clock_minutes, seal_time_score
 
 
 def test_parse_and_score_bands():

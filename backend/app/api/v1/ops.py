@@ -21,9 +21,7 @@ from app.schemas.ops import (
     SyncResult,
 )
 from app.schemas.screener import JobOut
-from app.services import (
-    mcp_client,
-)
+from app.services.ai import mcp_client
 from app.services.ops import (
     auto_screen as ops_auto_screen,
 )

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from app.services import skill_runtime as rt
-from app.services.skill_runtime import SkillContext
+from app.services.ai import skill_runtime as rt
+from app.services.ai.skill_runtime import SkillContext
 
 
 def _ctx() -> SkillContext:
@@ -11,7 +11,7 @@ def _ctx() -> SkillContext:
 
 
 def test_missing_skill_returns_error(tmp_path, monkeypatch) -> None:
-    from app.services import skills_catalog as cat
+    from app.services.ai import skills_catalog as cat
 
     monkeypatch.setattr(cat, "skills_root", lambda: tmp_path)
     out = rt.run_skill_module("nope", _ctx(), {})
@@ -19,7 +19,7 @@ def test_missing_skill_returns_error(tmp_path, monkeypatch) -> None:
 
 
 def test_run_success(tmp_path, monkeypatch) -> None:
-    from app.services import skills_catalog as cat
+    from app.services.ai import skills_catalog as cat
 
     monkeypatch.setattr(cat, "skills_root", lambda: tmp_path)
     d = tmp_path / "demo"
@@ -33,7 +33,7 @@ def test_run_success(tmp_path, monkeypatch) -> None:
 
 
 def test_timeout_returns_error(tmp_path, monkeypatch) -> None:
-    from app.services import skills_catalog as cat
+    from app.services.ai import skills_catalog as cat
 
     monkeypatch.setattr(cat, "skills_root", lambda: tmp_path)
     monkeypatch.setattr(rt, "SKILL_TIMEOUT_SEC", 0.2)

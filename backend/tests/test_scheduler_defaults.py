@@ -1,9 +1,9 @@
 from app.services.ops.catalog import RUNNABLE_JOB_IDS
-from app.services.scheduler_defaults import resolve_cron
+from app.services.ops.scheduler_defaults import resolve_cron
 
 
 def test_defaults_cover_all_runnable() -> None:
-    from app.services import scheduler_defaults as sd
+    from app.services.ops import scheduler_defaults as sd
 
     assert set(sd.DEFAULT_CRON) == set(RUNNABLE_JOB_IDS)
 

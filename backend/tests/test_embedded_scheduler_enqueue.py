@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from app.schemas.ops import SchedulerConfigOut
-from app.services import embedded_scheduler as es
+from app.services.ops import embedded_scheduler as es
 
 
 def test_run_job_enqueues_instead_of_local_runner() -> None:

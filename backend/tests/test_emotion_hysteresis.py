@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from app.services.emotion_cycle import DEFAULT_THRESHOLDS, estimate_fear_greed_proxy
-from app.services.emotion_hysteresis import apply_stage_hysteresis, reset_emotion_stage_hysteresis
+from app.services.emotion.emotion_cycle import DEFAULT_THRESHOLDS, estimate_fear_greed_proxy
+from app.services.emotion.emotion_hysteresis import apply_stage_hysteresis, reset_emotion_stage_hysteresis
 
 
 def test_hysteresis_holds_startup_near_threshold() -> None:

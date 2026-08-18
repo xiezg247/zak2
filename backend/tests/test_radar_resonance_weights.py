@@ -14,7 +14,7 @@ from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
 from app.schemas.market import RadarCardOut
-from app.services import radar_resonance as rr
+from app.services.radar import radar_resonance as rr
 
 
 def _make_user() -> User:

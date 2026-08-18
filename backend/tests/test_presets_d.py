@@ -3,10 +3,10 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from app.schemas.screener import ConditionRunRequest, HardFilterPrefs
-from app.services import tushare_screener
-from app.services.engine import run_condition_screen
-from app.services.presets import list_presets
-from app.services.quotes import QuoteRow
+from app.services.market import tushare_screener
+from app.services.market.quotes import QuoteRow
+from app.services.screener.engine import run_condition_screen
+from app.services.screener.presets import list_presets
 
 
 def test_large_cap_and_moneyflow_presets_implemented() -> None:

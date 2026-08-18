@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.services import mcp_client as mc
+from app.services.ai import mcp_client as mc
 
 
 def test_parse_allowlist_empty_means_default() -> None:

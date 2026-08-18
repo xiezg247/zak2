@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 from fastapi import HTTPException
 
 from app.schemas.watchlist import PositionOut
-from app.services.ai_tools import execute_write_tool, summarize_write_tool
+from app.services.ai.ai_tools import execute_write_tool, summarize_write_tool
 
 
 def test_summarize_new_write_tools() -> None:
@@ -24,7 +24,7 @@ def test_summarize_new_write_tools() -> None:
 def test_upsert_not_in_watchlist() -> None:
     db = MagicMock()
     with (
-        patch("app.services.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
+        patch("app.services.ai.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
         patch("app.repositories.positions.PositionRepository.get_position", return_value=None),
         patch(
             "app.repositories.positions.PositionRepository.add_position",
@@ -58,7 +58,7 @@ def test_upsert_creates_when_missing() -> None:
         buy_date="2026-08-01",
     )
     with (
-        patch("app.services.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
+        patch("app.services.ai.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
         patch("app.repositories.positions.PositionRepository.get_position", return_value=None),
         patch("app.repositories.positions.PositionRepository.add_position", return_value=row) as add,
         patch("app.repositories.positions.PositionRepository.update_position") as upd,
@@ -92,7 +92,7 @@ def test_upsert_updates_when_exists() -> None:
         buy_date="2026-08-01",
     )
     with (
-        patch("app.services.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
+        patch("app.services.ai.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
         patch("app.repositories.positions.PositionRepository.get_position", return_value=existing),
         patch("app.repositories.positions.PositionRepository.update_position", return_value=row) as upd,
         patch("app.repositories.positions.PositionRepository.add_position") as add,
@@ -116,7 +116,7 @@ def test_upsert_updates_when_exists() -> None:
 def test_delete_position_missing() -> None:
     db = MagicMock()
     with (
-        patch("app.services.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
+        patch("app.services.ai.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
         patch("app.repositories.positions.PositionRepository.delete_position", return_value=False),
     ):
         out = execute_write_tool(db, "u1", "delete_position", {"symbol": "600519.SSE"})

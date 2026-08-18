@@ -28,12 +28,12 @@ from app.schemas.content import (
     TeamReportListItem,
     TeamReportOut,
 )
-from app.services import feed as feed_svc
-from app.services import notes as notes_svc
-from app.services import plan_draft as plan_draft_svc
-from app.services import plan_manage as plan_manage_svc
-from app.services import playbook as playbook_svc
-from app.services import team_reports
+from app.services.content import feed as feed_svc
+from app.services.content import notes as notes_svc
+from app.services.plan import plan_draft as plan_draft_svc
+from app.services.plan import plan_manage as plan_manage_svc
+from app.services.plan import playbook as playbook_svc
+from app.services.team import team_reports
 
 router = APIRouter(tags=["content"])
 

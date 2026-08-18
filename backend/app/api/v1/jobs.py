@@ -6,7 +6,7 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.schemas.screener import JobOut
-from app.services.arq_jobs import get_job_out, list_job_outs
+from app.services.ops.arq_jobs import get_job_out, list_job_outs
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 

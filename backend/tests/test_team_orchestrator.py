@@ -12,7 +12,7 @@ from app.schemas.team import (
     TeamScores,
     TeamStrategy,
 )
-from app.services import team_orchestrator
+from app.services.team import team_orchestrator
 
 _PREFETCH = TeamPrefetch(
     vt_symbol="600519.SSE",

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.services import leader_screen, radar
+from app.services.radar import cards as radar
+from app.services.screener import leader_screen
 
 
 def test_synth_change_top_empty_points_to_collector() -> None:

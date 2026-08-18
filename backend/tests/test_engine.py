@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from app.schemas.screener import ConditionRunRequest, HardFilterPrefs
-from app.services.engine import run_condition_screen
-from app.services.hard_filters import apply_hard_filters
-from app.services.quotes import QuoteRow
+from app.services.market.quotes import QuoteRow
+from app.services.screener.engine import run_condition_screen
+from app.services.screener.hard_filters import apply_hard_filters
 
 
 def _row(symbol: str, **kwargs) -> QuoteRow:  # type: ignore[no-untyped-def]
@@ -107,7 +107,7 @@ def test_recipe_enriches_empty_industry_before_filter() -> None:
     from unittest.mock import MagicMock, patch
 
     from app.schemas.screener import RecipeRunRequest
-    from app.services.engine import run_recipe_screen
+    from app.services.screener.engine import run_recipe_screen
 
     class _Store:
         def available(self):
@@ -120,7 +120,7 @@ def test_recipe_enriches_empty_industry_before_filter() -> None:
             return [QuoteRow(symbol="SHSE.600519", name="茅台", change_pct=5.0, industry="")]
 
     with patch(
-        "app.services.stock_industry.load_industry_map",
+        "app.services.market.stock_industry.load_industry_map",
         return_value={"SHSE.600519": "白酒"},
     ):
         result = run_recipe_screen(
@@ -143,7 +143,7 @@ def test_recipe_enriches_empty_industry_before_filter() -> None:
 
 def test_recipe_post_close_multi() -> None:
     from app.schemas.screener import RecipeRunRequest
-    from app.services.engine import run_recipe_screen
+    from app.services.screener.engine import run_recipe_screen
 
     class _MfStore(_FakeStore):
         def load_ranked_quotes(self, field: str, *, pool: int = 500) -> list[QuoteRow]:

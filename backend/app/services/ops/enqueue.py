@@ -1,6 +1,6 @@
 """兼容入口：实现已迁至 arq_jobs。"""
 
-from app.services.arq_jobs import (
+from app.services.ops.arq_jobs import (
     _index_ops_job,
     _job_out_from_arq,
     enqueue_ops_job,

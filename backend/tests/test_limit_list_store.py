@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.services.limit_list_store import attach_first_time_fields, load_first_time_map
+from app.services.market.limit_list_store import attach_first_time_fields, load_first_time_map
 from app.services.ops.sync_limit_list import JOB_ID, sync_limit_list
 
 
@@ -52,7 +52,7 @@ def test_load_first_time_map_from_db() -> None:
         return result
 
     db.execute.side_effect = _execute
-    with patch("app.services.limit_list_store.latest_open_yyyymmdd", return_value="20240805"):
+    with patch("app.services.market.limit_list_store.latest_open_yyyymmdd", return_value="20240805"):
         out = load_first_time_map(db, lazy_fetch=False)
     assert out == {"SHSE.600519": "0935", "SZSE.000001": "1400"}
 
@@ -75,9 +75,9 @@ def test_load_first_time_map_lazy_fetch() -> None:
 
     db.execute.side_effect = _execute
     with (
-        patch("app.services.limit_list_store.latest_open_yyyymmdd", return_value="20240805"),
-        patch("app.services.limit_list_store.ts.require_token", return_value="tok"),
-        patch("app.services.limit_list_store.sync_one_day", return_value=1) as sync_day,
+        patch("app.services.market.limit_list_store.latest_open_yyyymmdd", return_value="20240805"),
+        patch("app.services.market.limit_list_store.ts.require_token", return_value="tok"),
+        patch("app.services.market.limit_list_store.sync_one_day", return_value=1) as sync_day,
     ):
         out = load_first_time_map(db, lazy_fetch=True)
     sync_day.assert_called_once_with(db, "20240805")
@@ -85,7 +85,7 @@ def test_load_first_time_map_lazy_fetch() -> None:
 
 
 def test_load_first_time_map_no_token_silent() -> None:
-    from app.services import tushare_client as ts
+    from app.services.market import tushare_client as ts
 
     db = MagicMock()
 
@@ -96,12 +96,12 @@ def test_load_first_time_map_no_token_silent() -> None:
 
     db.execute.side_effect = _execute
     with (
-        patch("app.services.limit_list_store.latest_open_yyyymmdd", return_value="20240805"),
+        patch("app.services.market.limit_list_store.latest_open_yyyymmdd", return_value="20240805"),
         patch(
-            "app.services.limit_list_store.ts.require_token",
+            "app.services.market.limit_list_store.ts.require_token",
             side_effect=ts.TushareNotConfiguredError("未配置 TUSHARE_TOKEN"),
         ),
-        patch("app.services.limit_list_store.sync_one_day") as sync_day,
+        patch("app.services.market.limit_list_store.sync_one_day") as sync_day,
     ):
         out = load_first_time_map(db, lazy_fetch=True)
     sync_day.assert_not_called()
@@ -109,7 +109,7 @@ def test_load_first_time_map_no_token_silent() -> None:
 
 
 def test_sync_limit_list_without_token() -> None:
-    from app.services import tushare_client as ts
+    from app.services.market import tushare_client as ts
 
     db = MagicMock()
     with (

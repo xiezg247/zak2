@@ -4,8 +4,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from app.schemas.watchlist import TradingRiskPrefsOut
-from app.services import ai_read_tools as art
-from app.services.ai_tools import WRITE_TOOL_NAMES, execute_tool
+from app.services.ai import ai_read_tools as art
+from app.services.ai.ai_tools import WRITE_TOOL_NAMES, execute_tool
 
 
 def test_get_market_emotion_shape() -> None:
@@ -20,35 +20,35 @@ def test_get_market_emotion_shape() -> None:
 
 
 def test_ai_tools_delegates_emotion() -> None:
-    with patch("app.services.ai_read_tools.get_market_emotion", return_value={"emotion": {}, "overview": {}}) as m:
+    with patch("app.services.ai.ai_read_tools.get_market_emotion", return_value={"emotion": {}, "overview": {}}) as m:
         raw = execute_tool(MagicMock(), "u", "get_market_emotion", {})
     assert "emotion" in raw
     m.assert_called_once()
 
 
 def test_ai_tools_delegates_get_positions() -> None:
-    with patch("app.services.ai_read_tools.get_positions", return_value={"count": 0, "items": []}) as m:
+    with patch("app.services.ai.ai_read_tools.get_positions", return_value={"count": 0, "items": []}) as m:
         raw = execute_tool(MagicMock(), "u", "get_positions", {"limit": 5})
     assert "count" in raw
     m.assert_called_once()
 
 
 def test_run_skill_watchlist_mocked() -> None:
-    with patch("app.services.ai_read_tools.get_watchlist", return_value={"count": 0, "items": []}) as m:
+    with patch("app.services.ai.ai_read_tools.get_watchlist", return_value={"count": 0, "items": []}) as m:
         out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "watchlist", "limit": 5})
     assert "items" in out or "count" in out
     m.assert_called_once()
 
 
 def test_run_skill_screener_mocked() -> None:
-    with patch("app.services.ai_read_tools.get_recent_screening", return_value={"runs": []}) as m:
+    with patch("app.services.ai.ai_read_tools.get_recent_screening", return_value={"runs": []}) as m:
         out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "screener", "limit": 2})
     assert "runs" in out
     m.assert_called_once()
 
 
 def test_run_skill_radar_mocked() -> None:
-    with patch("app.services.ai_read_tools.get_radar_snapshot", return_value={"cards": []}) as m:
+    with patch("app.services.ai.ai_read_tools.get_radar_snapshot", return_value={"cards": []}) as m:
         out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "radar"})
     assert "cards" in out
     m.assert_called_once()
@@ -86,7 +86,7 @@ def test_get_stock_notes_ok() -> None:
 def test_run_skill_notes_list() -> None:
     assert "list_note_symbols" not in WRITE_TOOL_NAMES
     assert "get_stock_notes" not in WRITE_TOOL_NAMES
-    with patch("app.services.ai_read_tools.list_note_symbols", return_value={"count": 0, "symbols": []}) as m:
+    with patch("app.services.ai.ai_read_tools.list_note_symbols", return_value={"count": 0, "symbols": []}) as m:
         out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "notes"})
     assert "symbols" in out or "count" in out
     m.assert_called_once()
@@ -94,7 +94,7 @@ def test_run_skill_notes_list() -> None:
 
 def test_run_skill_notes_stock() -> None:
     with patch(
-        "app.services.ai_read_tools.get_stock_notes",
+        "app.services.ai.ai_read_tools.get_stock_notes",
         return_value={"memo": {}, "entries": [], "entry_count": 0},
     ) as m:
         out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "notes", "vt_symbol": "600519.SSE"})
@@ -220,13 +220,13 @@ def test_get_signal_panel_delegates() -> None:
 def test_run_skill_positions_all() -> None:
     assert "get_positions" not in WRITE_TOOL_NAMES
     with (
-        patch("app.services.ai_read_tools.get_positions", return_value={"count": 0, "items": []}) as gp,
+        patch("app.services.ai.ai_read_tools.get_positions", return_value={"count": 0, "items": []}) as gp,
         patch(
-            "app.services.ai_read_tools.get_signal_panel",
+            "app.services.ai.ai_read_tools.get_signal_panel",
             return_value={"symbols": [], "count": 0, "max_symbols": 10},
         ) as gs,
         patch(
-            "app.services.ai_read_tools.get_trading_risk",
+            "app.services.ai.ai_read_tools.get_trading_risk",
             return_value={"prefs": {}, "risk_summary": {}},
         ) as gr,
     ):
@@ -239,7 +239,7 @@ def test_run_skill_positions_all() -> None:
 
 def test_run_skill_positions_section_signals() -> None:
     with patch(
-        "app.services.ai_read_tools.get_signal_panel",
+        "app.services.ai.ai_read_tools.get_signal_panel",
         return_value={"symbols": ["600519.SSE"], "count": 1, "max_symbols": 10},
     ) as gs:
         out = execute_tool(MagicMock(), "u", "run_skill", {"skill_id": "positions", "section": "signals"})

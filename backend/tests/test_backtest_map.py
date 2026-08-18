@@ -1,4 +1,4 @@
-from app.services.backtest_map import map_vnpy_statistics
+from app.services.backtest.backtest_map import map_vnpy_statistics
 
 
 def test_map_strips_percent_and_builds_curve():

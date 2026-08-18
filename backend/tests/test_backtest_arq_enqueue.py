@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.services import arq_jobs
+from app.services.ops import arq_jobs
 
 
 @pytest.mark.asyncio

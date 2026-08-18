@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from unittest.mock import MagicMock, patch
 
-from app.services import bar_download as bars
+from app.services.market import bar_download as bars
 from app.services.ops import bars_fill as ops_bars_fill
 
 

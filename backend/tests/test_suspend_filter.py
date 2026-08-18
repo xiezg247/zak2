@@ -3,9 +3,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from app.schemas.screener import HardFilterPrefs
-from app.services import suspend as sus
-from app.services.hard_filters import apply_hard_filters
-from app.services.quotes import QuoteRow
+from app.services.market import suspend as sus
+from app.services.market.quotes import QuoteRow
+from app.services.screener.hard_filters import apply_hard_filters
 
 
 def _row(tf: str, name: str = "x") -> QuoteRow:
@@ -17,7 +17,7 @@ def test_load_empty() -> None:
     res = MagicMock()
     res.mappings.return_value.all.return_value = []
     db.execute.return_value = res
-    with patch("app.services.suspend.latest_open_yyyymmdd", return_value="20260813"):
+    with patch("app.services.market.suspend.latest_open_yyyymmdd", return_value="20260813"):
         assert sus.load_suspended_vt_symbols(db) == set()
 
 

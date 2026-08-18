@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.services.pattern_rules import (
+from app.services.screener.pattern_rules import (
     PATTERN_MATCHERS,
     PATTERN_META,
     BarSeries,
@@ -56,7 +56,7 @@ def test_w_bottom_match(monkeypatch) -> None:
         lows[i] = 15.6
     series = BarSeries(closes=closes, highs=highs, lows=lows, volumes=[1000.0] * 60)
 
-    import app.services.pattern_rules as rules
+    import app.services.screener.pattern_rules as rules
 
     monkeypatch.setattr(rules, "_local_minima", lambda _v, *, radius=2: [12, 28])
     m = match_w_bottom(series)

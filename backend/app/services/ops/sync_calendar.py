@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.time import china_today
 from app.schemas.ops import SyncResult
-from app.services import tushare_client as ts
+from app.services.market import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
 
 JOB_ID = "sync_trade_calendar"

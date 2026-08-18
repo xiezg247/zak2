@@ -7,7 +7,7 @@ import pytest
 from arq.jobs import JobStatus
 
 from app.schemas.screener import JobOut
-from app.services import arq_jobs as m
+from app.services.ops import arq_jobs as m
 
 
 def test_index_job_writes_unified_zset() -> None:
@@ -32,7 +32,7 @@ async def test_enqueue_ops_returns_existing_when_in_progress() -> None:
     fake_pool.enqueue_job = AsyncMock()
     with (
         patch.object(m, "_arq_pool", AsyncMock(return_value=fake_pool)),
-        patch("app.services.arq_jobs.Job") as JobCls,
+        patch("app.services.ops.arq_jobs.Job") as JobCls,
     ):
         inst = AsyncMock()
         inst.status = AsyncMock(return_value=JobStatus.in_progress)
@@ -54,7 +54,7 @@ async def test_enqueue_ops_clears_complete_then_enqueues() -> None:
 
     with (
         patch.object(m, "_arq_pool", AsyncMock(return_value=fake_pool)),
-        patch("app.services.arq_jobs.Job") as JobCls,
+        patch("app.services.ops.arq_jobs.Job") as JobCls,
         patch.object(m, "_sync_redis", return_value=MagicMock()),
         patch.object(m, "index_job") as idx,
     ):

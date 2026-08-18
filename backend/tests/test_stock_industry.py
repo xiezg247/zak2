@@ -11,8 +11,8 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.services import stock_industry as si
-from app.services.quotes import QuoteRow
+from app.services.market import stock_industry as si
+from app.services.market.quotes import QuoteRow
 
 
 def _row(symbol: str, industry: str = "") -> QuoteRow:

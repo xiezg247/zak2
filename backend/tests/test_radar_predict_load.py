@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from app.services.radar_predict import load_predict
+from app.services.radar.radar_predict import load_predict
 
 
 def test_load_predict_empty():

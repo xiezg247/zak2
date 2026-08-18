@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from app.core.redis_keys import ARQ_BARS_LOCK_KEY
-from app.services import bars_lock as bl
+from app.services.ops import bars_lock as bl
 
 
 def test_try_acquire_bars_sets_nx() -> None:

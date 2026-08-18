@@ -13,7 +13,7 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.services.quotes import QuoteRow
+from app.services.market.quotes import QuoteRow
 
 
 def _item(symbol: str = "600519", exchange: str = "SSE", name: str = "茅台", sort: int = 0):

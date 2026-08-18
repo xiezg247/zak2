@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from app.schemas.ops import SchedulerConfigOut
 from app.services.ops.auto_screen import screen_intraday, screen_post_close
 from app.services.ops.catalog import RUNNABLE_JOB_IDS
-from app.services.presets import get_builtin_recipe
+from app.services.screener.presets import get_builtin_recipe
 
 
 def test_screen_intraday_requires_user() -> None:

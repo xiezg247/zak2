@@ -1,4 +1,4 @@
-from app.services.position_risk_tags import compute_position_risk_tags, primary_risk_tag
+from app.services.strategy.position_risk_tags import compute_position_risk_tags, primary_risk_tag
 
 
 def test_sell_and_float_loss_order() -> None:

@@ -13,7 +13,7 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.services import recipe_weights as rw
+from app.services.screener import recipe_weights as rw
 
 
 def test_normalize_sums_to_one() -> None:
@@ -183,8 +183,8 @@ def test_normalize_last_key_compensation_sums_exactly_one() -> None:
 
 
 def test_score_intraday_custom_weights_changes_ranking() -> None:
-    from app.services.engine import _score_intraday_multi
-    from app.services.quotes import QuoteRow
+    from app.services.market.quotes import QuoteRow
+    from app.services.screener.engine import _score_intraday_multi
 
     high_mom = QuoteRow(
         symbol="A",
@@ -209,8 +209,8 @@ def test_score_intraday_custom_weights_changes_ranking() -> None:
 
 
 def test_score_ultra_short_custom_weights_changes_ranking() -> None:
-    from app.services.engine import _score_ultra_short
-    from app.services.quotes import QuoteRow
+    from app.services.market.quotes import QuoteRow
+    from app.services.screener.engine import _score_ultra_short
 
     high_board = QuoteRow(
         symbol="A",
@@ -234,8 +234,8 @@ def test_score_ultra_short_custom_weights_changes_ranking() -> None:
 
 def test_run_recipe_screen_loads_user_weights() -> None:
     from app.schemas.screener import HardFilterPrefs, RecipeRunRequest
-    from app.services.engine import run_recipe_screen
-    from app.services.quotes import QuoteRow
+    from app.services.market.quotes import QuoteRow
+    from app.services.screener.engine import run_recipe_screen
 
     class _Store:
         def available(self) -> bool:
@@ -258,7 +258,7 @@ def test_run_recipe_screen_loads_user_weights() -> None:
     custom = {"momentum": 0.05, "turnover": 0.8, "volume_ratio": 0.1, "surge": 0.05}
     db = MagicMock()
     with patch(
-        "app.services.engine.recipe_weights_svc.load_recipe_weights",
+        "app.services.screener.engine.recipe_weights_svc.load_recipe_weights",
         return_value=custom,
     ) as load:
         result = run_recipe_screen(
@@ -277,8 +277,8 @@ def test_run_recipe_screen_loads_user_weights() -> None:
 
 def test_run_recipe_screen_loads_ultra_short_user_weights() -> None:
     from app.schemas.screener import HardFilterPrefs, RecipeRunRequest
-    from app.services.engine import run_recipe_screen
-    from app.services.quotes import QuoteRow
+    from app.services.market.quotes import QuoteRow
+    from app.services.screener.engine import run_recipe_screen
 
     class _Store:
         def available(self) -> bool:
@@ -297,7 +297,7 @@ def test_run_recipe_screen_loads_ultra_short_user_weights() -> None:
     custom = {"board": 0.05, "momentum": 0.85, "turnover": 0.1}
     db = MagicMock()
     with patch(
-        "app.services.engine.recipe_weights_svc.load_recipe_weights",
+        "app.services.screener.engine.recipe_weights_svc.load_recipe_weights",
         return_value=custom,
     ) as load:
         result = run_recipe_screen(

@@ -1,7 +1,7 @@
 from datetime import date
 from unittest.mock import MagicMock, patch
 
-from app.services import tushare_client as ts
+from app.services.market import tushare_client as ts
 from app.services.ops import fill_focus_pool_minute as m
 
 

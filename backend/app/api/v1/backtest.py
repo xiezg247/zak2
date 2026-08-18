@@ -21,9 +21,9 @@ from app.schemas.backtest import (
     StrategyProfileOut,
 )
 from app.schemas.common import ApiResponse, PageOut
-from app.services.arq_jobs import BACKTEST_FUNCS, enqueue_app_job
-from app.services.backtest_engine import PROFILES, STRATEGIES
-from app.services.backtest_optimize import expand_ma_grid
+from app.services.backtest.backtest_engine import PROFILES, STRATEGIES
+from app.services.backtest.backtest_optimize import expand_ma_grid
+from app.services.ops.arq_jobs import BACKTEST_FUNCS, enqueue_app_job
 
 router = APIRouter(prefix="/backtest", tags=["backtest"])
 

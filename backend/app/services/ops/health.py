@@ -17,9 +17,10 @@ from app.schemas.ops import (
     HealthRedisOut,
     HealthSchedulerLockOut,
 )
-from app.services import mcp_client, scheduler_lock
+from app.services.ai import mcp_client
+from app.services.market.quotes import get_quote_store
+from app.services.ops import scheduler_lock
 from app.services.quote_collect.control import collector_health
-from app.services.quotes import get_quote_store
 
 
 def _mask_url(url: str) -> str:

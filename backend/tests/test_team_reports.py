@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 from app.schemas.content import TeamReportListItem
 from app.schemas.team import AgentScore, TeamEmotion, TeamPrefetch, TeamScores
-from app.services.team_orchestrator import _fallback_report, stream_team_analysis_with_persist
-from app.services.team_reports import should_persist_report
+from app.services.team.team_orchestrator import _fallback_report, stream_team_analysis_with_persist
+from app.services.team.team_reports import should_persist_report
 
 
 def test_should_persist_requires_section() -> None:
@@ -47,11 +47,11 @@ def test_stream_persist_emits_report_saved() -> None:
     ]
     with (
         patch(
-            "app.services.team_orchestrator.stream_team_analysis",
+            "app.services.team.team_orchestrator.stream_team_analysis",
             return_value=iter(events),
         ),
         patch(
-            "app.services.team_reports.persist_team_report",
+            "app.services.team.team_reports.persist_team_report",
             return_value=TeamReportListItem(id=9, title="t", vt_symbol="600519.SSE"),
         ) as persist,
     ):

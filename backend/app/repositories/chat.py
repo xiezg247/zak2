@@ -10,8 +10,8 @@ from app.models.chat import ChatMessage, ChatSession
 from app.repositories.base import BaseRepository
 from app.repositories.pagination import Page
 from app.schemas.chat import MessageOut, SessionOut
-from app.services import ai_agent
-from app.services.ai_context import SYSTEM_PROMPT, build_context_brief
+from app.services.ai import ai_agent
+from app.services.ai.ai_context import SYSTEM_PROMPT, build_context_brief
 
 
 def _now() -> str:

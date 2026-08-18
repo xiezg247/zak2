@@ -16,7 +16,7 @@ from app.main import create_app
 from app.models.content import TradingPlan
 from app.models.user import User
 from app.schemas.market import RadarResonanceEntry, RadarResonanceOut
-from app.services import plan_draft as pd
+from app.services.plan import plan_draft as pd
 
 
 def _make_user() -> User:
@@ -63,8 +63,8 @@ def test_normalize_trade_date() -> None:
 def test_ice_stage_raises_no_write() -> None:
     db = MagicMock()
     with (
-        patch("app.services.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="ice", stage_label="冰点")),
-        patch("app.services.plan_draft.list_radar_cards") as cards,
+        patch("app.services.plan.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="ice", stage_label="冰点")),
+        patch("app.services.plan.plan_draft.list_radar_cards") as cards,
     ):
         with pytest.raises(HTTPException) as ei:
             pd.create_resonance_plan_draft(db, "u1")
@@ -79,10 +79,10 @@ def test_recession_stage_raises_no_write() -> None:
     db = MagicMock()
     with (
         patch(
-            "app.services.plan_draft.build_emotion_cycle",
+            "app.services.plan.plan_draft.build_emotion_cycle",
             return_value=SimpleNamespace(stage="recession", stage_label="退潮"),
         ),
-        patch("app.services.plan_draft.list_radar_cards") as cards,
+        patch("app.services.plan.plan_draft.list_radar_cards") as cards,
     ):
         with pytest.raises(HTTPException) as ei:
             pd.create_resonance_plan_draft(db, "u1")
@@ -97,9 +97,9 @@ def test_no_cards_400() -> None:
     db = MagicMock()
     with (
         patch(
-            "app.services.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="divergence", stage_label="分歧")
+            "app.services.plan.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="divergence", stage_label="分歧")
         ),
-        patch("app.services.plan_draft.list_radar_cards", return_value=[]),
+        patch("app.services.plan.plan_draft.list_radar_cards", return_value=[]),
     ):
         with pytest.raises(HTTPException) as ei:
             pd.create_resonance_plan_draft(db, "u1")
@@ -112,11 +112,11 @@ def test_empty_resonance_400() -> None:
     empty = RadarResonanceOut(min_cards=2, top_n=5, total=0, entries=[])
     with (
         patch(
-            "app.services.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="divergence", stage_label="分歧")
+            "app.services.plan.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="divergence", stage_label="分歧")
         ),
-        patch("app.services.plan_draft.list_radar_cards", return_value=[MagicMock()]),
-        patch("app.services.plan_draft.list_radar_resonance", return_value=empty),
-        patch("app.services.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
+        patch("app.services.plan.plan_draft.list_radar_cards", return_value=[MagicMock()]),
+        patch("app.services.plan.plan_draft.list_radar_resonance", return_value=empty),
+        patch("app.services.plan.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
     ):
         with pytest.raises(HTTPException) as ei:
             pd.create_resonance_plan_draft(db, "u1", top_n=5)
@@ -144,12 +144,12 @@ def test_create_draft_and_replace() -> None:
 
     with (
         patch(
-            "app.services.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="divergence", stage_label="分歧")
+            "app.services.plan.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="divergence", stage_label="分歧")
         ),
-        patch("app.services.plan_draft.list_radar_cards", return_value=[MagicMock()]),
-        patch("app.services.plan_draft.list_radar_resonance", return_value=out),
-        patch("app.services.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
-        patch("app.services.plan_draft.uuid") as u,
+        patch("app.services.plan.plan_draft.list_radar_cards", return_value=[MagicMock()]),
+        patch("app.services.plan.plan_draft.list_radar_resonance", return_value=out),
+        patch("app.services.plan.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
+        patch("app.services.plan.plan_draft.uuid") as u,
     ):
         u.uuid4.return_value.hex = "abc123"
         result = pd.create_resonance_plan_draft(db, "u1", top_n=5)
@@ -172,11 +172,11 @@ def test_create_draft_and_replace() -> None:
 
     with (
         patch(
-            "app.services.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="divergence", stage_label="分歧")
+            "app.services.plan.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="divergence", stage_label="分歧")
         ),
-        patch("app.services.plan_draft.list_radar_cards", return_value=[MagicMock()]),
-        patch("app.services.plan_draft.list_radar_resonance", return_value=out),
-        patch("app.services.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
+        patch("app.services.plan.plan_draft.list_radar_cards", return_value=[MagicMock()]),
+        patch("app.services.plan.plan_draft.list_radar_resonance", return_value=out),
+        patch("app.services.plan.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
     ):
         result2 = pd.create_resonance_plan_draft(db, "u1", top_n=5)
 
@@ -209,11 +209,11 @@ def test_replace_path_flush_before_commit() -> None:
 
     with (
         patch(
-            "app.services.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="divergence", stage_label="分歧")
+            "app.services.plan.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="divergence", stage_label="分歧")
         ),
-        patch("app.services.plan_draft.list_radar_cards", return_value=[MagicMock()]),
-        patch("app.services.plan_draft.list_radar_resonance", return_value=out),
-        patch("app.services.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
+        patch("app.services.plan.plan_draft.list_radar_cards", return_value=[MagicMock()]),
+        patch("app.services.plan.plan_draft.list_radar_resonance", return_value=out),
+        patch("app.services.plan.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
     ):
         result = pd.create_resonance_plan_draft(db, "u1", top_n=5)
 
@@ -236,7 +236,7 @@ def test_resolve_next_trade_date_calendar_hit() -> None:
 def test_resolve_next_trade_date_fallback() -> None:
     db = MagicMock()
     db.execute.return_value.scalar.return_value = None
-    with patch("app.services.plan_draft.latest_open_yyyymmdd", return_value="20260811"):
+    with patch("app.services.plan.plan_draft.latest_open_yyyymmdd", return_value="20260811"):
         td, fallback = pd.resolve_next_trade_date(db, today=date(2026, 8, 10))
     assert td == "2026-08-11"
     assert fallback is True
@@ -265,11 +265,11 @@ def test_does_not_touch_active() -> None:
     ]
     out = RadarResonanceOut(min_cards=2, top_n=5, total=1, entries=entries)
     with (
-        patch("app.services.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="startup", stage_label="启动")),
-        patch("app.services.plan_draft.list_radar_cards", return_value=[MagicMock()]),
-        patch("app.services.plan_draft.list_radar_resonance", return_value=out),
-        patch("app.services.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
-        patch("app.services.plan_draft.uuid") as u,
+        patch("app.services.plan.plan_draft.build_emotion_cycle", return_value=SimpleNamespace(stage="startup", stage_label="启动")),
+        patch("app.services.plan.plan_draft.list_radar_cards", return_value=[MagicMock()]),
+        patch("app.services.plan.plan_draft.list_radar_resonance", return_value=out),
+        patch("app.services.plan.plan_draft.resolve_next_trade_date", return_value=("2026-08-11", False)),
+        patch("app.services.plan.plan_draft.uuid") as u,
     ):
         u.uuid4.return_value.hex = "new1"
         pd.create_resonance_plan_draft(db, "u1")
@@ -363,7 +363,7 @@ def test_append_idempotent_when_already_in_draft() -> None:
 
 
 def test_append_rejects_when_full() -> None:
-    from app.services.plan_manage import MAX_PLAN_SYMBOLS
+    from app.services.plan.plan_manage import MAX_PLAN_SYMBOLS
 
     db = MagicMock()
     plan = MagicMock(spec=TradingPlan)
@@ -391,7 +391,7 @@ def test_append_ice_stage_still_ok() -> None:
     db.scalars.return_value = []
     with (
         patch.object(pd, "resolve_next_trade_date", return_value=("2026-08-17", False)),
-        patch("app.services.plan_draft.build_emotion_cycle") as emo,
+        patch("app.services.plan.plan_draft.build_emotion_cycle") as emo,
         patch.object(pd, "uuid") as u,
     ):
         u.uuid4.return_value.hex = "iceok"

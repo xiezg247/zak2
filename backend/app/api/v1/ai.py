@@ -24,8 +24,9 @@ from app.schemas.chat import (
     TeamStreamRequest,
 )
 from app.schemas.common import ApiResponse, OkOut, PageOut
-from app.services import ai_agent, ai_proposals, team_orchestrator
-from app.services import llm as llm_svc
+from app.services.ai import ai_agent, ai_proposals
+from app.services.ai import llm as llm_svc
+from app.services.team import team_orchestrator
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
