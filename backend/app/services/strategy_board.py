@@ -457,17 +457,17 @@ def load_strategy_board(
     # 持仓记账
     pos_rows = positions_repo.PositionRepository(db, user_id).list_positions()
 
-    position_vts = [to_vt_symbol(str(r["symbol"]), str(r["exchange"])) for r in pos_rows]
+    position_vts = [to_vt_symbol(str(r.symbol), str(r.exchange)) for r in pos_rows]
     off_set = set(list_off_plan_vt_symbols(position_vts, plan_vts))
 
     positions: list[dict[str, Any]] = []
     for row in pos_rows:
-        symbol = str(row["symbol"])
-        exchange = str(row["exchange"])
+        symbol = str(row.symbol)
+        exchange = str(row.exchange)
         vt = to_vt_symbol(symbol, exchange)
-        cost = float(row["cost_price"] or 0)
-        volume = int(row["volume"] or 0)
-        buy_date = str(row["buy_date"] or "")[:10]
+        cost = float(row.cost_price or 0)
+        volume = int(row.volume or 0)
+        buy_date = str(row.buy_date or "")[:10]
         position_key = f"{cost}:{volume}:{buy_date}"
         q = quote_by_vt.get(vt)
         last = getattr(q, "last_price", None) if q else None
@@ -499,9 +499,9 @@ def load_strategy_board(
                     "cost_price": cost,
                     "volume": volume,
                     "buy_date": buy_date,
-                    "notes": str(row["notes"] or ""),
-                    "source": str(row["source"] or "manual"),
-                    "plan_pct": _safe_float(row["plan_pct"]),
+                    "notes": str(row.notes or ""),
+                    "source": str(row.source or "manual"),
+                    "plan_pct": _safe_float(row.plan_pct),
                     "last_price": last,
                     "market_value": market_value,
                     "unrealized_pnl": pnl,

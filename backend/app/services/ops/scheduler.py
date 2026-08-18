@@ -9,7 +9,7 @@ from typing import Any, Literal
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.schemas.ops import JobLastRun, SchedulerJobOut
+from app.schemas.ops import JobLastRun, SchedulerConfigOut, SchedulerJobOut
 from app.services.ops.catalog import JOB_SPECS, JOBS_BY_ID, RUNNABLE_JOB_IDS
 from app.services.scheduler_defaults import resolve_cron
 
@@ -44,7 +44,7 @@ def _run_hint_for(kind: JobKind) -> str | None:
     return "未实现：见 docs/product-roadmap.md"
 
 
-def load_scheduler_config(db: Session) -> dict[str, Any]:
+def load_scheduler_config(db: Session) -> SchedulerConfigOut:
     row = (
         db.execute(
             text("SELECT config_json, updated_at FROM system.scheduler_config WHERE id = :id"),
@@ -54,19 +54,19 @@ def load_scheduler_config(db: Session) -> dict[str, Any]:
         .first()
     )
     if not row:
-        return {"id": _CONFIG_ID, "config": {}, "updated_at": None}
+        return SchedulerConfigOut(id=_CONFIG_ID, config={}, updated_at=None)
     raw = row["config_json"]
     if isinstance(raw, str):
         raw = json.loads(raw) if raw.strip() else {}
     updated = row["updated_at"]
-    return {
-        "id": _CONFIG_ID,
-        "config": raw or {},
-        "updated_at": updated.isoformat() if hasattr(updated, "isoformat") else (str(updated) if updated else None),
-    }
+    return SchedulerConfigOut(
+        id=_CONFIG_ID,
+        config=raw or {},
+        updated_at=updated.isoformat() if hasattr(updated, "isoformat") else (str(updated) if updated else None),
+    )
 
 
-def save_scheduler_config(db: Session, config: dict[str, Any]) -> dict[str, Any]:
+def save_scheduler_config(db: Session, config: dict[str, Any]) -> SchedulerConfigOut:
     if not isinstance(config, dict):
         raise ValueError("config 必须是对象")
     db.execute(
@@ -84,11 +84,11 @@ def save_scheduler_config(db: Session, config: dict[str, Any]) -> dict[str, Any]
     return load_scheduler_config(db)
 
 
-def patch_job_enabled(db: Session, job_id: str, enabled: bool) -> dict[str, Any]:
+def patch_job_enabled(db: Session, job_id: str, enabled: bool) -> SchedulerConfigOut:
     if job_id not in JOBS_BY_ID:
         raise KeyError(job_id)
     loaded = load_scheduler_config(db)
-    config = dict(loaded["config"] or {})
+    config = dict(loaded.config or {})
     attr = JOBS_BY_ID[job_id].config_attr
     job_cfg = dict(config.get(attr) or {})
     job_cfg["enabled"] = enabled
@@ -155,7 +155,7 @@ def save_job_run_meta(
 
 def list_scheduler_jobs(db: Session) -> list[SchedulerJobOut]:
     loaded = load_scheduler_config(db)
-    config = loaded["config"] or {}
+    config = loaded.config or {}
     out: list[SchedulerJobOut] = []
     for spec in JOB_SPECS:
         job_cfg = config.get(spec.config_attr) or {}

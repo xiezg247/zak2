@@ -328,14 +328,14 @@ def _upsert_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
             action = "created"
     except Exception as exc:
         return {"error": str(getattr(exc, "detail", None) or exc)}
-    vt = str(row.get("vt_symbol") or to_vt_symbol(symbol, exchange))
+    vt = str(row.vt_symbol or to_vt_symbol(symbol, exchange))
     return {
         "ok": True,
         "action": action,
         "vt_symbol": vt,
-        "cost_price": row.get("cost_price"),
-        "volume": row.get("volume"),
-        "buy_date": row.get("buy_date"),
+        "cost_price": row.cost_price,
+        "volume": row.volume,
+        "buy_date": row.buy_date,
     }
 
 

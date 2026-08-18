@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+from app.schemas.ops import SchedulerConfigOut
 from app.services.ops.auto_screen import screen_intraday, screen_post_close
 from app.services.ops.catalog import RUNNABLE_JOB_IDS
 from app.services.presets import get_builtin_recipe
@@ -22,7 +23,7 @@ def test_screen_intraday_saves_run() -> None:
     }
     fake_run = MagicMock(id="run-1")
     with (
-        patch("app.services.ops.auto_screen.load_scheduler_config", return_value={"config": {}}),
+        patch("app.services.ops.auto_screen.load_scheduler_config", return_value=SchedulerConfigOut(id="default", config={})),
         patch("app.repositories.screener.ScreenerRunRepository.latest_run_symbols", return_value=None),
         patch("app.services.ops.auto_screen.run_recipe_screen", return_value=fake_result),
         patch("app.repositories.screener.ScreenerRunRepository.save_run", return_value=fake_run) as save,
@@ -49,7 +50,9 @@ def test_screen_post_close_saves_run() -> None:
     with (
         patch(
             "app.services.ops.auto_screen.load_scheduler_config",
-            return_value={"config": {"screen_post_close": {"recipe_id": "post_close_multi", "top_n": 15}}},
+            return_value=SchedulerConfigOut(
+                id="default", config={"screen_post_close": {"recipe_id": "post_close_multi", "top_n": 15}}
+            ),
         ),
         patch("app.repositories.screener.ScreenerRunRepository.latest_run_symbols", return_value=None),
         patch("app.services.ops.auto_screen.run_recipe_screen", return_value=fake_result) as run,

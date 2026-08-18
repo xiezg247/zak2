@@ -237,9 +237,7 @@ def get_positions(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[PositionOut]]:
-    return ApiResponse(
-        data=[PositionOut(**row) for row in positions_repo.PositionRepository(db, str(user.id)).list_positions()]
-    )
+    return ApiResponse(data=positions_repo.PositionRepository(db, str(user.id)).list_positions())
 
 
 @router.post("/watchlist/positions", response_model=ApiResponse[PositionOut])
@@ -258,7 +256,7 @@ def post_position(
         notes=body.notes,
         plan_pct=body.plan_pct,
     )
-    return ApiResponse(data=PositionOut(**row))
+    return ApiResponse(data=row)
 
 
 @router.put("/watchlist/positions/{vt_symbol}", response_model=ApiResponse[PositionOut])
@@ -278,7 +276,7 @@ def put_position(
         notes=body.notes,
         plan_pct=body.plan_pct,
     )
-    return ApiResponse(data=PositionOut(**row))
+    return ApiResponse(data=row)
 
 
 @router.delete("/watchlist/positions/{vt_symbol}", response_model=ApiResponse[OkOut])

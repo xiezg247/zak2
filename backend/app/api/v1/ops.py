@@ -55,7 +55,7 @@ router = APIRouter(prefix="/ops", tags=["ops"])
 @router.get("/health", response_model=ApiResponse[HealthOut])
 def get_health(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ApiResponse[HealthOut]:
     _ = user
-    return ApiResponse(data=HealthOut(**ops_health.health_snapshot(db)))
+    return ApiResponse(data=ops_health.health_snapshot(db))
 
 
 @router.post("/collector/force", response_model=ApiResponse[SyncResult])
@@ -126,7 +126,7 @@ def get_bars_overview(
     db: Session = Depends(get_db),
 ) -> ApiResponse[BarsOverviewOut]:
     _ = user
-    return ApiResponse(data=BarsOverviewOut(**ops_bars.bars_overview(db, interval=interval)))
+    return ApiResponse(data=ops_bars.bars_overview(db, interval=interval))
 
 
 @router.get("/scheduler/config", response_model=ApiResponse[SchedulerConfigOut])
@@ -135,7 +135,7 @@ def get_scheduler_config(
     db: Session = Depends(get_db),
 ) -> ApiResponse[SchedulerConfigOut]:
     _ = user
-    return ApiResponse(data=SchedulerConfigOut(**ops_scheduler.load_scheduler_config(db)))
+    return ApiResponse(data=ops_scheduler.load_scheduler_config(db))
 
 
 @router.put("/scheduler/config", response_model=ApiResponse[SchedulerConfigOut])
@@ -145,7 +145,7 @@ def put_scheduler_config(
     db: Session = Depends(get_db),
 ) -> ApiResponse[SchedulerConfigOut]:
     _ = user
-    return ApiResponse(data=SchedulerConfigOut(**ops_scheduler.save_scheduler_config(db, body.config)))
+    return ApiResponse(data=ops_scheduler.save_scheduler_config(db, body.config))
 
 
 @router.get("/scheduler/jobs", response_model=ApiResponse[list[SchedulerJobOut]])
@@ -220,7 +220,7 @@ def post_cache_purge(
     db: Session = Depends(get_db),
 ) -> ApiResponse[PurgeResult]:
     _ = user
-    return ApiResponse(data=PurgeResult(**ops_purge.purge_stale_cache(db)))
+    return ApiResponse(data=ops_purge.purge_stale_cache(db))
 
 
 @router.post("/sync/trade-calendar", response_model=ApiResponse[SyncResult])

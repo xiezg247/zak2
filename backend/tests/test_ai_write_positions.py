@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from fastapi import HTTPException
 
+from app.schemas.watchlist import PositionOut
 from app.services.ai_tools import execute_write_tool, summarize_write_tool
 
 
@@ -48,14 +49,14 @@ def test_upsert_not_in_watchlist() -> None:
 
 def test_upsert_creates_when_missing() -> None:
     db = MagicMock()
-    row = {
-        "vt_symbol": "600519.SSE",
-        "symbol": "600519",
-        "exchange": "SSE",
-        "cost_price": 100.0,
-        "volume": 100,
-        "buy_date": "2026-08-01",
-    }
+    row = PositionOut(
+        vt_symbol="600519.SSE",
+        symbol="600519",
+        exchange="SSE",
+        cost_price=100.0,
+        volume=100,
+        buy_date="2026-08-01",
+    )
     with (
         patch("app.services.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
         patch("app.repositories.positions.PositionRepository.get_position", return_value=None),
@@ -82,7 +83,14 @@ def test_upsert_creates_when_missing() -> None:
 def test_upsert_updates_when_exists() -> None:
     db = MagicMock()
     existing = {"vt_symbol": "600519.SSE", "symbol": "600519", "exchange": "SSE"}
-    row = {**existing, "cost_price": 110.0, "volume": 200, "buy_date": "2026-08-01"}
+    row = PositionOut(
+        vt_symbol="600519.SSE",
+        symbol="600519",
+        exchange="SSE",
+        cost_price=110.0,
+        volume=200,
+        buy_date="2026-08-01",
+    )
     with (
         patch("app.services.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
         patch("app.repositories.positions.PositionRepository.get_position", return_value=existing),

@@ -139,7 +139,10 @@ def get_stock_notes(db: Session, user_id: str, args: dict[str, Any]) -> Any:
 def get_positions(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     limit = max(1, min(int(args.get("limit") or 20), 20))
     with_quotes = bool(args.get("with_quotes", True))
-    items = list(positions_repo.PositionRepository(db, user_id).list_positions()[:limit])
+    items = [
+        r.model_dump() if isinstance(r, BaseModel) else r
+        for r in positions_repo.PositionRepository(db, user_id).list_positions()[:limit]
+    ]
     if with_quotes and items:
         try:
             from app.services.symbols import to_tf_symbol

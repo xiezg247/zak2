@@ -7,8 +7,10 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.ops import BarsOverviewOut
 
-def bars_overview(db: Session, *, interval: str = "d") -> dict[str, Any]:
+
+def bars_overview(db: Session, *, interval: str = "d") -> BarsOverviewOut:
     row = (
         db.execute(
             text(
@@ -53,15 +55,15 @@ def bars_overview(db: Session, *, interval: str = "d") -> dict[str, Any]:
     )
 
     if not row:
-        return {
-            "interval": interval,
-            "symbol_count": 0,
-            "min_start": None,
-            "max_end": None,
-            "as_of_trade_date": None,
-            "ok_count": 0,
-            "stale_count": 0,
-        }
+        return BarsOverviewOut(
+            interval=interval,
+            symbol_count=0,
+            min_start=None,
+            max_end=None,
+            as_of_trade_date=None,
+            ok_count=0,
+            stale_count=0,
+        )
 
     def _iso(v: Any) -> str | None:
         if v is None:
@@ -78,13 +80,13 @@ def bars_overview(db: Session, *, interval: str = "d") -> dict[str, Any]:
         ok_count = 0
         stale_count = 0
 
-    return {
-        "interval": interval,
-        "symbol_count": symbol_count,
-        "min_start": _iso(row["min_start"]),
-        "max_end": _iso(row["max_end"]),
-        "as_of_trade_date": row["as_of_trade_date"],
-        "ok_count": ok_count,
-        "stale_count": stale_count,
-        "unknown_count": max(0, symbol_count - ok_count - stale_count),
-    }
+    return BarsOverviewOut(
+        interval=interval,
+        symbol_count=symbol_count,
+        min_start=_iso(row["min_start"]),
+        max_end=_iso(row["max_end"]),
+        as_of_trade_date=row["as_of_trade_date"],
+        ok_count=ok_count,
+        stale_count=stale_count,
+        unknown_count=max(0, symbol_count - ok_count - stale_count),
+    )

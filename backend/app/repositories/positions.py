@@ -1,8 +1,8 @@
 """自选持仓记账 CRUD（投研层，非实盘）。
 
 ORM 操作 app.watchlist_positions（模型 WatchlistPosition，复合主键
-symbol+exchange）。对外返回 dict（含 vt_symbol 派生字段），保持既有
-调用契约；复合主键与定制校验使其不继承 BaseRepository。
+symbol+exchange）。对外返回 PositionOut（含 vt_symbol 派生字段）；
+复合主键与定制校验使其不继承 BaseRepository。
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.time import china_now, china_today
 from app.models.watchlist import WatchlistPosition
 from app.repositories.watchlist import WatchlistItemRepository
+from app.schemas.watchlist import PositionOut
 from app.services.symbols import normalize_exchange, to_vt_symbol
 
 POSITION_MAX_ITEMS = 20
@@ -61,7 +62,7 @@ def validate_inputs(*, cost_price: float, volume: int, buy_date: str) -> None:
 
 
 class PositionRepository:
-    """持仓记账仓库（ORM 查询，返回 dict）。"""
+    """持仓记账仓库（ORM 查询，返回 PositionOut）。"""
 
     def __init__(self, db: Session, user_id: str) -> None:
         self.db = db
@@ -77,40 +78,40 @@ class PositionRepository:
         )
 
     @staticmethod
-    def _to_dict(p: WatchlistPosition) -> dict:
+    def _to_out(p: WatchlistPosition) -> PositionOut:
         symbol = p.symbol
         exchange = normalize_exchange(p.exchange)
-        return {
-            "symbol": symbol,
-            "exchange": exchange,
-            "vt_symbol": to_vt_symbol(symbol, exchange),
-            "cost_price": float(p.cost_price),
-            "volume": int(p.volume),
-            "buy_date": str(p.buy_date)[:10],
-            "notes": str(p.notes or ""),
-            "source": str(p.source or "manual"),
-            "plan_pct": float(p.plan_pct) if p.plan_pct is not None else None,
-            "sort_order": int(p.sort_order or 0),
-            "created_at": str(p.created_at or ""),
-            "updated_at": str(p.updated_at or ""),
-        }
+        return PositionOut(
+            symbol=symbol,
+            exchange=exchange,
+            vt_symbol=to_vt_symbol(symbol, exchange),
+            cost_price=float(p.cost_price),
+            volume=int(p.volume),
+            buy_date=str(p.buy_date)[:10],
+            notes=str(p.notes or ""),
+            source=str(p.source or "manual"),
+            plan_pct=float(p.plan_pct) if p.plan_pct is not None else None,
+            sort_order=int(p.sort_order or 0),
+            created_at=str(p.created_at or ""),
+            updated_at=str(p.updated_at or ""),
+        )
 
     def _in_watchlist(self, symbol: str, exchange: str) -> bool:
         items = WatchlistItemRepository(self.db, self.user_id).list_items()
         exch = normalize_exchange(exchange)
         return any(i.symbol == symbol and normalize_exchange(i.exchange) == exch for i in items)
 
-    def list_positions(self) -> list[dict]:
+    def list_positions(self) -> list[PositionOut]:
         rows = self.db.scalars(
             select(WatchlistPosition)
             .where(WatchlistPosition.user_id == self.user_id)
             .order_by(WatchlistPosition.sort_order, WatchlistPosition.buy_date.desc())
         )
-        return [self._to_dict(r) for r in rows]
+        return [self._to_out(r) for r in rows]
 
-    def get_position(self, symbol: str, exchange: str) -> dict | None:
+    def get_position(self, symbol: str, exchange: str) -> PositionOut | None:
         row = self._row(symbol, normalize_exchange(exchange))
-        return self._to_dict(row) if row else None
+        return self._to_out(row) if row else None
 
     def add_position(
         self,
@@ -122,7 +123,7 @@ class PositionRepository:
         buy_date: str,
         notes: str = "",
         plan_pct: float | None = None,
-    ) -> dict:
+    ) -> PositionOut:
         validate_inputs(cost_price=cost_price, volume=volume, buy_date=buy_date)
         exch = normalize_exchange(exchange)
         if not self._in_watchlist(symbol, exch):
@@ -151,7 +152,7 @@ class PositionRepository:
         self.db.add(row)
         self.db.commit()
         self.db.refresh(row)
-        return self._to_dict(row)
+        return self._to_out(row)
 
     def update_position(
         self,
@@ -163,7 +164,7 @@ class PositionRepository:
         buy_date: str,
         notes: str = "",
         plan_pct: float | None = None,
-    ) -> dict:
+    ) -> PositionOut:
         validate_inputs(cost_price=cost_price, volume=volume, buy_date=buy_date)
         exch = normalize_exchange(exchange)
         row = self._row(symbol, exch)
@@ -177,7 +178,7 @@ class PositionRepository:
         row.updated_at = _now_iso()
         self.db.commit()
         self.db.refresh(row)
-        return self._to_dict(row)
+        return self._to_out(row)
 
     def delete_position(self, *, symbol: str, exchange: str) -> bool:
         row = self._row(symbol, normalize_exchange(exchange))

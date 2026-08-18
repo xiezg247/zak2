@@ -14,5 +14,5 @@ def test_health_scheduler_lock_has_ok() -> None:
         store.meta.return_value = {"available": True, "updated_at": None, "quote_count": 0}
         gs.return_value = store
         snap = ops_health.health_snapshot(db)
-    assert snap["scheduler_lock"]["ok"] is True
-    assert "key_prefix" in snap["scheduler_lock"]
+    assert snap.scheduler_lock.ok is True
+    assert snap.scheduler_lock.key_prefix

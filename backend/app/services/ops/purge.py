@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import os
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.schemas.ops import PurgeResult
 from app.services.ops.scheduler import save_job_run_meta
 
 JOB_ID = "purge_stale_cache"
@@ -27,7 +27,7 @@ def _delete_count(db: Session, sql: str, params: dict[str, str]) -> int:
     return int(getattr(result, "rowcount", 0) or 0)
 
 
-def purge_stale_cache(db: Session) -> dict[str, Any]:
+def purge_stale_cache(db: Session) -> PurgeResult:
     now = datetime.now(UTC)
     now_text = now.isoformat(timespec="seconds")
     signal_cutoff = (now - timedelta(days=_env_int("CACHE_SIGNAL_RETENTION_DAYS", 7))).isoformat(timespec="seconds")
@@ -61,4 +61,4 @@ def purge_stale_cache(db: Session) -> dict[str, Any]:
     parts = ", ".join(f"{name} {count}" for name, count in deleted.items() if count)
     message = f"清理 cache {total} 行（{parts or '无过期行'}）"
     save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
-    return {"deleted": deleted, "total": total, "message": message}
+    return PurgeResult(deleted=deleted, total=total, message=message)

@@ -10,15 +10,16 @@ import httpx
 from fastapi import HTTPException
 
 from app.core.settings import get_settings
+from app.schemas.chat import LlmStatus
 
 
-def llm_status() -> dict[str, Any]:
+def llm_status() -> LlmStatus:
     s = get_settings()
-    return {
-        "configured": bool(s.llm_api_key.strip()),
-        "model": s.llm_model,
-        "api_base": s.llm_api_base.rstrip("/"),
-    }
+    return LlmStatus(
+        configured=bool(s.llm_api_key.strip()),
+        model=s.llm_model,
+        api_base=s.llm_api_base.rstrip("/"),
+    )
 
 
 def _headers() -> dict[str, str]:

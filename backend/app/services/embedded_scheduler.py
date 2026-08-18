@@ -63,7 +63,7 @@ def _run_job(job_id: str) -> None:
     try:
         db = SessionLocal()
         loaded = load_scheduler_config(db)
-        config = dict(loaded.get("config") or {})
+        config = dict(loaded.config or {})
         if not _job_enabled(config, job_id):
             return
 
@@ -102,7 +102,7 @@ def start_embedded_scheduler() -> None:
 
     db = SessionLocal()
     try:
-        config = dict(load_scheduler_config(db).get("config") or {})
+        config = dict(load_scheduler_config(db).config or {})
     finally:
         db.close()
 

@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.schemas.ops import SchedulerConfigOut
 from app.services import embedded_scheduler as es
 from app.services.ops.catalog import RUNNABLE_JOB_IDS
 
@@ -41,7 +42,7 @@ def test_run_job_skips_when_not_enabled(monkeypatch) -> None:
     monkeypatch.setattr(
         es,
         "load_scheduler_config",
-        lambda _db: {"config": {"purge_stale_cache": {"enabled": False}}},
+        lambda _db: SchedulerConfigOut(id="default", config={"purge_stale_cache": {"enabled": False}}),
     )
     enq = MagicMock()
     monkeypatch.setattr(es, "enqueue_ops_job_sync", enq)
@@ -60,7 +61,7 @@ def test_screen_skips_without_user(monkeypatch) -> None:
     monkeypatch.setattr(
         es,
         "load_scheduler_config",
-        lambda _db: {"config": {"screen_intraday": {"enabled": True}}},
+        lambda _db: SchedulerConfigOut(id="default", config={"screen_intraday": {"enabled": True}}),
     )
     enq = MagicMock()
     monkeypatch.setattr(es, "enqueue_ops_job_sync", enq)
@@ -83,7 +84,7 @@ def test_screen_calls_with_user(monkeypatch) -> None:
     monkeypatch.setattr(
         es,
         "load_scheduler_config",
-        lambda _db: {"config": {"screen_intraday": {"enabled": True}}},
+        lambda _db: SchedulerConfigOut(id="default", config={"screen_intraday": {"enabled": True}}),
     )
     enq = MagicMock(return_value="jid")
     monkeypatch.setattr(es, "enqueue_ops_job_sync", enq)
@@ -156,7 +157,7 @@ def test_run_job_skips_when_distributed_lock_not_acquired(monkeypatch) -> None:
     monkeypatch.setattr(
         es,
         "load_scheduler_config",
-        lambda _db: {"config": {"purge_stale_cache": {"enabled": True}}},
+        lambda _db: SchedulerConfigOut(id="default", config={"purge_stale_cache": {"enabled": True}}),
     )
     enq = MagicMock()
     monkeypatch.setattr(es, "enqueue_ops_job_sync", enq)
@@ -179,7 +180,7 @@ def test_run_job_releases_distributed_lock_in_finally(monkeypatch) -> None:
     monkeypatch.setattr(
         es,
         "load_scheduler_config",
-        lambda _db: {"config": {"purge_stale_cache": {"enabled": True}}},
+        lambda _db: SchedulerConfigOut(id="default", config={"purge_stale_cache": {"enabled": True}}),
     )
     enq = MagicMock(return_value="jid")
     monkeypatch.setattr(es, "enqueue_ops_job_sync", enq)

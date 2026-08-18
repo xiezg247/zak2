@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+from app.schemas.ops import SchedulerConfigOut
 from app.services import embedded_scheduler as es
 
 
@@ -24,7 +25,7 @@ def test_run_job_enqueues_instead_of_local_runner() -> None:
         patch.object(
             es,
             "load_scheduler_config",
-            return_value={"config": {"sync_universe": {"enabled": True}}},
+            return_value=SchedulerConfigOut(id="default", config={"sync_universe": {"enabled": True}}),
         ),
         patch.object(es, "enqueue_ops_job_sync", return_value="jid") as enq,
         patch.object(es, "needs_user_id", return_value=False),

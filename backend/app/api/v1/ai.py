@@ -33,7 +33,7 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 @router.get("/status", response_model=ApiResponse[LlmStatus])
 def get_status(user: User = Depends(get_current_user)) -> ApiResponse[LlmStatus]:
     _ = user
-    return ApiResponse(data=LlmStatus(**llm_svc.llm_status()))
+    return ApiResponse(data=llm_svc.llm_status())
 
 
 @router.get("/sessions", response_model=ApiResponse[list[SessionOut]])

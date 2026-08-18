@@ -81,7 +81,7 @@ def _run_sync_bilibili_feed(db: Session, **_kwargs: Any) -> SyncResult:
 
 
 RUNNERS: dict[str, Callable[..., Any]] = {
-    # 各 runner 统一返回 SyncResult（Pydantic model），worker 层 model_dump 后入库。
+    # 各 runner 返回 Pydantic model（多为 SyncResult，purge 为 PurgeResult），worker 层 model_dump 后入库。
     "purge_stale_cache": ops_purge.purge_stale_cache,
     "sync_trade_calendar": ops_sync_calendar.sync_trade_calendar,
     "sync_sector_flow_daily": ops_sync_sector.sync_sector_flow_daily,

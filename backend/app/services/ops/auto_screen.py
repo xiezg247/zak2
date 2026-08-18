@@ -33,7 +33,7 @@ def _run_auto_screen(
     if not user_id:
         return SyncResult(success=False, message="缺少用户")
 
-    cfg = (load_scheduler_config(db).get("config") or {}).get(config_attr) or {}
+    cfg = (load_scheduler_config(db).config or {}).get(config_attr) or {}
     if not isinstance(cfg, dict):
         cfg = {}
     recipe_id = str(cfg.get("recipe_id") or default_recipe).strip() or default_recipe
