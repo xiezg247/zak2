@@ -27,6 +27,11 @@ const enabledOnly = ref(false)
 
 const subtitle = computed(() => `${subs.value.length} 订阅 · ${itemsTotal.value} 条`)
 
+const ITEM_TYPE_LABELS: Record<string, string> = {
+  video: '视频',
+  dynamic: '动态',
+}
+
 const displayedSubs = computed(() => {
   let list = subs.value
   if (enabledOnly.value) {
@@ -57,6 +62,10 @@ const displayedItems = computed(() => {
   }
   return list
 })
+
+function itemTypeLabel(t: string): string {
+  return ITEM_TYPE_LABELS[t] || ''
+}
 
 async function load() {
   loading.value = true
@@ -188,111 +197,166 @@ onMounted(() => {
 <template>
   <AppShell title="信息流" :subtitle="subtitle" active="feed">
     <div class="page">
-      <p class="hint muted">
-        左侧可 mid 直填，或关键词搜索后点选添加 UP 订阅；可选「并同步」立即拉取动态。批量同步仍可由
-        Ops「B站订阅同步」或内嵌定时（`sync_bilibili_feed`，需
-        <code>BILIBILI_COOKIES</code>）。
-      </p>
-      <p v-if="error" class="err">{{ error }}</p>
+      <div class="page-head">
+        <p class="hint">
+          添加 B 站 UP 订阅后可自动拉取动态；批量同步走
+          <code>sync_bilibili_feed</code>（需 <code>BILIBILI_COOKIES</code>）。
+        </p>
+        <p v-if="error" class="err">{{ error }}</p>
+      </div>
 
       <div class="workspace">
         <aside class="left">
-          <div class="row">
-            <input v-model="newMid" placeholder="UP mid" @keyup.enter="addSub" />
-            <button type="button" class="primary" :disabled="adding" @click="addSub">添加</button>
-          </div>
-          <label class="sync-label">
-            <input v-model="syncOnAdd" type="checkbox" />
-            并同步
-          </label>
-          <div class="row">
-            <input v-model="searchQ" placeholder="关键词搜 UP" @keyup.enter="runSearch" />
-            <button type="button" class="ghost" :disabled="searching" @click="runSearch">
-              搜索
-            </button>
-          </div>
-          <div v-if="searchHits.length" class="hits">
-            <div v-for="h in searchHits" :key="h.mid" class="hit-row">
-              <img v-if="h.avatar" class="avatar" :src="h.avatar" alt="" />
-              <span v-else class="avatar avatar-ph" aria-hidden="true"></span>
-              <div class="hit-meta">
-                <div class="hit-name">{{ h.name || h.mid }}</div>
-                <div class="muted tiny-text">mid {{ h.mid }}</div>
-              </div>
-              <button type="button" class="tiny" :disabled="adding" @click="addFromHit(h)">
-                添加
+          <section class="side-section">
+            <h2 class="side-title">添加订阅</h2>
+            <div class="row">
+              <input v-model="newMid" placeholder="输入 UP 的 mid" @keyup.enter="addSub" />
+              <button type="button" class="primary" :disabled="adding" @click="addSub">添加</button>
+            </div>
+            <label class="check-label">
+              <input v-model="syncOnAdd" type="checkbox" />
+              <span>添加后立即同步</span>
+            </label>
+
+            <div class="row">
+              <input
+                v-model="searchQ"
+                placeholder="搜索 UP 主（关键词）"
+                @keyup.enter="runSearch"
+              />
+              <button type="button" class="ghost" :disabled="searching" @click="runSearch">
+                {{ searching ? '搜索中' : '搜索' }}
               </button>
             </div>
-          </div>
-          <p v-else-if="searchTried && !searching" class="muted tiny-text">无搜索结果</p>
-          <p v-if="!subs.length && !loading" class="muted tiny-text sub-hint">
-            先搜索关键词或填写 mid 添加订阅。
-          </p>
-          <input
-            v-if="subs.length"
-            v-model="subFilter"
-            class="sub-filter"
-            placeholder="过滤订阅名/mid"
-          />
-          <label v-if="subs.length" class="enabled-label">
-            <input v-model="enabledOnly" type="checkbox" />
-            仅启用
-          </label>
-          <button type="button" class="sub" :class="{ on: !subId }" @click="subId = ''">
-            全部
-          </button>
-          <p v-if="subs.length && !displayedSubs.length" class="muted tiny-text">无匹配订阅</p>
-          <div v-for="s in displayedSubs" :key="s.id" class="sub-row">
-            <button type="button" class="sub" :class="{ on: subId === s.id }" @click="subId = s.id">
-              {{ s.display_name || s.source_id }}
-            </button>
-            <button type="button" class="tiny" @click="toggleSub(s)">
-              {{ s.enabled ? '开' : '关' }}
-            </button>
-            <button type="button" class="tiny danger" @click="removeSub(s)">删</button>
-          </div>
-        </aside>
-        <section class="right">
-          <div class="right-tools">
-            <button class="ghost" type="button" :disabled="loading" @click="load">刷新</button>
-            <div v-if="items.length" class="filter-row">
-              <input v-model="listFilter" placeholder="过滤标题/作者" />
-              <label class="unread-label">
-                <input v-model="unreadOnly" type="checkbox" />
-                仅未读
-              </label>
+
+            <div v-if="searchHits.length" class="hits">
+              <div v-for="h in searchHits" :key="h.mid" class="hit-row">
+                <div class="hit-meta">
+                  <div class="hit-name">{{ h.name || h.mid }}</div>
+                  <div class="muted tiny-text">mid {{ h.mid }}</div>
+                </div>
+                <button type="button" class="tiny" :disabled="adding" @click="addFromHit(h)">
+                  添加
+                </button>
+              </div>
             </div>
+            <p v-else-if="searchTried && !searching" class="muted tiny-text">无搜索结果</p>
+          </section>
+
+          <section class="side-section grow">
+            <div class="side-title-row">
+              <h2 class="side-title">我的订阅</h2>
+              <span class="count muted">{{ subs.length }}</span>
+            </div>
+
+            <input v-model="subFilter" class="sub-filter" placeholder="过滤订阅名 / mid" />
+            <label class="check-label">
+              <input v-model="enabledOnly" type="checkbox" />
+              <span>仅看启用</span>
+            </label>
+
+            <button type="button" class="sub all" :class="{ on: !subId }" @click="subId = ''">
+              全部动态
+            </button>
+
+            <p v-if="subs.length && !displayedSubs.length" class="muted tiny-text">无匹配订阅</p>
+            <p v-if="!subs.length && !loading" class="muted tiny-text sub-hint">
+              先搜索关键词或填写 mid 添加订阅。
+            </p>
+
+            <div class="sub-list">
+              <div
+                v-for="s in displayedSubs"
+                :key="s.id"
+                class="sub-row"
+                :class="{ on: subId === s.id, off: !s.enabled }"
+              >
+                <button
+                  type="button"
+                  class="sub-name"
+                  :title="s.source_id"
+                  @click="subId = s.id"
+                >
+                  {{ s.display_name || s.source_id }}
+                </button>
+                <button
+                  type="button"
+                  class="icon-btn"
+                  :class="{ on: s.enabled }"
+                  :title="s.enabled ? '停用' : '启用'"
+                  @click="toggleSub(s)"
+                >
+                  {{ s.enabled ? '开' : '关' }}
+                </button>
+                <button
+                  type="button"
+                  class="icon-btn danger"
+                  title="删除"
+                  @click="removeSub(s)"
+                >
+                  删
+                </button>
+              </div>
+            </div>
+          </section>
+        </aside>
+
+        <section class="right">
+          <div class="right-head">
+            <div class="right-title-row">
+              <h2 class="right-title">动态</h2>
+              <span class="count muted">{{ displayedItems.length }}</span>
+            </div>
+            <button class="ghost" type="button" :disabled="loading" @click="load">刷新</button>
           </div>
 
-          <p v-if="loading" class="muted">加载中…</p>
-          <template v-else>
-            <p v-if="!subs.length" class="empty muted">暂无订阅</p>
-            <p v-else-if="!items.length" class="empty muted">
-              暂无动态。可到 Ops 执行 sync_bilibili_feed。
-              <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
-            </p>
-            <p v-else-if="!displayedItems.length" class="empty muted">无匹配动态</p>
-            <article
-              v-for="item in displayedItems"
-              :key="item.id"
-              class="item"
-              :class="{ unread: !item.is_read }"
-              @click="openItem(item)"
-            >
-              <div class="meta muted">
-                {{ item.author_name }} · {{ item.published_at }}
-                <span v-if="!item.is_read">· 未读</span>
-              </div>
-              <h3>{{ item.title || '(无标题)' }}</h3>
-              <p class="summary">{{ item.summary }}</p>
-            </article>
-            <PagerBar
-              :page="itemsPage"
-              :pages="itemsPages"
-              :total="itemsTotal"
-              @change="goItemsPage"
-            />
-          </template>
+          <div v-if="items.length" class="filter-row">
+            <input v-model="listFilter" placeholder="过滤标题 / 作者 / 摘要" />
+            <label class="check-label">
+              <input v-model="unreadOnly" type="checkbox" />
+              <span>仅看未读</span>
+            </label>
+          </div>
+
+          <div class="feed">
+            <p v-if="loading" class="empty muted">加载中…</p>
+            <template v-else>
+              <p v-if="!subs.length" class="empty muted">暂无订阅</p>
+              <p v-else-if="!items.length" class="empty muted">
+                暂无动态。可到「调度」执行 B 站订阅同步。
+                <RouterLink to="/scheduler" class="link">去调度</RouterLink>
+              </p>
+              <p v-else-if="!displayedItems.length" class="empty muted">无匹配动态</p>
+              <article
+                v-for="(item, i) in displayedItems"
+                :key="item.id"
+                class="item"
+                :class="{ unread: !item.is_read }"
+                :style="{ '--i': i }"
+                @click="openItem(item)"
+              >
+                <div class="item-head">
+                  <div class="item-byline">
+                    <span class="item-author">{{ item.author_name || '未知作者' }}</span>
+                    <span class="item-time">{{ item.published_at }}</span>
+                  </div>
+                  <span v-if="itemTypeLabel(item.item_type)" class="item-type">{{
+                    itemTypeLabel(item.item_type)
+                  }}</span>
+                  <span v-if="!item.is_read" class="unread-dot" title="未读"></span>
+                </div>
+                <h3 class="item-title">{{ item.title || '(无标题)' }}</h3>
+                <p v-if="item.summary" class="item-summary">{{ item.summary }}</p>
+                <span class="item-open">打开 ↗</span>
+              </article>
+              <PagerBar
+                :page="itemsPage"
+                :pages="itemsPages"
+                :total="itemsTotal"
+                @change="goItemsPage"
+              />
+            </template>
+          </div>
         </section>
       </div>
     </div>
@@ -301,214 +365,436 @@ onMounted(() => {
 
 <style scoped>
 .page {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   height: 100%;
   padding: 16px 24px 24px;
 }
+.page-head {
+  display: grid;
+  gap: 6px;
+}
 .hint {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+.hint code {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 4px;
+  color: var(--brand-dark);
 }
 .err {
   margin: 0;
   color: var(--danger);
+  font-size: 0.85rem;
 }
+
 .workspace {
   display: grid;
-  grid-template-columns: 240px 1fr;
-  gap: 12px;
-  min-height: 0;
+  grid-template-columns: 264px minmax(0, 1fr);
+  gap: 14px;
   flex: 1;
+  min-height: 0;
 }
+
+/* ---------- 左栏 ---------- */
 .left,
 .right {
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--bg-elevated);
-  padding: 12px;
+  min-height: 0;
   overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.left {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+}
+.side-section {
   display: grid;
   gap: 8px;
-  align-content: start;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.side-section + .side-section {
+  padding-top: 16px;
+}
+.side-section.grow {
+  flex: 1;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.side-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+.side-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.count {
+  font-size: 0.75rem;
 }
 .row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
 }
 .row input {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
   border-radius: 0.5rem;
   padding: 8px 10px;
 }
-.sync-label {
+.check-label {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.85rem;
-  color: var(--muted);
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.check-label input {
+  accent-color: var(--brand);
 }
 .primary {
-  background: var(--accent);
+  background: var(--brand);
   border: none;
   color: var(--brand-foreground);
   border-radius: 0.5rem;
   padding: 8px 12px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 .primary:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
+  cursor: not-allowed;
 }
-.sub-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 6px;
-}
-.tiny.danger {
-  color: var(--danger);
-}
-.sub {
-  text-align: left;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
+.ghost {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
   border-radius: 0.5rem;
-  padding: 8px 10px;
+  padding: 8px 12px;
+  white-space: nowrap;
 }
-.sub.on {
-  border-color: var(--accent);
+.ghost:hover:not(:disabled) {
+  background: var(--brand-light);
+  color: var(--brand);
+  border-color: var(--brand-soft);
+}
+.ghost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.hits {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line-soft);
+  border-radius: 0.6rem;
+  padding: 6px;
+  background: var(--surface-muted);
+}
+.hit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.hit-meta {
+  min-width: 0;
+}
+.hit-name {
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tiny-text {
+  font-size: 0.72rem;
 }
 .tiny {
   background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
+  border: 1px solid var(--line);
+  color: var(--brand);
   border-radius: 0.5rem;
-  padding: 0 8px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
 }
-.ghost {
-  justify-self: start;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
+.tiny:hover:not(:disabled) {
+  background: var(--brand-light);
+}
+.tiny:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sub-filter {
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 0.5rem;
-  padding: 6px 10px;
+  color: var(--ink);
+  padding: 8px 10px;
+  width: 100%;
 }
-.right-tools {
+.sub-hint {
+  margin: 0;
+}
+.sub.all {
+  width: 100%;
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink);
+}
+.sub-list {
   display: grid;
+  gap: 2px;
+  margin-top: 2px;
+  overflow: auto;
+}
+.sub-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+  align-items: center;
+  border-radius: 0.5rem;
+  padding: 4px 4px;
+}
+.sub-row:hover {
+  background: var(--surface-muted);
+}
+.sub-row.on {
+  background: var(--brand-light);
+}
+.sub-row.off .sub-name {
+  color: var(--ink-faint);
+}
+.sub-name {
+  min-width: 0;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  padding: 6px 4px;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink-muted);
+  border-radius: 0.4rem;
+  padding: 2px 7px;
+  font-size: 0.72rem;
+}
+.icon-btn:hover {
+  background: var(--surface);
+}
+.icon-btn.on {
+  color: var(--ok);
+  border-color: #86efac;
+  background: #ecfdf5;
+}
+.icon-btn.danger {
+  color: var(--danger);
+}
+.icon-btn.danger:hover {
+  background: #fff1f2;
+  border-color: var(--danger);
+}
+
+/* ---------- 右栏 ---------- */
+.right {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+}
+.right-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.right-title-row {
+  display: flex;
+  align-items: baseline;
   gap: 8px;
+}
+.right-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
 }
 .filter-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 4px;
 }
 .filter-row input {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 0.5rem;
-  padding: 6px 10px;
-  min-width: 140px;
   flex: 1;
+  min-width: 160px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 0.5rem;
+  padding: 8px 10px;
 }
-.unread-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: var(--muted);
-  white-space: nowrap;
+
+.feed {
+  display: grid;
+  gap: 10px;
+  padding-top: 6px;
 }
-.enabled-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: var(--muted);
-  white-space: nowrap;
+.empty {
+  text-align: center;
+  padding: 32px 16px;
+  margin: 0;
+  color: var(--ink-muted);
 }
-.draft-link {
+.link {
   color: var(--brand);
   margin-left: 4px;
 }
-.sub-hint {
-  margin: 0;
+.link:hover {
+  text-decoration: underline;
 }
-.sub-filter {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  color: var(--text);
-  padding: 8px 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
+
 .item {
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 10px 12px;
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  padding: 12px 14px;
   cursor: pointer;
-  background: var(--bg);
+  background: var(--surface);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+  animation: rise 0.32s ease both;
+  animation-delay: calc(min(var(--i), 14) * 22ms);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.item:hover {
+  border-color: var(--brand-soft);
+  box-shadow: var(--shadow-panel);
+  transform: translateY(-1px);
 }
 .item.unread {
   border-color: var(--brand-soft);
+  background: linear-gradient(90deg, var(--brand-light), var(--surface) 32%);
 }
-.item h3 {
-  margin: 4px 0;
-  font-size: 1rem;
+.item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.summary {
+.item-byline {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+.item-author {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+.item-time {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+.item-type {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--brand-dark);
+  background: var(--brand-light);
+  border: 1px solid var(--brand-soft);
+  border-radius: 999px;
+  padding: 1px 8px;
+  flex-shrink: 0;
+}
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px var(--brand-light);
+}
+.item-title {
+  margin: 8px 0 4px;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.item-summary {
   margin: 0;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.85rem;
+  line-height: 1.55;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.meta {
-  font-size: 0.8rem;
-}
-.muted {
-  color: var(--muted);
-}
-.empty {
-  text-align: center;
-  padding: 24px;
-}
-.hits {
-  display: grid;
-  gap: 6px;
-}
-.hit-row {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 8px;
-  align-items: center;
-}
-.avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-.avatar-ph {
+.item-open {
   display: inline-block;
-  background: var(--border);
-  flex-shrink: 0;
-}
-.hit-name {
-  font-size: 0.9rem;
-}
-.tiny-text {
+  margin-top: 8px;
   font-size: 0.75rem;
+  color: var(--ink-faint);
+  opacity: 0;
+  transform: translateY(2px);
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
 }
+.item:hover .item-open {
+  opacity: 1;
+  transform: translateY(0);
+  color: var(--brand);
+}
+
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
+  }
+  .left,
+  .right {
+    overflow: visible;
   }
 }
 </style>

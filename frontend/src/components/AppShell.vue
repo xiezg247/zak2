@@ -20,6 +20,8 @@ defineProps<{
     | 'backtest'
     | 'ai'
     | 'ops'
+    | 'scheduler'
+    | 'notify'
 }>()
 
 const auth = useAuthStore()
@@ -37,6 +39,8 @@ type NavKey =
   | 'notes'
   | 'ai'
   | 'ops'
+  | 'scheduler'
+  | 'notify'
 
 type NavItem = {
   key: NavKey
@@ -68,7 +72,11 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   },
   {
     title: '系统',
-    items: [{ key: 'ops', label: '运维', to: '/ops', enabled: true }],
+    items: [
+      { key: 'ops', label: '运维', to: '/ops', enabled: true },
+      { key: 'scheduler', label: '调度', to: '/scheduler', enabled: true },
+      { key: 'notify', label: '通知', to: '/notify', enabled: true },
+    ],
   },
 ]
 
@@ -123,14 +131,6 @@ function logout() {
           </ul>
         </div>
       </nav>
-
-      <div class="side-foot">
-        <span class="avatar sm" aria-hidden="true">{{ initial }}</span>
-        <div class="side-foot-text">
-          <span class="side-foot-name">{{ displayName }}</span>
-          <span class="side-foot-meta">工作台</span>
-        </div>
-      </div>
     </aside>
 
     <div class="main">
@@ -199,34 +199,6 @@ function logout() {
 .side-nav::-webkit-scrollbar-thumb {
   background: var(--line);
   border-radius: 999px;
-}
-.side-foot {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-  margin: 0 12px 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--line-soft);
-  border-radius: 0.75rem;
-  background: var(--surface-muted);
-}
-.side-foot-text {
-  display: grid;
-  min-width: 0;
-  gap: 2px;
-}
-.side-foot-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--ink);
-}
-.side-foot-meta {
-  font-size: 0.7rem;
-  color: var(--ink-faint);
 }
 .nav-group.spaced {
   margin-top: 1.25rem;
@@ -319,10 +291,6 @@ function logout() {
   font-size: 0.75rem;
   font-weight: 600;
   flex-shrink: 0;
-}
-.avatar.sm {
-  width: 30px;
-  height: 30px;
 }
 .user-name {
   max-width: 10rem;

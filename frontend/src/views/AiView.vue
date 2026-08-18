@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
+import MarkdownView from '../components/MarkdownView.vue'
 import PagerBar from '../components/PagerBar.vue'
 import {
   aiApi,
@@ -67,6 +68,10 @@ function formatArgs(p: ConfirmProposal): string {
   } catch {
     return String(p.args)
   }
+}
+
+function agentName(key: string): string {
+  return key === 'financial' ? '财务' : key === 'risk' ? '风险' : '策略'
 }
 
 const subtitle = computed(() => {
@@ -323,92 +328,132 @@ onMounted(async () => {
 <template>
   <AppShell title="AI 助手" :subtitle="subtitle" active="ai">
     <div class="page">
-      <p v-if="status && !status.configured" class="warn-banner muted">
-        未配置 LLM_API_KEY，对话与团队分析不可用。
-      </p>
+      <p v-if="status && !status.configured" class="warn-banner">未配置 LLM_API_KEY，对话与团队分析不可用。</p>
       <p v-if="error" class="err">{{ error }}</p>
+
       <div class="workspace">
         <aside class="left">
-          <button class="primary" type="button" @click="newSession">新对话</button>
-          <label class="ctx">
-            <input v-model="includeContext" type="checkbox" />
-            注入自选/选股/回测上下文
-          </label>
-          <label class="ctx">
-            <input v-model="useTools" type="checkbox" />
-            启用工具（Agent）
-          </label>
-          <div class="team-box">
-            <div class="team-title">投研团队</div>
-            <input v-model="teamSymbol" placeholder="600519.SSE" @keyup.enter="runTeam" />
+          <section class="side-section">
+            <button class="primary block" type="button" @click="newSession">+ 新对话</button>
+            <label class="check-label">
+              <input v-model="includeContext" type="checkbox" />
+              <span>注入自选/选股/回测上下文</span>
+            </label>
+            <label class="check-label">
+              <input v-model="useTools" type="checkbox" />
+              <span>启用工具（Agent）</span>
+            </label>
+          </section>
+
+          <section class="side-section team">
+            <div class="side-title-row">
+              <h2 class="side-title">投研团队</h2>
+              <span v-if="teamWeighted != null" class="weighted">{{ teamWeighted }}</span>
+            </div>
+            <input
+              v-model="teamSymbol"
+              class="filter"
+              placeholder="600519.SSE"
+              @keyup.enter="runTeam"
+            />
             <div class="team-mode">
-              <label>
+              <label :class="{ on: teamMode === 'fast' }">
                 <input v-model="teamMode" type="radio" value="fast" :disabled="teamBusy" />
-                快速
+                <span>快速</span>
               </label>
-              <label>
+              <label :class="{ on: teamMode === 'deep' }">
                 <input v-model="teamMode" type="radio" value="deep" :disabled="teamBusy" />
-                深度
+                <span>深度</span>
               </label>
             </div>
             <button
               type="button"
-              class="primary"
+              class="primary block"
               :disabled="teamBusy || busy || !teamSymbol.trim()"
               @click="runTeam"
             >
               {{ teamBusy ? '分析中…' : teamMode === 'deep' ? '深度团队分析' : '团队分析' }}
             </button>
-            <p v-if="teamMode === 'deep'" class="muted tiny">三分析师并行 LLM，更慢更耗 token</p>
-            <p v-if="teamWeighted != null" class="muted">加权分 {{ teamWeighted }}</p>
-          </div>
-          <div v-if="sessions.length" class="session-filter">
-            <input v-model="sessionFilter" placeholder="过滤会话" />
-          </div>
-          <p v-if="!sessions.length" class="muted tiny sess-empty">暂无会话，点上方新对话</p>
-          <p v-else-if="!displayedSessions.length" class="muted tiny sess-empty">无匹配会话</p>
-          <button
-            v-for="s in displayedSessions"
-            :key="s.id"
-            type="button"
-            class="sess"
-            :class="{ on: sessionId === s.id }"
-            @click="selectSession(s.id)"
-          >
-            <span>{{ sessionTitle(s) }}</span>
-            <span class="muted">{{ s.updated_at }}</span>
-            <span class="del" @click.stop="removeSession(s.id)">删</span>
-          </button>
-          <PagerBar
-            :page="sessionsPage"
-            :pages="sessionsPages"
-            :total="sessionsTotal"
-            @change="goSessionsPage"
-          />
+            <p v-if="teamMode === 'deep'" class="hint muted">三分析师并行 LLM，更慢更耗 token</p>
+          </section>
+
+          <section class="side-section grow">
+            <div class="side-title-row">
+              <h2 class="side-title">会话</h2>
+              <span class="count muted">{{ sessionsTotal }}</span>
+            </div>
+            <input v-model="sessionFilter" class="filter" placeholder="过滤会话" />
+            <p v-if="!sessions.length" class="hint muted">暂无会话，点上方新对话</p>
+            <p v-else-if="!displayedSessions.length" class="hint muted">无匹配会话</p>
+            <div class="sess-list">
+              <button
+                v-for="s in displayedSessions"
+                :key="s.id"
+                type="button"
+                class="sess"
+                :class="{ on: sessionId === s.id }"
+                @click="selectSession(s.id)"
+              >
+                <span class="sess-title">{{ sessionTitle(s) }}</span>
+                <span class="sess-time muted">{{ s.updated_at }}</span>
+                <span class="del" title="删除会话" @click.stop="removeSession(s.id)">删</span>
+              </button>
+            </div>
+            <PagerBar
+              :page="sessionsPage"
+              :pages="sessionsPages"
+              :total="sessionsTotal"
+              @change="goSessionsPage"
+            />
+          </section>
         </aside>
 
         <section class="right">
           <div ref="listEl" class="msgs">
-            <div v-for="m in messages" :key="m.id" class="bubble" :class="m.role">
-              <div class="role">{{ m.role === 'user' ? '我' : '助手' }}</div>
-              <pre>{{ m.content }}</pre>
+            <div
+              v-if="
+                !messages.length && !streaming && !toolStatus && !proposals.length && !teamReport
+              "
+              class="welcome"
+            >
+              <div class="welcome-icon" aria-hidden="true">✦</div>
+              <h2>开始对话</h2>
+              <p>向 AI 助手提问，或输入股票代码用「投研团队」生成研报。</p>
             </div>
-            <p v-if="toolStatus" class="tool-status">{{ toolStatus }}</p>
-            <p v-if="teamStatus" class="tool-status">{{ teamStatus }}</p>
+
+            <template v-for="m in messages" :key="m.id">
+              <div class="bubble" :class="m.role">
+                <div class="role">{{ m.role === 'user' ? '我' : '助手' }}</div>
+                <MarkdownView v-if="m.role === 'assistant'" :source="m.content" />
+                <pre v-else>{{ m.content }}</pre>
+              </div>
+            </template>
+
+            <p v-if="toolStatus" class="status-pill">
+              <span class="spinner" aria-hidden="true"></span>{{ toolStatus }}
+            </p>
+            <p v-if="teamStatus" class="status-pill">
+              <span class="spinner" aria-hidden="true"></span>{{ teamStatus }}
+            </p>
+
             <div v-if="Object.keys(teamScores).length" class="team-scores">
               <div v-for="(block, key) in teamScores" :key="key" class="score-card">
-                <strong>{{
-                  key === 'financial' ? '财务' : key === 'risk' ? '风险' : '策略'
-                }}</strong>
-                <span>{{ block.score ?? '—' }}</span>
-                <p class="muted">{{ block.summary || '' }}</p>
-                <pre v-if="teamBodies[key]" class="agent-body">{{ teamBodies[key] }}</pre>
+                <div class="score-head">
+                  <strong>{{ agentName(key) }}</strong>
+                  <span class="score-num">{{ block.score ?? '—' }}</span>
+                </div>
+                <p v-if="block.summary" class="score-summary">{{ block.summary }}</p>
+                <div v-if="teamBodies[key]" class="agent-body">
+                  <MarkdownView :source="teamBodies[key]" />
+                </div>
               </div>
             </div>
+
             <div v-if="teamReport" class="bubble assistant">
               <div class="role">首席汇总</div>
-              <pre>{{ teamReport }}</pre>
+              <MarkdownView :source="teamReport" />
             </div>
+
             <p v-if="teamSavedReport" class="saved-tip">
               研报已保存：{{ teamSavedReport.title }}
               <button
@@ -424,10 +469,11 @@ onMounted(async () => {
                 在笔记中打开
               </button>
             </p>
+
             <div v-for="p in proposals" :key="p.proposal_id" class="confirm-card" :class="p.status">
               <div class="confirm-head">
                 <strong>待确认写操作</strong>
-                <span class="muted">{{ p.tool }}</span>
+                <span class="tool-tag">{{ p.tool }}</span>
               </div>
               <div class="confirm-body">{{ p.summary }}</div>
               <button
@@ -460,7 +506,7 @@ onMounted(async () => {
                   拒绝
                 </button>
               </div>
-              <p v-else class="muted status-line">
+              <p v-else class="status-line">
                 {{
                   p.status === 'confirmed'
                     ? '已确认并写入'
@@ -470,24 +516,18 @@ onMounted(async () => {
                 }}
               </p>
             </div>
+
             <div v-if="streaming" class="bubble assistant">
               <div class="role">助手</div>
-              <pre>{{ streaming }}</pre>
+              <MarkdownView :source="streaming" />
             </div>
-            <p
-              v-if="
-                !messages.length && !streaming && !toolStatus && !proposals.length && !teamReport
-              "
-              class="empty muted"
-            >
-              开始提问，或左侧输入代码点「团队分析」
-            </p>
           </div>
+
           <form class="composer" @submit.prevent="send">
             <textarea
               v-model="draft"
               rows="3"
-              placeholder="输入问题，Enter+Ctrl 发送"
+              placeholder="输入问题，Ctrl+Enter 发送"
               @keydown.ctrl.enter.prevent="send"
             />
             <button class="primary" type="submit" :disabled="busy || teamBusy || !draft.trim()">
@@ -507,294 +547,497 @@ onMounted(async () => {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  gap: 10px;
   min-height: 0;
 }
 .err {
   color: var(--danger);
-  margin: 0 0 8px;
-}
-.warn-banner {
-  margin: 0 0 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background: var(--surface-muted, var(--bg-elevated));
-}
-.session-filter input {
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 0.5rem;
-  padding: 6px 10px;
+  margin: 0;
   font-size: 0.85rem;
 }
-.sess-empty {
-  margin: 4px 0;
+.warn-banner {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--brand-soft);
+  border-radius: 0.5rem;
+  background: var(--brand-light);
+  color: var(--brand-dark);
+  font-size: 0.82rem;
 }
-.args-pre {
-  margin: 6px 0 0;
-  padding: 8px;
-  font-size: 0.75rem;
-  overflow: auto;
-  max-height: 160px;
-  background: var(--bg);
-  border-radius: 0.4rem;
-  border: 1px solid var(--border);
-}
-.tiny-btn {
-  justify-self: start;
-  margin-top: 6px;
-  font-size: 0.8rem;
-  padding: 4px 8px;
-}
+
 .workspace {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 14px;
   flex: 1;
   min-height: 0;
 }
+
+/* ---------- 左栏 ---------- */
 .left,
 .right {
+  min-height: 0;
   border: 1px solid var(--line);
-  border-radius: 0.75rem;
+  border-radius: 0.9rem;
   background: var(--surface);
   box-shadow: var(--shadow-card);
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  min-height: 0;
 }
 .left {
-  align-content: start;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
   overflow: auto;
 }
-.right {
-  grid-template-rows: 1fr auto;
-}
-.ctx {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-.team-box {
+.side-section {
   display: grid;
   gap: 8px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--bg);
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-soft);
 }
-.team-title {
-  font-size: 0.85rem;
+.side-section + .side-section {
+  padding-top: 16px;
+}
+.side-section.grow {
+  flex: 1;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.side-title {
+  margin: 0;
+  font-size: 0.72rem;
   font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+.side-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.count {
+  font-size: 0.75rem;
+}
+.weighted {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--brand);
+  background: var(--brand-light);
+  border: 1px solid var(--brand-soft);
+  border-radius: 999px;
+  padding: 0 10px;
+  line-height: 1.6;
+}
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.check-label input {
+  accent-color: var(--brand);
+}
+.primary {
+  background: var(--brand);
+  border: none;
+  color: var(--brand-foreground);
+  border-radius: 0.5rem;
+  padding: 9px 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.primary:hover:not(:disabled) {
+  background: var(--brand-dark);
+}
+.primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.primary.block {
+  width: 100%;
+}
+.ghost {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  border-radius: 0.5rem;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+.ghost:hover:not(:disabled) {
+  background: var(--brand-light);
+  color: var(--brand);
+  border-color: var(--brand-soft);
+}
+
+.filter {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  color: var(--ink);
+  padding: 8px 10px;
+  width: 100%;
 }
 .team-mode {
-  display: flex;
-  gap: 12px;
-  font-size: 0.8rem;
-  color: var(--muted);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
 }
 .team-mode label {
   display: flex;
-  gap: 4px;
   align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  padding: 6px 0;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
   cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
 }
-.tiny {
-  font-size: 0.72rem;
+.team-mode label.on {
+  border-color: var(--brand-soft);
+  background: var(--brand-light);
+  color: var(--brand);
+}
+.team-mode input {
+  accent-color: var(--brand);
+}
+.hint {
   margin: 0;
+  font-size: 0.72rem;
 }
-.team-box input {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  color: var(--text);
-  padding: 8px 10px;
-}
-.team-scores {
+
+.sess-list {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-.score-card {
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 8px 10px;
-  background: var(--bg);
-  display: grid;
-  gap: 4px;
-  font-size: 0.85rem;
-}
-.score-card span {
-  font-size: 1.2rem;
-  font-weight: 700;
-}
-.agent-body {
-  margin: 6px 0 0;
-  white-space: pre-wrap;
-  font-size: 0.78rem;
-  line-height: 1.4;
-  color: var(--text);
-  max-height: 160px;
+  gap: 3px;
   overflow: auto;
 }
 .sess {
+  position: relative;
   text-align: left;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  color: var(--text);
-  padding: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  color: var(--ink);
+  padding: 8px 10px;
   display: grid;
   gap: 2px;
-  position: relative;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.sess:hover {
+  background: var(--surface-muted);
 }
 .sess.on {
-  border-color: var(--accent);
+  background: var(--brand-light);
+  border-color: var(--brand-soft);
+}
+.sess-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 24px;
+}
+.sess-time {
+  font-size: 0.7rem;
 }
 .del {
   position: absolute;
   right: 8px;
-  top: 8px;
-  color: var(--muted);
-  font-size: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-faint);
+  font-size: 0.72rem;
+  padding: 2px 4px;
+  border-radius: 0.3rem;
+}
+.del:hover {
+  color: var(--danger);
+  background: #fff1f2;
+}
+
+/* ---------- 右栏 ---------- */
+.right {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 14px;
 }
 .msgs {
   overflow: auto;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-content: start;
   padding-right: 4px;
 }
-.bubble {
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 10px 12px;
-  background: var(--bg);
+
+.welcome {
+  margin: auto;
+  text-align: center;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  color: var(--ink-muted);
+  padding: 32px;
 }
-.bubble.user {
-  border-color: var(--brand-soft);
+.welcome-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  color: var(--brand);
+  background: var(--brand-light);
+  border: 1px solid var(--brand-soft);
 }
-.bubble.assistant {
-  border-color: var(--line);
+.welcome h2 {
+  margin: 4px 0 0;
+  font-size: 1.1rem;
+  color: var(--ink);
 }
-.tool-status {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.8rem;
-  padding: 4px 8px;
-}
-.saved-tip {
+.welcome p {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--accent);
+}
+
+.bubble {
+  max-width: 78%;
+  border-radius: 0.8rem;
+  padding: 10px 14px;
+  display: grid;
+  gap: 4px;
+}
+.bubble.user {
+  align-self: flex-end;
+  background: var(--brand);
+  color: var(--brand-foreground);
+  border-bottom-right-radius: 0.25rem;
+}
+.bubble.assistant {
+  align-self: flex-start;
+  background: var(--surface-muted);
+  border: 1px solid var(--line-soft);
+  border-bottom-left-radius: 0.25rem;
+}
+.role {
+  font-size: 0.72rem;
+  opacity: 0.7;
+  font-weight: 600;
+}
+pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.status-pill {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--brand-light);
+  color: var(--brand-dark);
+  font-size: 0.78rem;
+}
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--brand-soft);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.team-scores {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.score-card {
+  border: 1px solid var(--line-soft);
+  border-radius: 0.6rem;
+  padding: 10px 12px;
+  background: var(--surface);
+  display: grid;
+  gap: 6px;
+}
+.score-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+.score-num {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--brand);
+}
+.score-summary {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+.agent-body {
+  margin: 4px 0 0;
+  max-height: 140px;
+  overflow: auto;
+  background: var(--surface-muted);
+  border-radius: 0.4rem;
+  padding: 8px 10px;
+}
+.agent-body :deep(.markdown) {
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.saved-tip {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ok);
   display: flex;
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-  padding: 4px 8px;
+  padding: 6px 10px;
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+  border-radius: 0.5rem;
 }
 .saved-tip .link {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--brand);
   text-decoration: underline;
+  text-underline-offset: 2px;
   padding: 0;
   cursor: pointer;
 }
+
 .confirm-card {
-  border: 1px solid var(--accent);
+  border: 1px solid var(--brand);
   border-radius: 0.75rem;
-  padding: 10px 12px;
-  background: var(--surface-muted);
+  padding: 12px 14px;
+  background: var(--brand-light);
   display: grid;
   gap: 8px;
 }
 .confirm-card.confirmed {
   border-color: var(--line);
-  opacity: 0.85;
+  background: var(--surface-muted);
 }
 .confirm-card.rejected,
 .confirm-card.error {
-  border-color: var(--border);
-  opacity: 0.75;
+  border-color: var(--line);
+  background: var(--surface-muted);
 }
 .confirm-head {
   display: flex;
   gap: 10px;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
 }
+.tool-tag {
+  font-size: 0.72rem;
+  color: var(--brand-dark);
+  background: var(--surface);
+  border: 1px solid var(--brand-soft);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
 .confirm-body {
-  font-size: 0.9rem;
-  line-height: 1.4;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink);
 }
 .confirm-actions {
   display: flex;
   gap: 8px;
 }
-.ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 0.5rem;
-  padding: 8px 12px;
-}
 .status-line {
   margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
 }
-.role {
-  color: var(--muted);
-  font-size: 0.75rem;
-  margin-bottom: 4px;
-}
-pre {
+.args-pre {
   margin: 0;
-  white-space: pre-wrap;
-  font-family: var(--font);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  padding: 8px 10px;
+  font-size: 0.74rem;
+  overflow: auto;
+  max-height: 160px;
+  background: var(--surface);
+  border-radius: 0.4rem;
+  border: 1px solid var(--line-soft);
 }
+.tiny-btn {
+  justify-self: start;
+  font-size: 0.78rem;
+  padding: 4px 10px;
+}
+
 .composer {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: end;
 }
-textarea {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  color: var(--text);
-  padding: 10px;
-  resize: vertical;
+.composer textarea {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  color: var(--ink);
+  padding: 10px 12px;
+  resize: none;
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
-.primary {
-  background: var(--accent);
-  border: none;
-  color: var(--brand-foreground);
-  border-radius: 0.5rem;
-  padding: 10px 14px;
-  font-weight: 600;
+.composer textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(230, 100, 50, 0.15);
+  outline: none;
 }
-.primary:disabled {
-  opacity: 0.6;
+.composer .primary {
+  padding: 12px 20px;
 }
+
 .muted {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.75rem;
 }
-.empty {
-  text-align: center;
-  padding: 40px;
-}
+
 @media (max-width: 900px) {
   .workspace {
+    grid-template-columns: 1fr;
+  }
+  .left,
+  .right {
+    overflow: visible;
+  }
+  .team-scores {
     grid-template-columns: 1fr;
   }
 }

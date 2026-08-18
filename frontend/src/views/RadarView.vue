@@ -55,6 +55,15 @@ const sourceChip = ref('')
 const cardSortKey = ref<'title' | 'rows' | null>(null)
 const cardSortDir = ref<'asc' | 'desc'>('desc')
 
+const SOURCE_LABELS: Record<string, string> = {
+  cache: '缓存',
+  synthesized: '合成',
+}
+
+function sourceLabel(source: string): string {
+  return SOURCE_LABELS[source] || source
+}
+
 const sourceOptions = computed(() => {
   const set = new Set<string>()
   for (const c of cards.value) {
@@ -423,7 +432,7 @@ onMounted(() => {
           {{ sideOpen ? '收起共振' : '展开共振' }}
         </button>
         <span v-if="active" class="muted source-hint"
-          >来源 {{ active.source }} · {{ active.computed_at || active.subtitle || '—' }}</span
+          >来源 {{ sourceLabel(active.source) }} · {{ active.computed_at || active.subtitle || '—' }}</span
         >
       </div>
       <p v-if="error" class="err">{{ error }}</p>
@@ -665,7 +674,7 @@ onMounted(() => {
                   :class="{ on: sourceChip === s }"
                   @click="sourceChip = s"
                 >
-                  {{ s }}
+                  {{ sourceLabel(s) }}
                 </button>
               </div>
               <div class="row filter-row">
@@ -697,7 +706,7 @@ onMounted(() => {
                 @click="activeId = c.card_id"
               >
                 <div class="title">{{ c.title }}</div>
-                <div class="meta muted">{{ c.rows.length }} 行 · {{ c.source }}</div>
+                <div class="meta muted">{{ c.rows.length }} 行 · {{ sourceLabel(c.source) }}</div>
                 <div v-if="c.empty_message && !c.rows.length" class="preview muted">
                   {{ c.empty_message }}
                 </div>

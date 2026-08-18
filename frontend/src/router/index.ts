@@ -30,6 +30,8 @@ const router = createRouter({
     { path: '/notes', name: 'notes', component: () => import('../views/NotesView.vue') },
     { path: '/ai', name: 'ai', component: () => import('../views/AiView.vue') },
     { path: '/ops', name: 'ops', component: () => import('../views/OpsView.vue') },
+    { path: '/scheduler', name: 'scheduler', component: () => import('../views/SchedulerView.vue') },
+    { path: '/notify', name: 'notify', component: () => import('../views/NotifyView.vue') },
   ],
 })
 
