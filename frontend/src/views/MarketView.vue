@@ -1,23 +1,21 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import CandleChart from '../components/CandleChart.vue'
 import { marketApi, type EmotionThresholds, type MarketOverview, type RankRow } from '../api/market'
-import { watchlistApi, type Bar } from '../api/watchlist'
+import { watchlistApi, type Bar, type Fundamentals } from '../api/watchlist'
 import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
 
-const router = useRouter()
 const overview = ref<MarketOverview | null>(null)
 const field = ref('change_pct')
 const ranks = ref<RankRow[]>([])
 const error = ref('')
 const loading = ref(false)
 const autoRefresh = ref(true)
-const selected = ref<RankRow | null>(null)
-const bars = ref<Bar[]>([])
-const barsError = ref('')
-const barsLoading = ref(false)
+const chartVt = ref('')
+const chartBars = ref<Bar[]>([])
+const chartBarsError = ref('')
+const chartBarsLoading = ref(false)
 const barInterval = ref<'d' | '1m'>('d')
 const barLimitDaily = ref(90)
 const barLimit1m = ref(480)
@@ -33,9 +31,13 @@ const barLimit = computed({
 const barLimitChoices = computed(() =>
   barInterval.value === '1m' ? [240, 480, 1200] : [60, 90, 120],
 )
+const watchSet = ref<Set<string>>(new Set())
+const fundVt = ref('')
+const fundData = ref<Fundamentals | null>(null)
+const fundLoading = ref(false)
+const fundError = ref('')
 // 休市时数据静止，无需高频拉取；慢轮询兜底以便开市后自动切回
 const CLOSED_POLL_MS = 5 * 60_000
-const addMsg = ref('')
 const thresholdsOpen = ref(false)
 const cycleInputsOpen = ref(false)
 const thresholdsSectionEl = ref<HTMLElement | null>(null)
@@ -105,11 +107,13 @@ const fieldMeta = computed(() => fields.find((f) => f.id === field.value) || fie
 type SortKey =
   | 'last_price'
   | 'change_pct'
+  | 'change_amount'
   | 'turnover_rate'
   | 'amount'
   | 'volume_ratio'
   | 'limit_times'
   | 'amplitude'
+  | 'total_mv'
   | null
 
 const listFilter = ref('')
@@ -240,6 +244,25 @@ function fmtMv(v: number | null | undefined): string {
   return v.toFixed(0) + '万'
 }
 
+function fmtYmd(raw: string | null | undefined): string {
+  const s = (raw || '').trim()
+  if (!s) return '—'
+  if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
+  return s
+}
+
+function fmtMoney(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—'
+  if (Math.abs(n) >= 1e8) return `${(n / 1e8).toFixed(2)} 亿`
+  if (Math.abs(n) >= 1e4) return `${(n / 1e4).toFixed(2)} 万`
+  return n.toFixed(2)
+}
+
+function fmtRatioPct(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—'
+  return `${(n * 100).toFixed(1)}%`
+}
+
 function fmtTime(raw: string | null | undefined): string {
   if (!raw) return '—'
   // TickFlow trade_time 形如 "HH:MM:SS"，取时分
@@ -301,10 +324,6 @@ async function load(quiet = false) {
     overview.value = await marketApi.overview()
     try {
       ranks.value = await marketApi.ranks(field.value, 50)
-      if (selected.value) {
-        selected.value =
-          ranks.value.find((r) => r.vt_symbol === selected.value?.vt_symbol) || selected.value
-      }
     } catch (e) {
       ranks.value = []
       if (overview.value.quote_count === 0) {
@@ -322,10 +341,10 @@ async function load(quiet = false) {
 
 async function onField() {
   error.value = ''
-  selected.value = null
-  bars.value = []
-  barsError.value = ''
-  barsLoading.value = false
+  chartVt.value = ''
+  chartBars.value = []
+  chartBarsError.value = ''
+  chartBarsLoading.value = false
   try {
     ranks.value = await marketApi.ranks(field.value, 50)
   } catch (e) {
@@ -334,48 +353,88 @@ async function onField() {
   }
 }
 
-async function loadBars() {
-  barsError.value = ''
-  bars.value = []
-  if (!selected.value) {
-    barsLoading.value = false
+async function loadChartBars(vt: string) {
+  chartBarsError.value = ''
+  chartBars.value = []
+  if (!vt) {
+    chartBarsLoading.value = false
     return
   }
-  barsLoading.value = true
+  chartBarsLoading.value = true
   try {
-    const resp = await watchlistApi.bars(
-      selected.value.vt_symbol,
-      barInterval.value,
-      barLimit.value,
-    )
-    bars.value = resp.bars
+    const resp = await watchlistApi.bars(vt, barInterval.value, barLimit.value)
+    chartBars.value = resp.bars
   } catch (e) {
-    barsError.value = e instanceof Error ? e.message : '无 K 线'
+    chartBarsError.value = e instanceof Error ? e.message : '无 K 线'
   } finally {
-    barsLoading.value = false
+    chartBarsLoading.value = false
   }
 }
 
-async function selectRank(r: RankRow) {
-  selected.value = r
-  addMsg.value = ''
-  await loadBars()
-}
-
-async function addSelected() {
-  if (!selected.value) return
-  addMsg.value = ''
+async function loadWatchSet() {
   try {
-    await watchlistApi.add(selected.value.vt_symbol, selected.value.name || '')
-    addMsg.value = '已加入自选'
-  } catch (e) {
-    addMsg.value = e instanceof Error ? e.message : '加入失败'
+    const items = await watchlistApi.list()
+    watchSet.value = new Set(items.map((i) => i.vt_symbol))
+  } catch {
+    // 静默失败，加自选操作仍可用
   }
 }
 
-function openInWatchlist() {
-  if (!selected.value) return
-  void router.push({ path: '/watchlist', query: { symbol: selected.value.vt_symbol } })
+async function toggleWatch(r: RankRow) {
+  const vt = r.vt_symbol
+  if (watchSet.value.has(vt)) {
+    await watchlistApi.remove(vt)
+    watchSet.value.delete(vt)
+    return
+  }
+  await watchlistApi.add(r.symbol, r.name || '')
+  watchSet.value.add(vt)
+}
+
+async function openFund(r: RankRow) {
+  fundVt.value = r.vt_symbol
+  fundError.value = ''
+  fundData.value = null
+  fundLoading.value = true
+  try {
+    fundData.value = await watchlistApi.fundamentals(r.vt_symbol)
+  } catch (e) {
+    fundError.value = e instanceof Error ? e.message : '基本面加载失败'
+  } finally {
+    fundLoading.value = false
+  }
+}
+
+function closeFund() {
+  fundVt.value = ''
+  fundData.value = null
+  fundError.value = ''
+  fundLoading.value = false
+}
+
+const fundRow = computed(() => ranks.value.find((r) => r.vt_symbol === fundVt.value) || null)
+
+function openChart(r: RankRow) {
+  chartVt.value = r.vt_symbol
+  chartBarsError.value = ''
+  chartBars.value = []
+  void loadChartBars(r.vt_symbol)
+}
+
+function closeChart() {
+  chartVt.value = ''
+  chartBars.value = []
+  chartBarsError.value = ''
+  chartBarsLoading.value = false
+}
+
+const chartRow = computed(() => ranks.value.find((r) => r.vt_symbol === chartVt.value) || null)
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    if (chartVt.value) closeChart()
+    else if (fundVt.value) closeFund()
+  }
 }
 
 function tick() {
@@ -396,15 +455,18 @@ watch(thresholdsOpen, (open) => {
 })
 
 watch([barLimit, barInterval], () => {
-  if (selected.value) void loadBars()
+  if (chartVt.value) void loadChartBars(chartVt.value)
 })
 
 onMounted(() => {
   void load()
+  void loadWatchSet()
   restartPoll()
+  document.addEventListener('keydown', onKeydown)
 })
 
 onUnmounted(() => {
+  document.removeEventListener('keydown', onKeydown)
   if (timer) window.clearInterval(timer)
 })
 </script>
@@ -596,38 +658,114 @@ onUnmounted(() => {
                 <th class="sortable" @click="toggleSort('change_pct')">
                   涨幅%{{ sortMark('change_pct') }}
                 </th>
+                <th class="sortable" @click="toggleSort('change_amount')">
+                  涨跌额{{ sortMark('change_amount') }}
+                </th>
                 <th v-if="scoreSortKey" class="sortable" @click="toggleSort(scoreSortKey)">
                   {{ fieldMeta.col }}{{ sortMark(scoreSortKey) }}
                 </th>
                 <th v-else>{{ fieldMeta.col }}</th>
+                <th class="sortable" @click="toggleSort('turnover_rate')">
+                  换手%{{ sortMark('turnover_rate') }}
+                </th>
+                <th class="sortable" @click="toggleSort('volume_ratio')">
+                  量比{{ sortMark('volume_ratio') }}
+                </th>
+                <th class="sortable" @click="toggleSort('total_mv')">
+                  总市值{{ sortMark('total_mv') }}
+                </th>
+                <th>行业</th>
                 <th>时间</th>
                 <th class="sortable" @click="toggleSort('amplitude')">振幅%{{ sortMark('amplitude') }}</th>
                 <th class="sortable" @click="toggleSort('amount')">成交额{{ sortMark('amount') }}</th>
+                <th class="ops">操作</th>
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="(r, i) in displayedRanks"
-                :key="r.tf_symbol"
-                :class="{ on: selected?.vt_symbol === r.vt_symbol }"
-                @click="selectRank(r)"
-              >
-                <td>
-                  <span class="rank-badge" :class="'rank-' + (i + 1)">{{ i + 1 }}</span>
-                </td>
-                <td class="mono">{{ r.vt_symbol }}</td>
-                <td>{{ r.name || '—' }}</td>
-                <td>{{ r.last_price != null ? r.last_price.toFixed(2) : '—' }}</td>
-                <td :class="{ up: (r.change_pct || 0) > 0, down: (r.change_pct || 0) < 0 }">
-                  {{ r.change_pct != null ? r.change_pct.toFixed(2) : '—' }}
-                </td>
-                <td>{{ scoreLabel(r) }}</td>
-                <td class="mono muted">{{ fmtTime(r.trade_time) }}</td>
-                <td>{{ fmtNum(r.amplitude, 2) }}</td>
-                <td>{{ fmtAmount(r.amount) }}</td>
-              </tr>
+              <template v-for="(r, i) in displayedRanks" :key="r.tf_symbol">
+                <tr>
+                  <td>
+                    <span class="rank-badge" :class="'rank-' + (i + 1)">{{ i + 1 }}</span>
+                  </td>
+                  <td class="mono">{{ r.vt_symbol }}</td>
+                  <td>{{ r.name || '—' }}</td>
+                  <td>{{ r.last_price != null ? r.last_price.toFixed(2) : '—' }}</td>
+                  <td :class="{ up: (r.change_pct || 0) > 0, down: (r.change_pct || 0) < 0 }">
+                    {{ r.change_pct != null ? r.change_pct.toFixed(2) : '—' }}
+                  </td>
+                  <td :class="{ up: (r.change_amount || 0) > 0, down: (r.change_amount || 0) < 0 }">
+                    {{ fmtSigned(r.change_amount) }}
+                  </td>
+                  <td>{{ scoreLabel(r) }}</td>
+                  <td>{{ r.turnover_rate != null ? r.turnover_rate.toFixed(2) : '—' }}</td>
+                  <td>{{ r.volume_ratio != null ? r.volume_ratio.toFixed(2) : '—' }}</td>
+                  <td class="mono muted">{{ fmtMv(r.total_mv) }}</td>
+                  <td>{{ r.industry || '—' }}</td>
+                  <td class="mono muted">{{ fmtTime(r.trade_time) }}</td>
+                  <td>{{ fmtNum(r.amplitude, 2) }}</td>
+                  <td>{{ fmtAmount(r.amount) }}</td>
+                  <td class="ops">
+                    <div class="row-ops">
+                      <button type="button" class="icon-btn" title="K线" @click="openChart(r)">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path
+                            d="M5 4v2.5M5 17.5V20M5 6.5a1.5 1.5 0 011.5-1.5h0A1.5 1.5 0 018 6.5v11a1.5 1.5 0 01-1.5 1.5h0A1.5 1.5 0 015 17.5v-11z"
+                          />
+                          <path
+                            d="M12 2v4M12 18v4M12 6a1.5 1.5 0 011.5-1.5h0A1.5 1.5 0 0115 6v12a1.5 1.5 0 01-1.5 1.5h0A1.5 1.5 0 0112 18V6z"
+                          />
+                          <path
+                            d="M19 6v3M19 17v4M19 9a1.5 1.5 0 011.5-1.5h0a1.5 1.5 0 011.5 1.5v8a1.5 1.5 0 01-1.5 1.5h0a1.5 1.5 0 01-1.5-1.5V9z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        class="icon-btn"
+                        :class="{ on: watchSet.has(r.vt_symbol) }"
+                        :title="watchSet.has(r.vt_symbol) ? '在自选，点击移除' : '加自选'"
+                        @click="toggleWatch(r)"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path
+                            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                          />
+                        </svg>
+                      </button>
+                      <button type="button" class="icon-btn" title="基本面" @click="openFund(r)">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path
+                            d="M3 3h18v18H3V3zM7 7h10M7 11h10M7 15h6"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
               <tr v-if="!ranks.length">
-                <td colspan="9" class="empty">
+                <td colspan="15" class="empty">
                   暂无排行（需 Redis 行情快照）
                   <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
                 </td>
@@ -635,51 +773,28 @@ onUnmounted(() => {
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
 
-        <aside v-if="selected" class="detail">
-          <div class="detail-head">
-            <div class="detail-id">
-              <strong>{{ selected.name || selected.vt_symbol }}</strong>
-              <div class="mono muted">{{ selected.vt_symbol }}</div>
-            </div>
-            <div
-              class="detail-price"
-              :class="{
-                up: (selected.change_pct || 0) > 0,
-                down: (selected.change_pct || 0) < 0,
-              }"
-            >
-              <span class="price mono">{{
-                selected.last_price != null ? selected.last_price.toFixed(2) : '—'
-              }}</span>
-              <span class="change mono">
-                {{
-                  selected.change_pct != null
-                    ? (selected.change_pct > 0 ? '+' : '') + selected.change_pct.toFixed(2) + '%'
-                    : '—'
-                }}
-              </span>
-            </div>
-          </div>
-          <div class="detail-actions">
-            <button type="button" class="primary" @click="addSelected">加自选</button>
-            <button type="button" class="ghost" @click="openInWatchlist">在自选打开</button>
-          </div>
-          <div v-if="selected" class="quote-grid">
-            <div class="q-item"><span class="q-k">今开</span><span class="q-v mono">{{ fmtNum(selected.open_price) }}</span></div>
-            <div class="q-item"><span class="q-k">最高</span><span class="q-v mono up">{{ fmtNum(selected.high_price) }}</span></div>
-            <div class="q-item"><span class="q-k">最低</span><span class="q-v mono down">{{ fmtNum(selected.low_price) }}</span></div>
-            <div class="q-item"><span class="q-k">昨收</span><span class="q-v mono">{{ fmtNum(selected.prev_close) }}</span></div>
-            <div class="q-item"><span class="q-k">涨跌</span><span class="q-v mono">{{ fmtSigned(selected.change_amount) }}</span></div>
-            <div class="q-item"><span class="q-k">振幅</span><span class="q-v mono">{{ fmtNum(selected.amplitude) }}%</span></div>
-            <div class="q-item"><span class="q-k">量比</span><span class="q-v mono">{{ fmtNum(selected.volume_ratio) }}</span></div>
-            <div class="q-item"><span class="q-k">换手</span><span class="q-v mono">{{ fmtNum(selected.turnover_rate) }}%</span></div>
-            <div class="q-item"><span class="q-k">净流入</span><span class="q-v mono">{{ fmtAmount(selected.net_mf_amount) }}</span></div>
-            <div class="q-item"><span class="q-k">成交额</span><span class="q-v mono">{{ fmtAmount(selected.amount) }}</span></div>
-            <div class="q-item"><span class="q-k">总市值</span><span class="q-v mono">{{ fmtMv(selected.total_mv) }}</span></div>
-            <div class="q-item"><span class="q-k">流通值</span><span class="q-v mono">{{ fmtMv(selected.circ_mv) }}</span></div>
-            <div v-if="selected.industry" class="q-item"><span class="q-k">行业</span><span class="q-v">{{ selected.industry }}</span></div>
-            <div class="q-item"><span class="q-k">时间</span><span class="q-v mono">{{ fmtTime(selected.trade_time) }}</span></div>
+    <Teleport to="body">
+      <div v-if="chartVt" class="chart-overlay" @click.self="closeChart">
+        <div class="chart-modal" role="dialog" aria-modal="true" aria-label="K线图">
+          <div class="chart-modal-head">
+            <strong>{{ chartRow?.name || chartVt }}</strong>
+            <span class="mono muted">{{ chartVt }}</span>
+            <div class="spacer"></div>
+            <button type="button" class="icon-btn" title="关闭" @click="closeChart">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
           <div class="bar-controls">
             <div class="limits">
@@ -713,19 +828,18 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
-          <p v-if="addMsg" class="muted">{{ addMsg }}</p>
-          <p v-if="barsLoading" class="muted">
+          <p v-if="chartBarsLoading" class="muted">
             {{ barInterval === '1m' ? '加载 1 分 K…' : '加载日 K…' }}
           </p>
-          <template v-else-if="barsError">
+          <template v-else-if="chartBarsError">
             <p class="err">
-              {{ barsError }}
+              {{ chartBarsError }}
               <RouterLink to="/ops" class="draft-link">{{
                 barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K'
               }}</RouterLink>
             </p>
           </template>
-          <template v-else-if="!bars.length">
+          <template v-else-if="!chartBars.length">
             <p class="muted">
               {{ barInterval === '1m' ? '暂无 1 分 K' : '暂无日 K' }}
               <RouterLink to="/ops" class="draft-link">{{
@@ -734,12 +848,108 @@ onUnmounted(() => {
             </p>
           </template>
           <div v-else class="chart">
-            <CandleChart :bars="bars" :height="240" :interval="barInterval" />
+            <CandleChart :bars="chartBars" :height="400" :interval="barInterval" />
           </div>
-        </aside>
-        <aside v-else class="detail empty-panel muted">点击排行行查看 K 线与操作</aside>
+        </div>
       </div>
-    </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div v-if="fundVt" class="chart-overlay" @click.self="closeFund">
+        <div class="chart-modal fund-modal" role="dialog" aria-modal="true" aria-label="基本面">
+          <div class="chart-modal-head">
+            <strong>{{ fundRow?.name || fundVt }}</strong>
+            <span class="mono muted">{{ fundVt }}</span>
+            <div class="spacer"></div>
+            <button type="button" class="icon-btn" title="关闭" @click="closeFund">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <p v-if="fundLoading" class="muted">加载基本面…</p>
+          <p v-else-if="fundError" class="err">{{ fundError }}</p>
+          <template v-else-if="fundData">
+            <div class="fund-block">
+              <h4>财报</h4>
+              <template v-if="fundData.snapshot">
+                <p class="muted">
+                  期末 {{ fmtYmd(fundData.snapshot.end_date) }}
+                  <span v-if="fundData.sync?.last_sync_at">
+                    · 同步 {{ fundData.sync.last_sync_at }}</span
+                  >
+                </p>
+                <dl class="fund-grid">
+                  <div>
+                    <dt>营收</dt>
+                    <dd class="mono">{{ fmtMoney(fundData.snapshot.revenue) }}</dd>
+                  </div>
+                  <div>
+                    <dt>净利</dt>
+                    <dd class="mono">{{ fmtMoney(fundData.snapshot.net_income) }}</dd>
+                  </div>
+                  <div>
+                    <dt>营收同比</dt>
+                    <dd>{{ fmtRatioPct(fundData.snapshot.revenue_yoy) }}</dd>
+                  </div>
+                  <div>
+                    <dt>净利同比</dt>
+                    <dd>{{ fmtRatioPct(fundData.snapshot.net_income_yoy) }}</dd>
+                  </div>
+                  <div>
+                    <dt>ROE</dt>
+                    <dd>{{ fmtRatioPct(fundData.snapshot.roe) }}</dd>
+                  </div>
+                  <div>
+                    <dt>资产负债率</dt>
+                    <dd>{{ fmtRatioPct(fundData.snapshot.debt_ratio) }}</dd>
+                  </div>
+                </dl>
+              </template>
+              <p v-else class="muted">
+                暂无财报
+                <RouterLink to="/ops" class="draft-link">去 Ops 同步自选财报</RouterLink>
+              </p>
+            </div>
+            <div class="fund-block">
+              <h4>披露</h4>
+              <template v-if="fundData.disclosures.length">
+                <table class="fund-disc">
+                  <thead>
+                    <tr>
+                      <th>报告期</th>
+                      <th>预告</th>
+                      <th>公告</th>
+                      <th>实际</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="d in fundData.disclosures" :key="d.end_date">
+                      <td class="mono">{{ fmtYmd(d.end_date) }}</td>
+                      <td class="mono">{{ fmtYmd(d.pre_date) }}</td>
+                      <td class="mono">{{ fmtYmd(d.ann_date) }}</td>
+                      <td class="mono">{{ fmtYmd(d.actual_date) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </template>
+              <p v-else class="muted">
+                暂无披露日历
+                <RouterLink to="/ops" class="draft-link">去 Ops 同步披露计划</RouterLink>
+              </p>
+            </div>
+          </template>
+          <p v-else class="muted">无基本面数据</p>
+        </div>
+      </div>
+    </Teleport>
   </AppShell>
 </template>
 
@@ -975,111 +1185,16 @@ onUnmounted(() => {
 }
 .split {
   display: grid;
-  grid-template-columns: 1.2fr 0.9fr;
   gap: 12px;
   min-height: 420px;
 }
-.table-wrap,
-.detail {
+.table-wrap {
   border: 1px solid var(--line);
   border-radius: 0.75rem;
   background: var(--surface);
   box-shadow: var(--shadow-card);
-}
-.table-wrap {
   overflow: auto;
   max-height: 70vh;
-}
-.detail {
-  padding: 14px;
-  display: grid;
-  gap: 10px;
-  align-content: start;
-}
-.empty-panel {
-  place-content: center;
-  text-align: center;
-  min-height: 240px;
-}
-.detail-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  align-items: flex-start;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line-soft);
-}
-.detail-id {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-.detail-id strong {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-.detail-id .mono {
-  font-size: 0.75rem;
-}
-.detail-price {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  white-space: nowrap;
-}
-.detail-price .price {
-  font-size: 1.35rem;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.detail-price .change {
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-.detail-price.up {
-  color: var(--danger);
-}
-.detail-price.down {
-  color: var(--ok);
-}
-.detail-actions {
-  display: flex;
-  gap: 8px;
-}
-.quote-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 12px;
-  padding: 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: 0.75rem;
-  background: var(--surface-muted);
-}
-.q-item {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-}
-.q-k {
-  color: var(--muted);
-  font-size: 0.72rem;
-  flex-shrink: 0;
-}
-.q-v {
-  font-size: 0.82rem;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.q-v.up {
-  color: var(--danger);
-}
-.q-v.down {
-  color: var(--ok);
 }
 .bar-controls {
   display: flex;
@@ -1106,6 +1221,135 @@ onUnmounted(() => {
   border-color: var(--brand-soft);
   font-weight: 500;
 }
+.link {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.link:hover {
+  color: var(--brand);
+}
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.icon-btn:hover {
+  background: var(--surface-muted);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.icon-btn svg {
+  width: 15px;
+  height: 15px;
+}
+.icon-btn.on {
+  color: var(--brand);
+  border-color: var(--brand-soft);
+  background: var(--brand-light);
+}
+.row-ops {
+  display: flex;
+  gap: 4px;
+}
+th.ops,
+td.ops {
+  text-align: right;
+}
+.fund-modal {
+  max-width: 560px;
+}
+.fund-block {
+  display: grid;
+  gap: 6px;
+}
+.fund-block h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.fund-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 16px;
+  margin: 0;
+}
+.fund-grid dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.fund-grid dd {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.fund-disc {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.fund-disc th,
+.fund-disc td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+}
+.fund-disc th {
+  color: var(--muted);
+  font-weight: 500;
+  background: var(--surface-muted);
+}
+.chart-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 24px;
+}
+.chart-modal {
+  width: 100%;
+  max-width: 860px;
+  max-height: 88vh;
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  box-shadow: var(--shadow-panel);
+}
+.chart-modal-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.chart-modal-head strong {
+  font-size: 1rem;
+}
+.chart-modal-head .mono {
+  font-size: 0.78rem;
+}
+.chart-modal-head .spacer {
+  flex: 1;
+}
+.chart-modal :deep(.candle svg) {
+  height: 400px;
+}
 .chart {
   border-top: 1px solid var(--border);
   padding-top: 8px;
@@ -1129,17 +1373,8 @@ th.sortable {
   cursor: pointer;
   user-select: none;
 }
-tbody tr {
-  cursor: pointer;
-}
 tbody tr:hover td {
   background: var(--surface-muted);
-}
-tbody tr.on td {
-  background: var(--brand-light);
-}
-tbody tr.on:hover td {
-  background: var(--brand-light);
 }
 .rank-badge {
   display: inline-grid;
@@ -1239,10 +1474,5 @@ tbody tr.on:hover td {
   margin: 0;
   color: var(--ok);
   font-size: 0.85rem;
-}
-@media (max-width: 960px) {
-  .split {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
