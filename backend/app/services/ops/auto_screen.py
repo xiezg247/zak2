@@ -2,19 +2,58 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.repositories import screener as repo
 from app.schemas.ops import SyncResult
 from app.schemas.screener import RecipeRunRequest
+from app.services.notify import delivery as notify_delivery
 from app.services.ops.scheduler import load_scheduler_config, save_job_run_meta
 from app.services.screener.engine import run_recipe_screen
+
+logger = logging.getLogger(__name__)
 
 JOB_INTRADAY = "screen_intraday"
 JOB_POST_CLOSE = "screen_post_close"
 DEFAULT_INTRADAY_RECIPE = "intraday_multi"
 DEFAULT_POST_CLOSE_RECIPE = "post_close_multi"
+
+SCREEN_PUSH_TOP_N = 10
+
+
+def _format_screen_lines(label: str, result: dict, run_id: str) -> str:
+    """构造选股结果推送文本（Top N）。"""
+    lines = [
+        f"📊 {label}完成",
+        f"配方 {result.get('condition')} 命中 {result.get('row_count')} 只"
+        f"（扫描 {result.get('total_scanned')}，run={run_id}）",
+    ]
+    for i, row in enumerate((result.get("rows") or [])[:SCREEN_PUSH_TOP_N], 1):
+        symbol = str(row.get("symbol") or "")
+        name = str(row.get("name") or "")
+        change_pct = row.get("change_pct")
+        if isinstance(change_pct, (int, float)):
+            lines.append(f"{i}. {symbol} {name} {change_pct:+.2f}%")
+        else:
+            lines.append(f"{i}. {symbol} {name}")
+    return "\n".join(lines)
+
+
+def _notify_screen_result(db: Session, *, user_id: str, job_id: str, label: str, result: dict, run_id: str) -> None:
+    """推送选股结果到用户渠道；失败仅记录日志，不影响主流程。"""
+    try:
+        notify_delivery.deliver_text(
+            db,
+            user_id=user_id,
+            event_type=f"ops.{job_id}",
+            title=label,
+            text=_format_screen_lines(label, result, run_id),
+        )
+    except Exception:
+        logger.warning("选股结果推送失败：job=%s run=%s", job_id, run_id, exc_info=True)
 
 
 def _run_auto_screen(
@@ -63,6 +102,7 @@ def _run_auto_screen(
         f"（扫描 {result.get('total_scanned')}，run={run.id}）"
     )
     save_job_run_meta(db, job_id, last_message=message, last_success=True)
+    _notify_screen_result(db, user_id=user_id, job_id=job_id, label=label, result=result, run_id=run.id)
     return SyncResult(
         success=True,
         message=message,
