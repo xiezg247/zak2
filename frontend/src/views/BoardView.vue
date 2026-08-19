@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import { confirmDialog } from '../lib/dialog'
 import {
@@ -12,6 +12,7 @@ import { backtestApi } from '../api/backtest'
 import { buildAlignedBacktestQuery, buildEnqueueRunBody } from '../lib/boardBacktestParams'
 
 const router = useRouter()
+const route = useRoute()
 
 const board = ref<StrategyBoard | null>(null)
 const boardError = ref('')
@@ -343,6 +344,12 @@ function tickBoard() {
 }
 
 onMounted(async () => {
+  const sm = typeof route.query.signal_mode === 'string' ? route.query.signal_mode : ''
+  if ((VALID_SIGNAL_MODES as string[]).includes(sm)) {
+    const mode = sm as SignalMode
+    signalMode.value = mode
+    saveSignalMode(mode)
+  }
   await refreshBoard()
   boardTimer = window.setInterval(tickBoard, 45000)
 })
