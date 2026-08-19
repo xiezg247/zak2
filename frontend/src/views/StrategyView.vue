@@ -2,17 +2,10 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
-import StockAnalysisModal from '../components/StockAnalysisModal.vue'
 import { backtestApi, type StrategyInfo } from '../api/backtest'
 import { watchlistApi, type StrategyBoard } from '../api/watchlist'
 import { POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
-import { useStockAnalysis } from '../composables/useStockAnalysis'
-import {
-  buildAlignedBacktestQuery,
-  type BoardSignalMode,
-} from '../lib/boardBacktestParams'
-
-const analysis = useStockAnalysis()
+import { buildAlignedBacktestQuery, type BoardSignalMode } from '../lib/boardBacktestParams'
 
 const SIGNAL_MODES: { id: BoardSignalMode; label: string }[] = [
   { id: 'heuristic_v2', label: '启发式确认' },
@@ -28,7 +21,6 @@ const strategies = ref<StrategyInfo[]>([])
 const strategiesError = ref('')
 const loading = ref(false)
 const autoRefresh = ref(true)
-const activeMode = ref<BoardSignalMode>('heuristic_v2')
 
 const { connected } = useQuoteNotify({
   onQuotesUpdated: () => {
@@ -49,9 +41,6 @@ const boardList = computed(() =>
     error: boardErrors.value[m.id] || '',
   })),
 )
-
-const activeBoard = computed(() => boards.value[activeMode.value] || null)
-const activeError = computed(() => boardErrors.value[activeMode.value] || '')
 
 let timer: number | undefined
 
@@ -112,11 +101,6 @@ function gotoBacktestStrategy(strategyId: string) {
   void router.push({ path: '/backtest', query: { strategy: strategyId } })
 }
 
-function gotoWatchlist(vt: string) {
-  if (!vt) return
-  void router.push({ path: '/watchlist', query: { symbol: vt } })
-}
-
 function fmtPct(v: number | null | undefined): string {
   if (v == null || Number.isNaN(v)) return '—'
   return `${(v * 100).toFixed(1)}%`
@@ -127,12 +111,6 @@ function fmtYmd(raw: string | null | undefined): string {
   if (!s) return '—'
   if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
   return s.slice(0, 10)
-}
-
-function signalClass(sig: string) {
-  if (sig === 'buy') return 'up'
-  if (sig === 'sell') return 'down'
-  return ''
 }
 
 onMounted(() => {
@@ -164,7 +142,7 @@ onUnmounted(() => {
       </div>
 
       <section class="cards">
-        <div v-for="m in boardList" :key="m.id" class="card" :class="{ on: activeMode === m.id }">
+        <div v-for="m in boardList" :key="m.id" class="card">
           <div class="k">{{ m.label }}</div>
           <template v-if="m.board">
             <div class="v">{{ m.board.signals.length }} 条信号</div>
@@ -207,81 +185,8 @@ onUnmounted(() => {
         </div>
         <p v-else class="s muted">加载中…</p>
       </section>
-
-      <section class="card">
-        <h3>
-          信号明细
-          <span v-if="activeBoard" class="muted">{{ activeBoard.signals.length }}</span>
-        </h3>
-        <div class="mode-tabs">
-          <button
-            v-for="m in SIGNAL_MODES"
-            :key="m.id"
-            type="button"
-            class="ghost"
-            :class="{ on: activeMode === m.id }"
-            @click="activeMode = m.id"
-          >
-            {{ m.label }}
-          </button>
-        </div>
-        <p v-if="activeError" class="err">{{ activeError }}</p>
-        <div v-else-if="activeBoard" class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>代码</th>
-                <th>名称</th>
-                <th>现价</th>
-                <th>信号</th>
-                <th>强度</th>
-                <th>摘要</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in activeBoard.signals" :key="row.vt_symbol">
-                <td class="mono">
-                  <button type="button" class="chip-link" @click="gotoWatchlist(row.vt_symbol)">
-                    {{ row.vt_symbol }}
-                  </button>
-                </td>
-                <td>{{ row.name || '—' }}</td>
-                <td>{{ row.last_price != null ? row.last_price.toFixed(2) : '—' }}</td>
-                <td :class="signalClass(row.signal)">{{ row.signal_label }}</td>
-                <td>
-                  <template v-if="row.strength_tier_label">
-                    {{ row.strength_tier_label
-                    }}<span v-if="row.strength != null"> · {{ row.strength.toFixed(1) }}</span>
-                  </template>
-                  <template v-else>
-                    {{ row.strength != null ? row.strength.toFixed(0) : '—' }}
-                  </template>
-                </td>
-                <td class="clip">{{ row.reason_summary || '—' }}</td>
-                <td>
-                  <button
-                    type="button"
-                    class="link"
-                    @click.stop="analysis.open(row.vt_symbol, row.name)"
-                  >
-                    析
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="!activeBoard.signals.length">
-                <td colspan="7" class="empty">
-                  无信号（可去 Ops 跑 warm_watchlist_strategy_cache 预热）
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p v-else class="s muted">加载中…</p>
-      </section>
     </div>
   </AppShell>
-  <StockAnalysisModal />
 </template>
 
 <style scoped>
@@ -328,10 +233,6 @@ onUnmounted(() => {
   gap: 2px;
   align-content: start;
 }
-.card.on {
-  border-color: var(--brand-soft);
-  background: linear-gradient(180deg, #fffdfb 0%, var(--surface) 100%);
-}
 .card h3 {
   margin: 0 0 10px;
   font-size: 0.9rem;
@@ -375,21 +276,9 @@ onUnmounted(() => {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.ghost.on {
-  background: var(--brand-light);
-  color: var(--brand);
-  border-color: var(--brand-soft);
-  font-weight: 500;
-}
 .tiny-btn {
   padding: 4px 8px;
   font-size: 0.8rem;
-}
-.mode-tabs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
 }
 .bt-grid {
   display: grid;
@@ -404,62 +293,6 @@ onUnmounted(() => {
   display: grid;
   gap: 2px;
   align-content: start;
-}
-.table-wrap {
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  overflow: auto;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-  max-height: 70vh;
-}
-th,
-td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.85rem;
-  text-align: left;
-  white-space: nowrap;
-}
-th {
-  color: var(--muted);
-  font-weight: 500;
-  background: var(--surface-muted);
-  position: sticky;
-  top: 0;
-}
-tbody tr:hover td {
-  background: var(--surface-muted);
-}
-.clip {
-  max-width: 280px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.chip-link {
-  background: none;
-  border: none;
-  color: var(--text);
-  font-family: var(--mono);
-  padding: 0;
-  cursor: pointer;
-}
-.chip-link:hover {
-  color: var(--brand);
-}
-.mono {
-  font-family: var(--mono);
-}
-.up {
-  color: var(--danger);
-}
-.down {
-  color: var(--ok);
-}
-.empty {
-  text-align: center;
-  color: var(--muted);
-  padding: 28px !important;
 }
 .muted {
   color: var(--muted);
