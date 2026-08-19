@@ -34,9 +34,7 @@ def test_run_task_missing() -> None:
 
 def test_run_task_disabled() -> None:
     db = MagicMock()
-    with patch(
-        "app.repositories.auto_schedule.AutoScheduleRepository.get_any", return_value=_task(enabled=False)
-    ):
+    with patch("app.repositories.auto_schedule.AutoScheduleRepository.get_any", return_value=_task(enabled=False)):
         out = run_task(db, 7)
     assert out.success is False
     assert out.skipped is True

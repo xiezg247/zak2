@@ -24,9 +24,7 @@ from app.services.ops.auto_schedule_time import parse_times
 router = APIRouter(prefix="/auto-schedules", tags=["auto-schedules"])
 
 
-def _get_owned(
-    db: Session, user_id: str, task_id: int
-) -> tuple[AutoScheduleRepository, AutoSchedule]:
+def _get_owned(db: Session, user_id: str, task_id: int) -> tuple[AutoScheduleRepository, AutoSchedule]:
     repo = AutoScheduleRepository(db, user_id)
     task = repo.get(task_id)
     if task is None:

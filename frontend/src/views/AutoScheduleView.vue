@@ -262,7 +262,12 @@ const empty = computed(
           <h3 class="editor-title">{{ editingId != null ? '编辑任务' : '新建任务' }}</h3>
           <label class="field">
             <span class="field-label">任务名称</span>
-            <input v-model="formName" class="input-field" placeholder="例如：盘中自动选股" maxlength="64" />
+            <input
+              v-model="formName"
+              class="input-field"
+              placeholder="例如：盘中自动选股"
+              maxlength="64"
+            />
           </label>
           <label class="field">
             <span class="field-label">选股配方</span>
@@ -284,7 +289,12 @@ const empty = computed(
           <div class="field">
             <span class="field-label">执行时刻（每天）</span>
             <div v-for="(_, i) in formTimes" :key="i" class="time-row">
-              <input v-model="formTimes[i]" class="input-field time-input" placeholder="HH:MM" maxlength="5" />
+              <input
+                v-model="formTimes[i]"
+                class="input-field time-input"
+                placeholder="HH:MM"
+                maxlength="5"
+              />
               <button
                 type="button"
                 class="ghost small"
@@ -298,7 +308,12 @@ const empty = computed(
           </div>
           <p v-if="editorErr" class="err">{{ editorErr }}</p>
           <div class="editor-actions">
-            <button type="button" class="ghost" :disabled="editorSaving" @click="editorOpen = false">
+            <button
+              type="button"
+              class="ghost"
+              :disabled="editorSaving"
+              @click="editorOpen = false"
+            >
               取消
             </button>
             <button type="button" class="primary" :disabled="editorSaving" @click="saveEditor">

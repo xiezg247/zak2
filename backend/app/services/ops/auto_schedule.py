@@ -43,7 +43,7 @@ def validate_task_input(*, name: str, recipe_id: str, days_of_week: str, times: 
 
 def _record_run(db: Session, task: AutoSchedule, *, message: str, success: bool) -> None:
     task.last_run_at = _now_str()
-    task.last_message = str(message)[: _META_MESSAGE_MAX]
+    task.last_message = str(message)[:_META_MESSAGE_MAX]
     task.last_success = success
     db.commit()
 
@@ -108,6 +108,8 @@ def poll_due_tasks(db: Session, now: datetime) -> list[dict[str, str]]:
     tasks = db.scalars(select(AutoSchedule).where(AutoSchedule.enabled.is_(True))).all()
     due: list[AutoSchedule] = []
     for task in tasks:
+        if not task.enabled:
+            continue
         try:
             days = parse_days_of_week(task.days_of_week)
             times = parse_times(list(task.times or []))

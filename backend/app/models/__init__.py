@@ -1,7 +1,7 @@
+from app.models.auto_schedule import AutoSchedule
 from app.models.backtest import BacktestRun
 from app.models.bars import DbBarData
 from app.models.channel import NotifyChannel
-from app.models.auto_schedule import AutoSchedule
 from app.models.chat import ChatMessage, ChatSession
 from app.models.content import (
     DisciplineDaily,

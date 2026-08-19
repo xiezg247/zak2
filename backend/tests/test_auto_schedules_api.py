@@ -72,9 +72,7 @@ def test_list_empty() -> None:
 def test_create_valid() -> None:
     db = MagicMock()
     row = _row()
-    with patch(
-        "app.repositories.auto_schedule.AutoScheduleRepository.create_task", return_value=row
-    ) as create:
+    with patch("app.repositories.auto_schedule.AutoScheduleRepository.create_task", return_value=row) as create:
         client = _api_client(db=db)
         resp = client.post(
             "/api/v1/auto-schedules",
@@ -116,9 +114,7 @@ def test_update_ok() -> None:
     row = _row()
     with (
         patch("app.repositories.auto_schedule.AutoScheduleRepository.get", return_value=row),
-        patch(
-            "app.repositories.auto_schedule.AutoScheduleRepository.update_task", return_value=row
-        ) as update,
+        patch("app.repositories.auto_schedule.AutoScheduleRepository.update_task", return_value=row) as update,
     ):
         client = _api_client(db=db)
         resp = client.patch("/api/v1/auto-schedules/7", json={"times": ["09:35"]})
@@ -141,9 +137,7 @@ def test_set_enabled() -> None:
     row.enabled = False
     with (
         patch("app.repositories.auto_schedule.AutoScheduleRepository.get", return_value=row),
-        patch(
-            "app.repositories.auto_schedule.AutoScheduleRepository.update_task", return_value=row
-        ) as update,
+        patch("app.repositories.auto_schedule.AutoScheduleRepository.update_task", return_value=row) as update,
     ):
         client = _api_client(db=db)
         resp = client.patch("/api/v1/auto-schedules/7/enabled", json={"enabled": False})
