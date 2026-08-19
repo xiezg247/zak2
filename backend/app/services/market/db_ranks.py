@@ -118,7 +118,7 @@ def _load_prev_closes(db: Session, trade_date: str) -> dict[str, float]:
 
 
 def _load_daily_basic_factors(db: Session) -> dict[str, dict[str, float]]:
-    """tf_symbol -> {turnover_rate, volume_ratio}。"""
+    """tf_symbol -> {turnover_rate, volume_ratio, total_mv, circ_mv}。"""
     payload = db.execute(
         text(
             """
@@ -147,6 +147,8 @@ def _load_daily_basic_factors(db: Session) -> dict[str, dict[str, float]]:
         out[tf] = {
             "turnover_rate": _f(item.get("turnover_rate")),
             "volume_ratio": _f(item.get("volume_ratio")),
+            "total_mv": _f(item.get("total_mv")),
+            "circ_mv": _f(item.get("circ_mv")),
         }
     return out
 
@@ -180,6 +182,22 @@ def _load_names(db: Session) -> dict[str, str]:
     return {to_tf_symbol(str(r["symbol"]), str(r["exchange"])): str(r["name"]) for r in rows}
 
 
+def _load_industries(db: Session) -> dict[str, str]:
+    """tf_symbol -> industry（申万行业 L2；缺失留空）。"""
+    rows = db.execute(
+        text(
+            """
+            SELECT symbol, exchange, industry
+            FROM app.stock_industry
+            WHERE industry <> ''
+            """
+        )
+    ).mappings().all()
+    return {
+        to_tf_symbol(str(r["symbol"]), str(r["exchange"])): str(r["industry"]) for r in rows
+    }
+
+
 def db_rank_fallback(db: Session, field: str, *, top_n: int = 50) -> list[RankRow]:
     """从数据库构造收盘排行；无数据返回空列表（不抛错）。"""
     if field not in DB_RANKABLE_FIELDS:
@@ -197,6 +215,7 @@ def db_rank_fallback(db: Session, field: str, *, top_n: int = 50) -> list[RankRo
     factors = _load_daily_basic_factors(db)
     limit_times = _load_limit_times(db, latest)
     names = _load_names(db)
+    industries = _load_industries(db)
 
     rows: list[RankRow] = []
     for tf, bar in bars.items():
@@ -207,6 +226,8 @@ def db_rank_fallback(db: Session, field: str, *, top_n: int = 50) -> list[RankRo
         f = factors.get(tf, {})
         turnover_rate = f.get("turnover_rate", 0.0)
         volume_ratio = f.get("volume_ratio", 0.0)
+        total_mv = f.get("total_mv", 0.0)
+        circ_mv = f.get("circ_mv", 0.0)
         lt = limit_times.get(tf, 0.0)
         amount = bar["amount"]
         volume = bar["volume"]
@@ -245,6 +266,9 @@ def db_rank_fallback(db: Session, field: str, *, top_n: int = 50) -> list[RankRo
                 amplitude=amplitude,
                 volume_ratio=volume_ratio,
                 limit_times=lt,
+                industry=industries.get(tf, ""),
+                total_mv=total_mv if total_mv > 0 else None,
+                circ_mv=circ_mv if circ_mv > 0 else None,
             )
         )
 

@@ -38,9 +38,26 @@ def test_db_rank_fallback_change_pct_ordering() -> None:
             "app.services.market.db_ranks._load_prev_closes",
             return_value={"SHSE.600519": 100.0, "SHSE.000001": 9.0},
         ),
-        patch("app.services.market.db_ranks._load_daily_basic_factors", return_value={}),
+        patch(
+            "app.services.market.db_ranks._load_daily_basic_factors",
+            return_value={
+                "SHSE.600519": {
+                    "turnover_rate": 1.5,
+                    "volume_ratio": 2.0,
+                    "total_mv": 2_000_000.0,
+                    "circ_mv": 1_900_000.0,
+                }
+            },
+        ),
         patch("app.services.market.db_ranks._load_limit_times", return_value={}),
-        patch("app.services.market.db_ranks._load_names", return_value={}),
+        patch(
+            "app.services.market.db_ranks._load_names",
+            return_value={"SHSE.600519": "茅台", "SHSE.000001": "平安"},
+        ),
+        patch(
+            "app.services.market.db_ranks._load_industries",
+            return_value={"SHSE.600519": "白酒", "SHSE.000001": "银行"},
+        ),
     ):
         rows = db_rank_fallback(db, "change_pct", top_n=10)
 
@@ -55,6 +72,14 @@ def test_db_rank_fallback_change_pct_ordering() -> None:
     assert rows[1].change_amount == pytest.approx(10.0)
     assert rows[1].open_price == pytest.approx(101.0)
     assert rows[1].volume == pytest.approx(1000)
+    # daily_basic 因子与行业需透传
+    assert rows[1].turnover_rate == pytest.approx(1.5)
+    assert rows[1].volume_ratio == pytest.approx(2.0)
+    assert rows[1].total_mv == pytest.approx(2_000_000.0)
+    assert rows[1].circ_mv == pytest.approx(1_900_000.0)
+    assert rows[1].industry == "白酒"
+    assert rows[0].industry == "银行"
+    assert rows[0].total_mv is None  # 无因子数据 → None（前端据此隐藏列）
 
 
 def test_load_daily_bars_amount_converts_qianyuan_to_yuan() -> None:

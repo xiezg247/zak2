@@ -181,6 +181,35 @@ const displayedRanks = computed(() => {
   return [...list].sort((a, b) => cmpNullable(a[key], b[key], dir))
 })
 
+// 接口未返回对应字段（或全为空值）时隐藏列；有数据则展示
+const condCols = [
+  'change_pct',
+  'change_amount',
+  'turnover_rate',
+  'volume_ratio',
+  'total_mv',
+  'industry',
+  'trade_time',
+  'amplitude',
+] as const
+
+type CondCol = (typeof condCols)[number]
+
+function colHasValue(r: RankRow, key: CondCol): boolean {
+  const v = r[key]
+  if (typeof v === 'string') return v.trim() !== ''
+  return v != null && !Number.isNaN(v) && v !== 0
+}
+
+const colVisible = computed(() => {
+  const map = {} as Record<CondCol, boolean>
+  for (const key of condCols) map[key] = ranks.value.some((r) => colHasValue(r, key))
+  return map
+})
+
+// 空态行 colspan：固定列 #/代码/名称/现价/分数字段/成交额/操作 = 7，加上可见的条件列
+const emptyColspan = computed(() => 7 + condCols.filter((k) => colVisible.value[k]).length)
+
 const subtitle = computed(() => {
   const o = overview.value
   if (!o) return ''
@@ -659,28 +688,30 @@ onUnmounted(() => {
                 <th class="sortable" @click="toggleSort('last_price')">
                   现价{{ sortMark('last_price') }}
                 </th>
-                <th class="sortable" @click="toggleSort('change_pct')">
+                <th v-if="colVisible.change_pct" class="sortable" @click="toggleSort('change_pct')">
                   涨幅%{{ sortMark('change_pct') }}
                 </th>
-                <th class="sortable" @click="toggleSort('change_amount')">
+                <th v-if="colVisible.change_amount" class="sortable" @click="toggleSort('change_amount')">
                   涨跌额{{ sortMark('change_amount') }}
                 </th>
                 <th v-if="scoreSortKey" class="sortable" @click="toggleSort(scoreSortKey)">
                   {{ fieldMeta.col }}{{ sortMark(scoreSortKey) }}
                 </th>
                 <th v-else>{{ fieldMeta.col }}</th>
-                <th class="sortable" @click="toggleSort('turnover_rate')">
+                <th v-if="colVisible.turnover_rate" class="sortable" @click="toggleSort('turnover_rate')">
                   换手%{{ sortMark('turnover_rate') }}
                 </th>
-                <th class="sortable" @click="toggleSort('volume_ratio')">
+                <th v-if="colVisible.volume_ratio" class="sortable" @click="toggleSort('volume_ratio')">
                   量比{{ sortMark('volume_ratio') }}
                 </th>
-                <th class="sortable" @click="toggleSort('total_mv')">
+                <th v-if="colVisible.total_mv" class="sortable" @click="toggleSort('total_mv')">
                   总市值{{ sortMark('total_mv') }}
                 </th>
-                <th>行业</th>
-                <th>时间</th>
-                <th class="sortable" @click="toggleSort('amplitude')">振幅%{{ sortMark('amplitude') }}</th>
+                <th v-if="colVisible.industry">行业</th>
+                <th v-if="colVisible.trade_time">时间</th>
+                <th v-if="colVisible.amplitude" class="sortable" @click="toggleSort('amplitude')">
+                  振幅%{{ sortMark('amplitude') }}
+                </th>
                 <th class="sortable" @click="toggleSort('amount')">成交额{{ sortMark('amount') }}</th>
                 <th class="ops">操作</th>
               </tr>
@@ -694,19 +725,29 @@ onUnmounted(() => {
                   <td class="mono">{{ r.vt_symbol }}</td>
                   <td>{{ r.name || '—' }}</td>
                   <td>{{ r.last_price != null ? r.last_price.toFixed(2) : '—' }}</td>
-                  <td :class="{ up: (r.change_pct || 0) > 0, down: (r.change_pct || 0) < 0 }">
+                  <td
+                    v-if="colVisible.change_pct"
+                    :class="{ up: (r.change_pct || 0) > 0, down: (r.change_pct || 0) < 0 }"
+                  >
                     {{ r.change_pct != null ? r.change_pct.toFixed(2) : '—' }}
                   </td>
-                  <td :class="{ up: (r.change_amount || 0) > 0, down: (r.change_amount || 0) < 0 }">
+                  <td
+                    v-if="colVisible.change_amount"
+                    :class="{ up: (r.change_amount || 0) > 0, down: (r.change_amount || 0) < 0 }"
+                  >
                     {{ fmtSigned(r.change_amount) }}
                   </td>
                   <td>{{ scoreLabel(r) }}</td>
-                  <td>{{ r.turnover_rate != null ? r.turnover_rate.toFixed(2) : '—' }}</td>
-                  <td>{{ r.volume_ratio != null ? r.volume_ratio.toFixed(2) : '—' }}</td>
-                  <td class="mono muted">{{ fmtMv(r.total_mv) }}</td>
-                  <td>{{ r.industry || '—' }}</td>
-                  <td class="mono muted">{{ fmtTime(r.trade_time) }}</td>
-                  <td>{{ fmtNum(r.amplitude, 2) }}</td>
+                  <td v-if="colVisible.turnover_rate">
+                    {{ r.turnover_rate != null ? r.turnover_rate.toFixed(2) : '—' }}
+                  </td>
+                  <td v-if="colVisible.volume_ratio">
+                    {{ r.volume_ratio != null ? r.volume_ratio.toFixed(2) : '—' }}
+                  </td>
+                  <td v-if="colVisible.total_mv" class="mono muted">{{ fmtMv(r.total_mv) }}</td>
+                  <td v-if="colVisible.industry">{{ r.industry || '—' }}</td>
+                  <td v-if="colVisible.trade_time" class="mono muted">{{ fmtTime(r.trade_time) }}</td>
+                  <td v-if="colVisible.amplitude">{{ fmtNum(r.amplitude, 2) }}</td>
                   <td>{{ fmtAmount(r.amount) }}</td>
                   <td class="ops">
                     <div class="row-ops">
@@ -788,7 +829,7 @@ onUnmounted(() => {
                 </tr>
               </template>
               <tr v-if="!ranks.length">
-                <td colspan="15" class="empty">
+                <td :colspan="emptyColspan" class="empty">
                   暂无排行（需 Redis 行情快照）
                   <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
                 </td>
