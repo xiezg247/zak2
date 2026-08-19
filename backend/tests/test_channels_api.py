@@ -149,6 +149,39 @@ def test_delete_channel_not_found() -> None:
     assert resp.status_code == 404
 
 
+def test_repo_create_generates_id() -> None:
+    """UUID 主键必须有应用层生成的 id，回归 base 的 autoincrement 误判。"""
+    from app.models.channel import NotifyChannel
+    from app.repositories.channel import ChannelRepository
+
+    db = MagicMock()
+    repo = ChannelRepository(db, "u1")
+    repo.create_channel(name="组群", webhook_url="https://open.feishu.cn/x", enabled=True)
+    added = db.add.call_args.args[0]
+    assert isinstance(added, NotifyChannel)
+    assert added.id  # 非空
+    assert added.user_id == "u1"
+    assert added.channel_type == "feishu"
+    assert added.enabled is True
+    assert '"webhook_url": "https://open.feishu.cn/x"' in added.config_json
+
+
+def test_repo_update_partial() -> None:
+    from app.models.channel import NotifyChannel
+    from app.repositories.channel import ChannelRepository
+
+    db = MagicMock()
+    row = _channel_row()
+    db.scalar.return_value = row
+    db.refresh.side_effect = lambda _: None
+    repo = ChannelRepository(db, "u1")
+    out = repo.update_channel("c1", {"name": "改名后", "enabled": False})
+    assert out is row
+    assert row.name == "改名后"
+    assert row.enabled is False
+    db.commit.assert_called_once()
+
+
 def test_test_channel_ok() -> None:
     db = MagicMock()
     with (

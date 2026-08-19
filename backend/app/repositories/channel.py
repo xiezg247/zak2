@@ -27,6 +27,10 @@ class ChannelRepository(BaseRepository[NotifyChannel]):
     model = NotifyChannel
     order_by = (NotifyChannel.created_at,)
 
+    def _id_is_autoincrement(self) -> bool:
+        # UUID 主键无自增；base 对 autoincrement="auto" 的误判会导致 id 为空
+        return False
+
     def to_out(self, channel: NotifyChannel) -> ChannelOut:
         return ChannelOut(
             id=channel.id,
@@ -41,6 +45,7 @@ class ChannelRepository(BaseRepository[NotifyChannel]):
     def create_channel(self, *, name: str, webhook_url: str, enabled: bool) -> NotifyChannel:
         now = _now_str()
         return self.create(
+            channel_type="feishu",
             name=name,
             config_json=json.dumps({"webhook_url": webhook_url}, ensure_ascii=False),
             enabled=enabled,
