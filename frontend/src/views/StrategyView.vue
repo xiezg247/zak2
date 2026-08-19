@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import { backtestApi, type StrategyInfo } from '../api/backtest'
 import { watchlistApi, type StrategyBoard } from '../api/watchlist'
-import { POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
 import { buildAlignedBacktestQuery, type BoardSignalMode } from '../lib/boardBacktestParams'
 
 const SIGNAL_MODES: { id: BoardSignalMode; label: string }[] = [
@@ -19,20 +18,6 @@ const boards = ref<Partial<Record<BoardSignalMode, StrategyBoard>>>({})
 const boardErrors = ref<Partial<Record<BoardSignalMode, string>>>({})
 const strategies = ref<StrategyInfo[]>([])
 const strategiesError = ref('')
-const loading = ref(false)
-const autoRefresh = ref(true)
-
-const { connected } = useQuoteNotify({
-  onQuotesUpdated: () => {
-    if (!autoRefresh.value || document.hidden) return
-    void load(true)
-  },
-})
-
-const refreshLabel = computed(() => {
-  if (!autoRefresh.value) return '已暂停自动刷新'
-  return connected.value ? 'WS + 慢轮询' : '15 秒刷新'
-})
 
 const boardList = computed(() =>
   SIGNAL_MODES.map((m) => ({
@@ -42,44 +27,23 @@ const boardList = computed(() =>
   })),
 )
 
-let timer: number | undefined
-
-function pollIntervalMs(): number {
-  return connected.value ? POLL_SLOW_MS : 15_000
-}
-
-function restartPoll() {
-  if (timer) window.clearInterval(timer)
-  timer = window.setInterval(() => {
-    if (!autoRefresh.value || document.hidden) return
-    void load(true)
-  }, pollIntervalMs())
-}
-
-watch(connected, () => restartPoll())
-
-async function load(quiet = false) {
-  if (!quiet) loading.value = true
-  try {
-    await Promise.all(
-      SIGNAL_MODES.map(async (m) => {
-        try {
-          boards.value[m.id] = await watchlistApi.strategyBoard({ signalMode: m.id })
-          boardErrors.value[m.id] = ''
-        } catch (e) {
-          boardErrors.value[m.id] = e instanceof Error ? e.message : '加载失败'
-        }
-      }),
-    )
-    if (!strategies.value.length && !strategiesError.value) {
+async function load() {
+  await Promise.all(
+    SIGNAL_MODES.map(async (m) => {
       try {
-        strategies.value = await backtestApi.strategies()
+        boards.value[m.id] = await watchlistApi.strategyBoard({ signalMode: m.id })
+        boardErrors.value[m.id] = ''
       } catch (e) {
-        strategiesError.value = e instanceof Error ? e.message : '回测策略加载失败'
+        boardErrors.value[m.id] = e instanceof Error ? e.message : '加载失败'
       }
+    }),
+  )
+  if (!strategies.value.length && !strategiesError.value) {
+    try {
+      strategies.value = await backtestApi.strategies()
+    } catch (e) {
+      strategiesError.value = e instanceof Error ? e.message : '回测策略加载失败'
     }
-  } finally {
-    loading.value = false
   }
 }
 
@@ -115,31 +79,17 @@ function fmtYmd(raw: string | null | undefined): string {
 
 onMounted(() => {
   void load()
-  restartPoll()
-})
-
-onUnmounted(() => {
-  if (timer) window.clearInterval(timer)
 })
 </script>
 
 <template>
   <AppShell title="策略" subtitle="策略信号总览 · 回测策略清单" active="strategies">
     <div class="page">
-      <div class="toolbar">
-        <p class="muted hint">
-          三轨信号缓存（启发式 / 双均线 / 趋势均线）；无数据时可去 Ops 跑
-          <code>warm_watchlist_strategy_cache</code> 预热。
-          <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
-        </p>
-        <div class="actions">
-          <label class="auto">
-            <input v-model="autoRefresh" type="checkbox" />
-            {{ refreshLabel }}
-          </label>
-          <button class="ghost" type="button" :disabled="loading" @click="load()">刷新</button>
-        </div>
-      </div>
+      <p class="muted hint">
+        三轨信号缓存（启发式 / 双均线 / 趋势均线）；无数据时可去 Ops 跑
+        <code>warm_watchlist_strategy_cache</code> 预热。
+        <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
+      </p>
 
       <section class="cards">
         <div v-for="m in boardList" :key="m.id" class="card">
@@ -194,29 +144,10 @@ onUnmounted(() => {
   display: grid;
   gap: 14px;
 }
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
 .hint {
   margin: 0;
   font-size: 0.8rem;
   max-width: 56ch;
-}
-.actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.auto {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  color: var(--muted);
-  font-size: 0.8rem;
 }
 .cards {
   display: grid;
