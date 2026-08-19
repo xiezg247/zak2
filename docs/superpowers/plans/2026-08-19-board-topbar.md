@@ -27,7 +27,7 @@
 - Consumes: `signalMode` / `signalForm.*`（`riskForm.total_capital/stop_loss_pct/caution_float_pct`）/ `prefsReady` / `riskSaving` / `riskError` / `riskMsg` / `enqueueing` / `saveTradingRisk` / `setSignalMode` / `openAlignedBacktest` / `enqueueAlignedBacktest` / `refreshBoard`（全部既有）
 - Produces: 无新接口（纯模板/样式重组）
 
-- [ ] **Step 1: script 区移除不再使用的风险指标**
+- [x] **Step 1: script 区移除不再使用的风险指标**
 
 在 `frontend/src/views/BoardView.vue` 中：
 
@@ -36,7 +36,7 @@
 
 保留 `formatMarketValue`（持仓表仍使用）。
 
-- [ ] **Step 2: 模板区移除风控卡与旧工具条，替换为单条 topbar**
+- [x] **Step 2: 模板区移除风控卡与旧工具条，替换为单条 topbar**
 
 删除整个 `.summary-grid` 块（含 `.risk-card` section）与 `.board-head` 块（含 h2、meta、mode-tabs、三个操作按钮），替换为：
 
@@ -136,7 +136,7 @@
 
 （原 `board?.note` 提示与 `boardError` 显示保持在其下方原位置。）
 
-- [ ] **Step 3: 样式区调整**
+- [x] **Step 3: 样式区调整**
 
 在 `<style scoped>` 中：
 
@@ -214,7 +214,7 @@
 }
 ```
 
-- [ ] **Step 4: 构建验证**
+- [x] **Step 4: 构建验证**
 
 Run: `cd frontend && npm run build`
 Expected: `vue-tsc` + `vite build` 通过（确认无 unused 报错）
@@ -222,7 +222,7 @@ Expected: `vue-tsc` + `vite build` 通过（确认无 unused 报错）
 Run: `cd frontend && npm run lint:check && npm run format:check`
 Expected: 通过（`BoardView.vue` 不在 format 问题列表）
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add frontend/src/views/BoardView.vue
