@@ -103,7 +103,6 @@ const fields = [
   { id: 'turnover_rate', label: '换手', col: '换手%' },
   { id: 'amount', label: '成交额', col: '成交额' },
   { id: 'volume_ratio', label: '量比', col: '量比' },
-  { id: 'limit_times', label: '连板', col: '连板' },
 ]
 
 const fieldMeta = computed(() => fields.find((f) => f.id === field.value) || fields[0])
@@ -115,7 +114,6 @@ type SortKey =
   | 'turnover_rate'
   | 'amount'
   | 'volume_ratio'
-  | 'limit_times'
   | 'amplitude'
   | 'total_mv'
   | null
@@ -159,7 +157,7 @@ function sortMark(key: Exclude<SortKey, null>): string {
 const scoreSortKey = computed((): Exclude<SortKey, null> | null => {
   const id = field.value
   if (id === 'change_pct') return null
-  if (id === 'turnover_rate' || id === 'amount' || id === 'volume_ratio' || id === 'limit_times') {
+  if (id === 'turnover_rate' || id === 'amount' || id === 'volume_ratio') {
     return id
   }
   return null
@@ -248,7 +246,6 @@ function scoreLabel(r: RankRow): string {
   if (id === 'turnover_rate') return r.turnover_rate != null ? r.turnover_rate.toFixed(2) : '—'
   if (id === 'amount') return r.amount != null ? (r.amount / 1e8).toFixed(2) + '亿' : '—'
   if (id === 'volume_ratio') return r.volume_ratio != null ? r.volume_ratio.toFixed(2) : '—'
-  if (id === 'limit_times') return r.limit_times != null ? String(r.limit_times) : '—'
   return r.score.toFixed(2)
 }
 
