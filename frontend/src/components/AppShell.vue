@@ -24,6 +24,7 @@ defineProps<{
     | 'ops'
     | 'scheduler'
     | 'notify'
+    | 'channels'
 }>()
 
 const auth = useAuthStore()
@@ -45,6 +46,7 @@ type NavKey =
   | 'ops'
   | 'scheduler'
   | 'notify'
+  | 'channels'
 
 type NavItem = {
   key: NavKey
@@ -82,6 +84,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { key: 'ops', label: '运维', to: '/ops', enabled: true },
       { key: 'scheduler', label: '调度', to: '/scheduler', enabled: true },
       { key: 'notify', label: '通知', to: '/notify', enabled: true },
+      { key: 'channels', label: '消息渠道', to: '/channels', enabled: true },
     ],
   },
 ]
