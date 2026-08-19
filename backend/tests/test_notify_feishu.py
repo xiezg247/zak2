@@ -23,9 +23,10 @@ def test_send_ok() -> None:
 
 
 def test_send_network_error() -> None:
-    with patch("app.services.notify.feishu.httpx.post", side_effect=httpx.ConnectError("boom")):
-        with pytest.raises(FeishuSendError) as exc:
-            send_feishu_webhook("https://hook", "标题", "正文")
+    with patch("app.services.notify.feishu.httpx.post", side_effect=httpx.ConnectError("boom")), pytest.raises(
+        FeishuSendError
+    ) as exc:
+        send_feishu_webhook("https://hook", "标题", "正文")
     assert "网络错误" in str(exc.value)
 
 
@@ -33,9 +34,8 @@ def test_send_feishu_code_error() -> None:
     with patch(
         "app.services.notify.feishu.httpx.post",
         return_value=MagicMock(status_code=200, json=lambda: {"code": 19001, "msg": "bad"}),
-    ):
-        with pytest.raises(FeishuSendError) as exc:
-            send_feishu_webhook("https://hook", "标题", "正文")
+    ), pytest.raises(FeishuSendError) as exc:
+        send_feishu_webhook("https://hook", "标题", "正文")
     assert "19001" in str(exc.value) or "bad" in str(exc.value)
 
 
@@ -43,9 +43,8 @@ def test_send_non_200() -> None:
     with patch(
         "app.services.notify.feishu.httpx.post",
         return_value=MagicMock(status_code=500, text="err"),
-    ):
-        with pytest.raises(FeishuSendError) as exc:
-            send_feishu_webhook("https://hook", "标题", "正文")
+    ), pytest.raises(FeishuSendError) as exc:
+        send_feishu_webhook("https://hook", "标题", "正文")
     assert "500" in str(exc.value)
 
 
@@ -53,6 +52,5 @@ def test_send_invalid_json() -> None:
     with patch(
         "app.services.notify.feishu.httpx.post",
         return_value=MagicMock(status_code=200, text="not-json", json=lambda: (_ for _ in ()).throw(ValueError("bad json"))),
-    ):
-        with pytest.raises(FeishuSendError):
-            send_feishu_webhook("https://hook", "标题", "正文")
+    ), pytest.raises(FeishuSendError):
+        send_feishu_webhook("https://hook", "标题", "正文")
