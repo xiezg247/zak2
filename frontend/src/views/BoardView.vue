@@ -4,11 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import StockAnalysisModal from '../components/StockAnalysisModal.vue'
 import { confirmDialog } from '../lib/dialog'
-import {
-  watchlistApi,
-  type PositionItem,
-  type StrategyBoard,
-} from '../api/watchlist'
+import { watchlistApi, type PositionItem, type StrategyBoard } from '../api/watchlist'
 import { backtestApi } from '../api/backtest'
 import { buildAlignedBacktestQuery, buildEnqueueRunBody } from '../lib/boardBacktestParams'
 import { useStockAnalysis } from '../composables/useStockAnalysis'
@@ -73,12 +69,6 @@ let boardTimer: number | undefined
 
 const panelSymbols = computed(() => board.value?.panel_symbols || [])
 const panelMax = 10
-const riskSummary = computed(() => board.value?.risk_summary ?? null)
-
-function formatPctRatio(v: number | null | undefined): string {
-  if (v == null || Number.isNaN(v)) return '—'
-  return `${(v * 100).toFixed(1)}%`
-}
 
 function formatMarketValue(v: number | null | undefined): string {
   if (v == null || Number.isNaN(v)) return '—'
@@ -368,69 +358,7 @@ onUnmounted(() => {
     <div class="page">
       <p v-if="boardError" class="err">{{ boardError }}</p>
 
-      <div class="summary-grid">
-        <section class="card risk-card">
-          <h3>仓位与风控</h3>
-          <div v-if="riskSummary" class="risk-summary muted">
-            <span>实际仓位 {{ formatPctRatio(riskSummary.actual_position_pct) }}</span>
-          </div>
-          <div class="pos-grid risk-grid">
-            <label>
-              总资金
-              <input
-                v-model="riskForm.total_capital"
-                type="number"
-                step="1000"
-                min="0"
-                placeholder="可选"
-                :disabled="!prefsReady || riskSaving"
-              />
-            </label>
-            <label>
-              止损%
-              <input
-                v-model="riskForm.stop_loss_pct"
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="50"
-                :disabled="!prefsReady || riskSaving"
-              />
-            </label>
-            <label>
-              浮亏警戒
-              <input
-                v-model="riskForm.caution_float_pct"
-                type="number"
-                step="0.5"
-                max="-0.1"
-                :disabled="!prefsReady || riskSaving"
-              />
-            </label>
-          </div>
-          <div class="actions">
-            <button
-              type="button"
-              class="primary"
-              :disabled="!prefsReady || riskSaving"
-              @click="saveTradingRisk"
-            >
-              {{ riskSaving ? '保存中…' : '保存风控' }}
-            </button>
-          </div>
-          <p v-if="!prefsReady" class="muted">加载风控偏好…</p>
-          <p v-else-if="riskError" class="err">{{ riskError }}</p>
-          <p v-else-if="riskMsg" class="muted">{{ riskMsg }}</p>
-          <p class="muted tip">止损按百分数（如 5 = 5%）；浮亏警戒为负数（如 -5）。</p>
-        </section>
-      </div>
-
-      <div class="board-head">
-        <h2>策略看盘</h2>
-        <span v-if="board" class="muted">
-          {{ board.config_key }} · {{ board.signal_mode || signalMode }} · {{ board.source }} ·
-          as_of {{ board.as_of || '—' }}
-        </span>
+      <div class="topbar">
         <div class="mode-tabs">
           <button
             type="button"
@@ -457,16 +385,69 @@ onUnmounted(() => {
             趋势均线
           </button>
         </div>
-        <button type="button" class="ghost" @click="openAlignedBacktest()">同参回测</button>
-        <button
-          type="button"
-          class="ghost"
-          :disabled="enqueueing"
-          @click="enqueueAlignedBacktest()"
-        >
-          {{ enqueueing ? '入队中…' : '入队回测' }}
-        </button>
-        <button type="button" class="ghost" @click="refreshBoard()">刷新看板</button>
+
+        <div class="risk-form">
+          <label>
+            总资金
+            <input
+              v-model="riskForm.total_capital"
+              type="number"
+              step="1000"
+              min="0"
+              placeholder="可选"
+              :disabled="!prefsReady || riskSaving"
+            />
+          </label>
+          <label>
+            止损%
+            <input
+              v-model="riskForm.stop_loss_pct"
+              type="number"
+              step="0.1"
+              min="0.1"
+              max="50"
+              :disabled="!prefsReady || riskSaving"
+            />
+          </label>
+          <label>
+            浮亏警戒
+            <input
+              v-model="riskForm.caution_float_pct"
+              type="number"
+              step="0.5"
+              max="-0.1"
+              :disabled="!prefsReady || riskSaving"
+            />
+          </label>
+          <button
+            type="button"
+            class="primary"
+            :disabled="!prefsReady || riskSaving"
+            @click="saveTradingRisk"
+          >
+            {{ riskSaving ? '保存中…' : '保存风控' }}
+          </button>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="ghost" @click="openAlignedBacktest()">同参回测</button>
+          <button
+            type="button"
+            class="ghost"
+            :disabled="enqueueing"
+            @click="enqueueAlignedBacktest()"
+          >
+            {{ enqueueing ? '入队中…' : '入队回测' }}
+          </button>
+          <button type="button" class="ghost" @click="refreshBoard()">刷新看板</button>
+        </div>
+      </div>
+
+      <div class="topbar-feedback">
+        <p v-if="!prefsReady" class="muted">加载风控偏好…</p>
+        <p v-else-if="riskError" class="err">{{ riskError }}</p>
+        <p v-else-if="riskMsg" class="muted">{{ riskMsg }}</p>
+        <p class="muted tip">止损按百分数（如 5 = 5%）；浮亏警戒为负数（如 -5）。</p>
       </div>
       <p v-if="board?.note" class="muted">{{ board.note }}</p>
 
@@ -495,7 +476,9 @@ onUnmounted(() => {
                 <button type="button" class="link" @click="removeFromSignalPanel(vt)">×</button>
               </span>
             </div>
-            <p v-else class="muted tip">名单为空时回退「自选 ∩ 策略 cache」；上限 {{ panelMax }} 只。</p>
+            <p v-else class="muted tip">
+              名单为空时回退「自选 ∩ 策略 cache」；上限 {{ panelMax }} 只。
+            </p>
             <p v-if="signalError" class="err">{{ signalError }}</p>
             <p v-else-if="signalMsg" class="muted">{{ signalMsg }}</p>
           </div>
@@ -560,9 +543,7 @@ onUnmounted(() => {
                   </td>
                 </tr>
                 <tr v-if="!board.signals.length">
-                  <td colspan="7" class="empty">
-                    无信号（可先编辑名单，或确认策略 cache 已写入）
-                  </td>
+                  <td colspan="7" class="empty">无信号（可先编辑名单，或确认策略 cache 已写入）</td>
                 </tr>
               </tbody>
             </table>
@@ -623,10 +604,7 @@ onUnmounted(() => {
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="row in board.positions"
-                  :key="row.vt_symbol + row.buy_date"
-                >
+                <tr v-for="row in board.positions" :key="row.vt_symbol + row.buy_date">
                   <td class="mono">
                     <button type="button" class="chip-link" @click="selectVt(row.vt_symbol)">
                       {{ row.vt_symbol }}
@@ -694,20 +672,60 @@ onUnmounted(() => {
   font-size: 0.9rem;
   font-weight: 600;
 }
-.summary-grid {
-  display: grid;
-  gap: 12px;
-  align-items: start;
-}
-.risk-summary {
+.topbar {
   display: flex;
+  align-items: flex-end;
+  gap: 16px;
   flex-wrap: wrap;
-  gap: 12px;
-  font-size: 0.8rem;
-  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
-.risk-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.mode-tabs {
+  display: inline-flex;
+  gap: 4px;
+}
+.risk-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.risk-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.risk-form input {
+  width: 110px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  padding: 6px 8px;
+}
+.risk-form input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(230, 100, 50, 0.15);
+  outline: none;
+}
+.topbar .actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.topbar-feedback {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.topbar-feedback p {
+  margin: 0;
 }
 .pos-grid {
   display: grid;
@@ -719,20 +737,6 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
-}
-.board-head {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.board-head h2 {
-  margin: 0;
-  font-size: 1rem;
-}
-.mode-tabs {
-  display: inline-flex;
-  gap: 4px;
 }
 .board-grid {
   display: grid;
@@ -909,10 +913,8 @@ tbody tr.on td {
   font-size: 0.85rem;
 }
 @media (max-width: 900px) {
-  .summary-grid,
   .board-grid,
-  .pos-grid,
-  .risk-grid {
+  .pos-grid {
     grid-template-columns: 1fr;
   }
 }
