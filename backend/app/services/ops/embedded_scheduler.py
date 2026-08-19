@@ -39,6 +39,10 @@ def _run_job(job_id: str) -> None:
     if not settings.scheduler_effective_enabled:
         return
 
+    if job_id == "auto_schedule_poll":
+        _run_auto_schedule_poll()
+        return
+
     lock = _locks[job_id]
     if not lock.acquire(blocking=False):
         _logger.info("embedded scheduler skip %s: already locked", job_id)
@@ -91,6 +95,22 @@ def _run_job(job_id: str) -> None:
         lock.release()
 
 
+def _run_auto_schedule_poll() -> None:
+    """每分钟扫描自动任务，命中当前时刻者入队 ARQ。"""
+    from app.core.time import china_now
+    from app.services.ops.auto_schedule import poll_due_tasks
+
+    db = SessionLocal()
+    try:
+        enqueued = poll_due_tasks(db, china_now())
+        if enqueued:
+            _logger.info("auto schedule poll enqueued: %s", enqueued)
+    except Exception:
+        _logger.exception("auto schedule poll failed")
+    finally:
+        db.close()
+
+
 def start_embedded_scheduler() -> None:
     global _scheduler
     settings = get_settings()
@@ -107,6 +127,15 @@ def start_embedded_scheduler() -> None:
         db.close()
 
     sched = BackgroundScheduler(timezone="Asia/Shanghai")
+    sched.add_job(
+        _run_job,
+        CronTrigger(minute="*"),
+        id="auto_schedule_poll",
+        args=["auto_schedule_poll"],
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     for job_id in sorted(RUNNABLE_JOB_IDS):
         job_cfg = config.get(job_id) if isinstance(config.get(job_id), dict) else {}
         cron = resolve_cron(job_id, job_cfg or {})
