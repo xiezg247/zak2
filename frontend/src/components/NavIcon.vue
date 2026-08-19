@@ -18,6 +18,7 @@ type NavIconName =
   | 'scheduler'
   | 'notify'
   | 'channels'
+  | 'auto-schedule'
 
 defineProps<{ name: NavIconName }>()
 
@@ -65,6 +66,9 @@ const paths: Record<NavIconName, string[]> = {
   ],
   channels: [
     'M10.666 13.115a2.5 2.5 0 11-4.732-.847L12 8.831M13.333 9.885a2.5 2.5 0 114.732.847L12 15.169M12 12.988V12',
+  ],
+  'auto-schedule': [
+    'M4.5 12a7.5 7.5 0 0115 0m-15 0l3 3m-3-3l3-3m7.5 0h3m-3 0l-3-3',
   ],
 }
 </script>

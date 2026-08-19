@@ -25,6 +25,7 @@ defineProps<{
     | 'scheduler'
     | 'notify'
     | 'channels'
+    | 'auto-schedule'
 }>()
 
 const auth = useAuthStore()
@@ -47,6 +48,7 @@ type NavKey =
   | 'scheduler'
   | 'notify'
   | 'channels'
+  | 'auto-schedule'
 
 type NavItem = {
   key: NavKey
@@ -85,6 +87,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { key: 'scheduler', label: '调度', to: '/scheduler', enabled: true },
       { key: 'notify', label: '通知', to: '/notify', enabled: true },
       { key: 'channels', label: '消息渠道', to: '/channels', enabled: true },
+      { key: 'auto-schedule', label: '自动任务', to: '/auto-schedule', enabled: true },
     ],
   },
 ]

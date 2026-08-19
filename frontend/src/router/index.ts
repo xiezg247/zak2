@@ -43,6 +43,11 @@ const router = createRouter({
     },
     { path: '/notify', name: 'notify', component: () => import('../views/NotifyView.vue') },
     { path: '/channels', name: 'channels', component: () => import('../views/ChannelsView.vue') },
+    {
+      path: '/auto-schedule',
+      name: 'auto-schedule',
+      component: () => import('../views/AutoScheduleView.vue'),
+    },
   ],
 })
 
