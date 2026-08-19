@@ -2,9 +2,13 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import AppShell from '../components/AppShell.vue'
 import CandleChart from '../components/CandleChart.vue'
+import StockAnalysisModal from '../components/StockAnalysisModal.vue'
 import { marketApi, type EmotionThresholds, type MarketOverview, type RankRow } from '../api/market'
 import { watchlistApi, type Bar, type Fundamentals } from '../api/watchlist'
 import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
+import { useStockAnalysis } from '../composables/useStockAnalysis'
+
+const analysis = useStockAnalysis()
 
 const overview = ref<MarketOverview | null>(null)
 const field = ref('change_pct')
@@ -760,6 +764,25 @@ onUnmounted(() => {
                           />
                         </svg>
                       </button>
+                      <button
+                        type="button"
+                        class="icon-btn"
+                        title="分析"
+                        @click.stop="analysis.open(r.vt_symbol, r.name)"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path
+                            d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5M3.75 21h4.5M3.75 21V9m0 0l-1.5 3M3.75 9l9-6 9 6m-13.5 0v6h4.5v-6"
+                          />
+                        </svg>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -951,6 +974,7 @@ onUnmounted(() => {
       </div>
     </Teleport>
   </AppShell>
+  <StockAnalysisModal />
 </template>
 
 <style scoped>

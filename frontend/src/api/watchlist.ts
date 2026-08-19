@@ -190,6 +190,22 @@ export type Fundamentals = {
   }[]
 }
 
+export type QuoteOut = {
+  symbol: string
+  exchange: string
+  vt_symbol: string
+  tf_symbol: string
+  name: string
+  last_price: number
+  change_pct: number
+  turnover_rate: number
+  volume: number
+  amount: number
+  amplitude: number
+  volume_ratio: number
+  industry: string
+}
+
 export const watchlistApi = {
   list: (groupId?: string) => {
     const q = groupId ? `?group_id=${encodeURIComponent(groupId)}` : ''
@@ -293,6 +309,8 @@ export const watchlistApi = {
     api<BarsResponse>(
       `/api/v1/bars/${encodeURIComponent(vtSymbol)}?interval=${interval}&limit=${limit}`,
     ),
+  quotes: (symbols: string) =>
+    api<QuoteOut[]>(`/api/v1/watchlist/quotes?symbols=${encodeURIComponent(symbols)}`),
   fundamentals: (vtSymbol: string) =>
     api<Fundamentals>(`/api/v1/watchlist/items/${encodeURIComponent(vtSymbol)}/fundamentals`),
 }

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
+import StockAnalysisModal from '../components/StockAnalysisModal.vue'
 import {
   marketApi,
   type RadarCard,
@@ -11,6 +12,9 @@ import {
   type ResonanceWeightItem,
 } from '../api/market'
 import { watchlistApi } from '../api/watchlist'
+import { useStockAnalysis } from '../composables/useStockAnalysis'
+
+const analysis = useStockAnalysis()
 
 const router = useRouter()
 const cards = ref<RadarCard[]>([])
@@ -478,6 +482,13 @@ onMounted(() => {
                       <button
                         type="button"
                         class="ghost tiny-btn"
+                        @click="analysis.open(row.vt_symbol, row.name)"
+                      >
+                        析
+                      </button>
+                      <button
+                        type="button"
+                        class="ghost tiny-btn"
                         :disabled="!!actingVt"
                         @click="addWatchFromHorizonRow(row.vt_symbol, row.name)"
                       >
@@ -547,6 +558,13 @@ onMounted(() => {
                     <td class="muted tiny">{{ row.seal_time_label || '—' }}</td>
                     <td class="muted tiny">{{ (row.reasons || []).join(' · ') || '—' }}</td>
                     <td class="ops">
+                      <button
+                        type="button"
+                        class="ghost tiny-btn"
+                        @click="analysis.open(row.vt_symbol, row.name)"
+                      >
+                        析
+                      </button>
                       <button
                         type="button"
                         class="ghost tiny-btn"
@@ -788,14 +806,23 @@ onMounted(() => {
                 {{ e.card_count }} 卡 · {{ e.card_titles.join(' / ') }}
                 <template v-if="sealLabel(e)"> · {{ sealLabel(e) }}</template>
               </div>
-              <button
-                type="button"
-                class="link"
-                :disabled="actingVt === e.vt_symbol"
-                @click="addWatch(e.vt_symbol, e.name)"
-              >
-                加自选
-              </button>
+              <div class="side-actions">
+                <button
+                  type="button"
+                  class="link"
+                  @click="analysis.open(e.vt_symbol, e.name)"
+                >
+                  析
+                </button>
+                <button
+                  type="button"
+                  class="link"
+                  :disabled="actingVt === e.vt_symbol"
+                  @click="addWatch(e.vt_symbol, e.name)"
+                >
+                  加自选
+                </button>
+              </div>
             </div>
             <p v-if="!resonance.length" class="muted empty-side">
               暂无共振标的（需至少 2 张卡片命中同一标的；可调权重后刷新）
@@ -806,6 +833,7 @@ onMounted(() => {
       </div>
     </div>
   </AppShell>
+  <StockAnalysisModal />
 </template>
 
 <style scoped>

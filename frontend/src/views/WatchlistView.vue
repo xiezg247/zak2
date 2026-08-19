@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import CandleChart from '../components/CandleChart.vue'
+import StockAnalysisModal from '../components/StockAnalysisModal.vue'
 import { confirmDialog, promptDialog } from '../lib/dialog'
 import {
   watchlistApi,
@@ -13,6 +14,9 @@ import {
   type WatchlistItem,
 } from '../api/watchlist'
 import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
+import { useStockAnalysis } from '../composables/useStockAnalysis'
+
+const analysis = useStockAnalysis()
 
 const route = useRoute()
 const items = ref<WatchlistItem[]>([])
@@ -699,6 +703,13 @@ onUnmounted(() => {
                   <td v-if="colVisible.volume_ratio">{{ formatNum2(item.volume_ratio) }}</td>
                   <td v-if="colVisible.amount">{{ formatAmountYi(item.amount) }}</td>
                   <td>
+                    <button
+                      type="button"
+                      class="link"
+                      @click.stop="analysis.open(item.vt_symbol, item.name)"
+                    >
+                      析
+                    </button>
                     <button type="button" class="link" @click.stop="onRemove(item)">删</button>
                   </td>
                 </tr>
@@ -920,6 +931,7 @@ onUnmounted(() => {
 
     </div>
   </AppShell>
+  <StockAnalysisModal />
 </template>
 
 <style scoped>

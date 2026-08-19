@@ -2,13 +2,17 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
+import StockAnalysisModal from '../components/StockAnalysisModal.vue'
 import { backtestApi, type StrategyInfo } from '../api/backtest'
 import { watchlistApi, type StrategyBoard } from '../api/watchlist'
 import { POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
+import { useStockAnalysis } from '../composables/useStockAnalysis'
 import {
   buildAlignedBacktestQuery,
   type BoardSignalMode,
 } from '../lib/boardBacktestParams'
+
+const analysis = useStockAnalysis()
 
 const SIGNAL_MODES: { id: BoardSignalMode; label: string }[] = [
   { id: 'heuristic_v2', label: '启发式确认' },
@@ -232,6 +236,7 @@ onUnmounted(() => {
                 <th>信号</th>
                 <th>强度</th>
                 <th>摘要</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -254,9 +259,18 @@ onUnmounted(() => {
                   </template>
                 </td>
                 <td class="clip">{{ row.reason_summary || '—' }}</td>
+                <td>
+                  <button
+                    type="button"
+                    class="link"
+                    @click.stop="analysis.open(row.vt_symbol, row.name)"
+                  >
+                    析
+                  </button>
+                </td>
               </tr>
               <tr v-if="!activeBoard.signals.length">
-                <td colspan="6" class="empty">
+                <td colspan="7" class="empty">
                   无信号（可去 Ops 跑 warm_watchlist_strategy_cache 预热）
                 </td>
               </tr>
@@ -267,6 +281,7 @@ onUnmounted(() => {
       </section>
     </div>
   </AppShell>
+  <StockAnalysisModal />
 </template>
 
 <style scoped>

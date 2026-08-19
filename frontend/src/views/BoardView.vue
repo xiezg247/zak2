@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
+import StockAnalysisModal from '../components/StockAnalysisModal.vue'
 import { confirmDialog } from '../lib/dialog'
 import {
   watchlistApi,
@@ -10,6 +11,9 @@ import {
 } from '../api/watchlist'
 import { backtestApi } from '../api/backtest'
 import { buildAlignedBacktestQuery, buildEnqueueRunBody } from '../lib/boardBacktestParams'
+import { useStockAnalysis } from '../composables/useStockAnalysis'
+
+const analysis = useStockAnalysis()
 
 const router = useRouter()
 const route = useRoute()
@@ -531,6 +535,13 @@ onUnmounted(() => {
                   <td class="clip">{{ row.reason_summary || '—' }}</td>
                   <td>
                     <button
+                      type="button"
+                      class="link"
+                      @click.stop="analysis.open(row.vt_symbol, row.name)"
+                    >
+                      析
+                    </button>
+                    <button
                       v-if="panelSymbols.includes(row.vt_symbol)"
                       type="button"
                       class="link"
@@ -637,6 +648,13 @@ onUnmounted(() => {
                   <td :class="signalClass(row.exit_signal)">{{ row.exit_signal_label }}</td>
                   <td>{{ row.risk_tags?.length ? row.risk_tags.join(' · ') : '—' }}</td>
                   <td>
+                    <button
+                      type="button"
+                      class="link"
+                      @click.stop="analysis.open(row.vt_symbol, row.name)"
+                    >
+                      析
+                    </button>
                     <button type="button" class="link" @click.stop="editBoardPosition(row)">
                       改
                     </button>
@@ -655,6 +673,7 @@ onUnmounted(() => {
       </div>
     </div>
   </AppShell>
+  <StockAnalysisModal />
 </template>
 
 <style scoped>
