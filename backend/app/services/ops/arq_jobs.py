@@ -339,3 +339,33 @@ async def list_job_outs(*, limit: int = 50) -> list[JobOut]:
 async def list_ops_job_outs(*, limit: int = 50) -> list[JobOut]:
     rows = await list_job_outs(limit=limit * 2)
     return [r for r in rows if r.kind.startswith("ops.")][:limit]
+
+
+def auto_arq_id(task_id: str) -> str:
+    return f"auto:{task_id}"
+
+
+async def enqueue_auto_task(task_id: str) -> str:
+    """以稳定 job id 入队自动任务；进行中则直接复用，避免重复执行。"""
+    stable_id = auto_arq_id(task_id)
+    pool = await _arq_pool()
+    settings = get_settings()
+    job_probe = Job(stable_id, redis=pool, _queue_name=settings.arq_queue_name)
+    st = await job_probe.status()
+    if st in _IN_FLIGHT:
+        return stable_id
+    if st in {JobStatus.complete, JobStatus.not_found}:
+        await _clear_arq_job_keys(pool, stable_id)
+    job = await pool.enqueue_job(
+        "run_auto_schedule_task",
+        task_id,
+        _job_id=stable_id,
+        _queue_name=settings.arq_queue_name,
+    )
+    if job is None:
+        raise RuntimeError(f"enqueue 失败：{task_id}")
+    return job.job_id
+
+
+def enqueue_auto_task_sync(task_id: str) -> str:
+    return asyncio.run(enqueue_auto_task(task_id))
