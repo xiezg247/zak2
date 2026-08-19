@@ -155,6 +155,10 @@ class StrategyInfo(BaseModel):
     interval: str
     description: str
     scenario: str = ""
+    category: str = ""
+    tags: list[str] = Field(default_factory=list)
+    default_params: str = ""
+    featured: bool = False
     implemented: bool = True
     engine: str = "vnpy"
 

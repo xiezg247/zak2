@@ -12,3 +12,24 @@ def test_sma() -> None:
 def test_strategies_engine_vnpy() -> None:
     assert STRATEGIES[0]["engine"] == "vnpy"
     assert len(PROFILES) >= 1
+
+
+def test_strategies_meta_fields() -> None:
+    ids = {s["id"] for s in STRATEGIES}
+    assert ids == {
+        "double_ma",
+        "trend_ma",
+        "medium_swing",
+        "donchian",
+        "rsi_reversal",
+        "bollinger",
+        "ma_band",
+        "atr_breakout",
+    }
+    categories = {s["category"] for s in STRATEGIES}
+    assert categories == {"trend", "breakout", "reversion"}
+    for s in STRATEGIES:
+        assert s["tags"]
+        assert s["default_params"]
+        assert isinstance(s["featured"], bool)
+    assert sum(1 for s in STRATEGIES if s["featured"]) >= 1

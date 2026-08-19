@@ -29,6 +29,10 @@ export type StrategyInfo = {
   interval: string
   description: string
   scenario?: string
+  category?: string
+  tags?: string[]
+  default_params?: string
+  featured?: boolean
   implemented: boolean
   engine?: string
 }
