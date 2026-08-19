@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import StockAnalysisModal from '../components/StockAnalysisModal.vue'
 import { confirmDialog } from '../lib/dialog'
-import { watchlistApi, type PositionItem, type StrategyBoard } from '../api/watchlist'
+import { watchlistApi, type StrategyBoard } from '../api/watchlist'
 import { backtestApi } from '../api/backtest'
 import { buildAlignedBacktestQuery, buildEnqueueRunBody } from '../lib/boardBacktestParams'
 import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
@@ -17,7 +17,6 @@ const route = useRoute()
 
 const board = ref<StrategyBoard | null>(null)
 const boardError = ref('')
-const positions = ref<PositionItem[]>([])
 const enqueueing = ref(false)
 const autoRefresh = ref(true)
 
@@ -52,17 +51,6 @@ const signalAdd = ref('')
 const signalError = ref('')
 const signalMsg = ref('')
 
-const posError = ref('')
-const posMsg = ref('')
-const editingVt = ref('')
-const form = ref({
-  symbol: '',
-  cost_price: '',
-  volume: '100',
-  buy_date: new Date().toISOString().slice(0, 10),
-  notes: '',
-})
-
 const riskForm = ref({
   total_capital: '',
   stop_loss_pct: '',
@@ -90,11 +78,6 @@ const refreshLabel = computed(() => {
 const panelSymbols = computed(() => board.value?.panel_symbols || [])
 const panelMax = 10
 
-function formatMarketValue(v: number | null | undefined): string {
-  if (v == null || Number.isNaN(v)) return '—'
-  return v.toLocaleString()
-}
-
 function applyRiskPrefs(prefs: {
   total_capital: number | null
   stop_loss_pct: number
@@ -118,13 +101,11 @@ async function refreshBoard(quiet = false) {
   if (!quiet) boardError.value = ''
   const loadPrefs = !quiet || !prefsReady.value
   try {
-    const [b, pos, prefs] = await Promise.all([
+    const [b, prefs] = await Promise.all([
       watchlistApi.strategyBoard({ signalMode: signalMode.value }),
-      watchlistApi.listPositions(),
       loadPrefs ? watchlistApi.tradingRisk() : Promise.resolve(null),
     ])
     board.value = b
-    positions.value = pos
     if (prefs) applyRiskPrefs(prefs)
   } catch (e) {
     boardError.value = e instanceof Error ? e.message : '策略看板加载失败'
@@ -221,106 +202,6 @@ async function saveTradingRisk() {
   }
 }
 
-function resetPosForm() {
-  editingVt.value = ''
-  form.value = {
-    symbol: '',
-    cost_price: '',
-    volume: '100',
-    buy_date: new Date().toISOString().slice(0, 10),
-    notes: '',
-  }
-  posMsg.value = ''
-  posError.value = ''
-}
-
-function fillPosForm(row: PositionItem) {
-  editingVt.value = row.vt_symbol
-  form.value = {
-    symbol: row.vt_symbol,
-    cost_price: String(row.cost_price),
-    volume: String(row.volume),
-    buy_date: row.buy_date.slice(0, 10),
-    notes: row.notes || '',
-  }
-  posMsg.value = ''
-  posError.value = ''
-}
-
-function editBoardPosition(row: {
-  vt_symbol: string
-  cost_price: number
-  volume: number
-  buy_date: string
-}) {
-  const full = positions.value.find((p) => p.vt_symbol === row.vt_symbol)
-  if (full) {
-    fillPosForm(full)
-    return
-  }
-  fillPosForm({
-    symbol: row.vt_symbol.split('.')[0] || row.vt_symbol,
-    exchange: row.vt_symbol.split('.')[1] || 'SSE',
-    vt_symbol: row.vt_symbol,
-    cost_price: row.cost_price,
-    volume: row.volume,
-    buy_date: row.buy_date,
-    notes: '',
-    source: 'manual',
-    sort_order: 0,
-    created_at: '',
-    updated_at: '',
-  })
-}
-
-async function savePosition() {
-  posError.value = ''
-  posMsg.value = ''
-  const symbol = form.value.symbol.trim()
-  const cost = Number(form.value.cost_price)
-  const volume = Number(form.value.volume)
-  if (!symbol) {
-    posError.value = '请填写代码（须已在自选）'
-    return
-  }
-  if (!(cost > 0) || !(volume > 0)) {
-    posError.value = '成本价与数量须大于 0'
-    return
-  }
-  const body = {
-    symbol,
-    cost_price: cost,
-    volume,
-    buy_date: form.value.buy_date,
-    notes: form.value.notes.trim(),
-  }
-  try {
-    if (editingVt.value) {
-      await watchlistApi.updatePosition(editingVt.value, body)
-      posMsg.value = '已更新持仓'
-    } else {
-      await watchlistApi.addPosition(body)
-      posMsg.value = '已录入持仓'
-    }
-    resetPosForm()
-    await refreshBoard()
-  } catch (e) {
-    posError.value = e instanceof Error ? e.message : '保存失败'
-  }
-}
-
-async function removePosition(vt: string) {
-  posError.value = ''
-  try {
-    await watchlistApi.removePosition(vt)
-    if (editingVt.value === vt) resetPosForm()
-    posMsg.value = '已删除持仓'
-    await refreshBoard()
-  } catch (e) {
-    posError.value = e instanceof Error ? e.message : '删除失败'
-  }
-}
-
 async function addToSignalPanel(raw?: string) {
   signalError.value = ''
   signalMsg.value = ''
@@ -379,7 +260,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <AppShell title="看板" subtitle="策略看盘 · 持仓 · 风控" active="board">
+  <AppShell title="看板" subtitle="策略看盘 · 风控" active="board">
     <div class="page">
       <p v-if="boardError" class="err">{{ boardError }}</p>
 
@@ -462,204 +343,103 @@ onUnmounted(() => {
       </div>
       <p v-if="board?.note" class="muted">{{ board.note }}</p>
 
-      <div v-if="board" class="board-grid">
-        <section class="card">
-          <h3>
-            信号区
-            <span class="muted">{{ board.signals.length }}</span>
-            <span class="muted"> · 名单 {{ panelSymbols.length }}/{{ panelMax }}</span>
-          </h3>
-          <div class="pos-form signal-form">
-            <div class="row">
-              <input
-                v-model="signalAdd"
-                placeholder="加入信号名单：600519.SSE"
-                @keyup.enter="addToSignalPanel()"
-              />
-              <button type="button" class="ghost" @click="addToSignalPanel(activeSignalVt)">
-                用选中
-              </button>
-              <button type="button" class="primary" @click="addToSignalPanel()">加入</button>
-            </div>
-            <div v-if="panelSymbols.length" class="chips">
-              <span v-for="vt in panelSymbols" :key="vt" class="chip-tag">
-                <button type="button" class="chip-link" @click="selectVt(vt)">{{ vt }}</button>
-                <button type="button" class="link" @click="removeFromSignalPanel(vt)">×</button>
-              </span>
-            </div>
-            <p v-else class="muted tip">
-              名单为空时回退「自选 ∩ 策略 cache」；上限 {{ panelMax }} 只。
-            </p>
-            <p v-if="signalError" class="err">{{ signalError }}</p>
-            <p v-else-if="signalMsg" class="muted">{{ signalMsg }}</p>
+      <section v-if="board" class="card">
+        <h3>
+          信号区
+          <span class="muted">{{ board.signals.length }}</span>
+          <span class="muted"> · 名单 {{ panelSymbols.length }}/{{ panelMax }}</span>
+        </h3>
+        <div class="pos-form signal-form">
+          <div class="row">
+            <input
+              v-model="signalAdd"
+              placeholder="加入信号名单：600519.SSE"
+              @keyup.enter="addToSignalPanel()"
+            />
+            <button type="button" class="ghost" @click="addToSignalPanel(activeSignalVt)">
+              用选中
+            </button>
+            <button type="button" class="primary" @click="addToSignalPanel()">加入</button>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>代码</th>
-                  <th>名称</th>
-                  <th>现价</th>
-                  <th>信号</th>
-                  <th>强度</th>
-                  <th>摘要</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="row in board.signals"
-                  :key="row.vt_symbol"
-                  :class="{ on: activeSignalVt === row.vt_symbol }"
-                  @click="pickSignal(row.vt_symbol)"
-                >
-                  <td class="mono">{{ row.vt_symbol }}</td>
-                  <td>{{ row.name || '—' }}</td>
-                  <td>{{ row.last_price != null ? row.last_price.toFixed(2) : '—' }}</td>
-                  <td :class="signalClass(row.signal)">{{ row.signal_label }}</td>
-                  <td>
-                    <template v-if="row.strength_tier_label">
-                      {{ row.strength_tier_label
-                      }}<span v-if="row.strength != null"> · {{ row.strength.toFixed(1) }}</span>
-                    </template>
-                    <template v-else>
-                      {{ row.strength != null ? row.strength.toFixed(0) : '—' }}
-                    </template>
-                  </td>
-                  <td class="clip">{{ row.reason_summary || '—' }}</td>
-                  <td>
-                    <button
-                      type="button"
-                      class="link"
-                      @click.stop="analysis.open(row.vt_symbol, row.name)"
-                    >
-                      析
-                    </button>
-                    <button
-                      v-if="panelSymbols.includes(row.vt_symbol)"
-                      type="button"
-                      class="link"
-                      @click.stop="removeFromSignalPanel(row.vt_symbol)"
-                    >
-                      移出
-                    </button>
-                    <button
-                      v-else
-                      type="button"
-                      class="link"
-                      @click.stop="addToSignalPanel(row.vt_symbol)"
-                    >
-                      入名单
-                    </button>
-                  </td>
-                </tr>
-                <tr v-if="!board.signals.length">
-                  <td colspan="7" class="empty">无信号（可先编辑名单，或确认策略 cache 已写入）</td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-if="panelSymbols.length" class="chips">
+            <span v-for="vt in panelSymbols" :key="vt" class="chip-tag">
+              <button type="button" class="chip-link" @click="selectVt(vt)">{{ vt }}</button>
+              <button type="button" class="link" @click="removeFromSignalPanel(vt)">×</button>
+            </span>
           </div>
-        </section>
-
-        <section class="card">
-          <h3>
-            持仓区 <span class="muted">{{ board.positions.length }}</span>
-          </h3>
-          <div class="pos-form">
-            <div class="pos-grid">
-              <label>
-                代码
-                <input v-model="form.symbol" placeholder="600519.SSE" />
-              </label>
-              <label>
-                成本
-                <input v-model="form.cost_price" type="number" step="0.01" min="0" />
-              </label>
-              <label>
-                数量
-                <input v-model="form.volume" type="number" step="100" min="100" />
-              </label>
-              <label>
-                买入日
-                <input v-model="form.buy_date" type="date" />
-              </label>
-            </div>
-            <label>
-              备注
-              <input v-model="form.notes" placeholder="可选" />
-            </label>
-            <div class="actions">
-              <button type="button" class="ghost" @click="resetPosForm">清空</button>
-              <button type="button" class="primary" @click="savePosition">
-                {{ editingVt ? '更新持仓' : '录入持仓' }}
-              </button>
-            </div>
-            <p v-if="posError" class="err">{{ posError }}</p>
-            <p v-else-if="posMsg" class="muted">{{ posMsg }}</p>
-            <p class="muted tip">须先加入自选；数量 100 股整手；写入持仓记账表。</p>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>代码</th>
-                  <th>成本</th>
-                  <th>数量</th>
-                  <th>现价</th>
-                  <th>市值</th>
-                  <th>浮盈%</th>
-                  <th>T+1</th>
-                  <th>退出</th>
-                  <th>风险</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in board.positions" :key="row.vt_symbol + row.buy_date">
-                  <td class="mono">
-                    <button type="button" class="chip-link" @click="selectVt(row.vt_symbol)">
-                      {{ row.vt_symbol }}
-                    </button>
-                  </td>
-                  <td>{{ row.cost_price.toFixed(2) }}</td>
-                  <td>{{ row.volume }}</td>
-                  <td>{{ row.last_price != null ? row.last_price.toFixed(2) : '—' }}</td>
-                  <td>{{ formatMarketValue(row.market_value) }}</td>
-                  <td
-                    :class="{
-                      up: (row.unrealized_pnl_pct || 0) > 0,
-                      down: (row.unrealized_pnl_pct || 0) < 0,
-                    }"
+          <p v-else class="muted tip">
+            名单为空时回退「自选 ∩ 策略 cache」；上限 {{ panelMax }} 只。
+          </p>
+          <p v-if="signalError" class="err">{{ signalError }}</p>
+          <p v-else-if="signalMsg" class="muted">{{ signalMsg }}</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>代码</th>
+                <th>名称</th>
+                <th>现价</th>
+                <th>信号</th>
+                <th>强度</th>
+                <th>摘要</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="row in board.signals"
+                :key="row.vt_symbol"
+                :class="{ on: activeSignalVt === row.vt_symbol }"
+                @click="pickSignal(row.vt_symbol)"
+              >
+                <td class="mono">{{ row.vt_symbol }}</td>
+                <td>{{ row.name || '—' }}</td>
+                <td>{{ row.last_price != null ? row.last_price.toFixed(2) : '—' }}</td>
+                <td :class="signalClass(row.signal)">{{ row.signal_label }}</td>
+                <td>
+                  <template v-if="row.strength_tier_label">
+                    {{ row.strength_tier_label
+                    }}<span v-if="row.strength != null"> · {{ row.strength.toFixed(1) }}</span>
+                  </template>
+                  <template v-else>
+                    {{ row.strength != null ? row.strength.toFixed(0) : '—' }}
+                  </template>
+                </td>
+                <td class="clip">{{ row.reason_summary || '—' }}</td>
+                <td>
+                  <button
+                    type="button"
+                    class="link"
+                    @click.stop="analysis.open(row.vt_symbol, row.name)"
                   >
-                    {{ row.unrealized_pnl_pct != null ? row.unrealized_pnl_pct.toFixed(2) : '—' }}
-                  </td>
-                  <td>{{ row.t1_locked ? '锁定' : '可卖' }}</td>
-                  <td :class="signalClass(row.exit_signal)">{{ row.exit_signal_label }}</td>
-                  <td>{{ row.risk_tags?.length ? row.risk_tags.join(' · ') : '—' }}</td>
-                  <td>
-                    <button
-                      type="button"
-                      class="link"
-                      @click.stop="analysis.open(row.vt_symbol, row.name)"
-                    >
-                      析
-                    </button>
-                    <button type="button" class="link" @click.stop="editBoardPosition(row)">
-                      改
-                    </button>
-                    <button type="button" class="link" @click.stop="removePosition(row.vt_symbol)">
-                      删
-                    </button>
-                  </td>
-                </tr>
-                <tr v-if="!board.positions.length">
-                  <td colspan="10" class="empty">无持仓，上方可录入（投研记账，非实盘）</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+                    析
+                  </button>
+                  <button
+                    v-if="panelSymbols.includes(row.vt_symbol)"
+                    type="button"
+                    class="link"
+                    @click.stop="removeFromSignalPanel(row.vt_symbol)"
+                  >
+                    移出
+                  </button>
+                  <button
+                    v-else
+                    type="button"
+                    class="link"
+                    @click.stop="addToSignalPanel(row.vt_symbol)"
+                  >
+                    入名单
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="!board.signals.length">
+                <td colspan="7" class="empty">无信号（可先编辑名单，或确认策略 cache 已写入）</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   </AppShell>
   <StockAnalysisModal />
@@ -761,21 +541,10 @@ onUnmounted(() => {
 .topbar-feedback p {
   margin: 0;
 }
-.pos-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 8px;
-}
-.board-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
 }
 .pos-form {
   display: grid;
@@ -945,11 +714,5 @@ tbody tr.on td {
   margin: 0;
   color: var(--danger);
   font-size: 0.85rem;
-}
-@media (max-width: 900px) {
-  .board-grid,
-  .pos-grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
