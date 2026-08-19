@@ -555,8 +555,12 @@ onUnmounted(() => {
               </select>
               <input v-model="newGroup" placeholder="新分组名" @keyup.enter="onCreateGroup" />
               <button type="button" class="ghost" @click="onCreateGroup">建组</button>
-              <button v-if="groupId" type="button" class="ghost" @click="onRenameGroup">改名</button>
-              <button v-if="groupId" type="button" class="ghost" @click="onDeleteGroup">删组</button>
+              <button v-if="groupId" type="button" class="ghost" @click="onRenameGroup">
+                改名
+              </button>
+              <button v-if="groupId" type="button" class="ghost" @click="onDeleteGroup">
+                删组
+              </button>
             </div>
             <div v-if="groupId && selected" class="row">
               <button type="button" class="ghost" @click="onAddToGroup">加入此组</button>
@@ -573,6 +577,9 @@ onUnmounted(() => {
                   <input v-model="autoRefresh" type="checkbox" />
                   {{ connected ? 'WS 推送 + 慢轮询' : '每 15s 刷新行情' }}
                 </label>
+                <button type="button" class="ghost sm" :disabled="loading" @click="refresh()">
+                  刷新
+                </button>
               </div>
             </div>
             <div class="row add-row">
@@ -928,7 +935,6 @@ onUnmounted(() => {
           </div>
         </section>
       </div>
-
     </div>
   </AppShell>
   <StockAnalysisModal />

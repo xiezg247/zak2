@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import StockAnalysisModal from '../components/StockAnalysisModal.vue'
@@ -7,6 +7,7 @@ import { confirmDialog } from '../lib/dialog'
 import { watchlistApi, type PositionItem, type StrategyBoard } from '../api/watchlist'
 import { backtestApi } from '../api/backtest'
 import { buildAlignedBacktestQuery, buildEnqueueRunBody } from '../lib/boardBacktestParams'
+import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
 import { useStockAnalysis } from '../composables/useStockAnalysis'
 
 const analysis = useStockAnalysis()
@@ -18,6 +19,7 @@ const board = ref<StrategyBoard | null>(null)
 const boardError = ref('')
 const positions = ref<PositionItem[]>([])
 const enqueueing = ref(false)
+const autoRefresh = ref(true)
 
 const SIGNAL_MODE_KEY = 'zak2:watchlist:signal_mode'
 type SignalMode = 'heuristic_v2' | 'double_ma' | 'trend_ma'
@@ -70,7 +72,19 @@ const riskError = ref('')
 const riskMsg = ref('')
 const riskSaving = ref(false)
 
-let boardTimer: number | undefined
+let timer: number | undefined
+
+const { connected } = useQuoteNotify({
+  onQuotesUpdated: () => {
+    if (!autoRefresh.value || document.hidden) return
+    void refreshBoard(true)
+  },
+})
+
+const refreshLabel = computed(() => {
+  if (!autoRefresh.value) return '已暂停自动刷新'
+  return connected.value ? 'WS + 慢轮询' : '15 秒轮询'
+})
 
 const panelSymbols = computed(() => board.value?.panel_symbols || [])
 const panelMax = 10
@@ -336,9 +350,16 @@ async function removeFromSignalPanel(vt: string) {
 }
 
 function tickBoard() {
-  if (document.hidden) return
+  if (!autoRefresh.value || document.hidden) return
   void refreshBoard(true)
 }
+
+function restartPoll() {
+  if (timer) window.clearInterval(timer)
+  timer = window.setInterval(tickBoard, connected.value ? POLL_SLOW_MS : POLL_FAST_MS)
+}
+
+watch(connected, () => restartPoll())
 
 onMounted(async () => {
   const sm = typeof route.query.signal_mode === 'string' ? route.query.signal_mode : ''
@@ -348,11 +369,11 @@ onMounted(async () => {
     saveSignalMode(mode)
   }
   await refreshBoard()
-  boardTimer = window.setInterval(tickBoard, 45000)
+  restartPoll()
 })
 
 onUnmounted(() => {
-  if (boardTimer) window.clearInterval(boardTimer)
+  if (timer) window.clearInterval(timer)
 })
 </script>
 
@@ -415,6 +436,10 @@ onUnmounted(() => {
         </div>
 
         <div class="actions">
+          <label class="auto">
+            <input v-model="autoRefresh" type="checkbox" />
+            {{ refreshLabel }}
+          </label>
           <button type="button" class="ghost" @click="openAlignedBacktest()">同参回测</button>
           <button
             type="button"
@@ -717,6 +742,14 @@ onUnmounted(() => {
   gap: 8px;
   flex-wrap: wrap;
   margin-left: auto;
+}
+.auto {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 .topbar-feedback {
   display: flex;
