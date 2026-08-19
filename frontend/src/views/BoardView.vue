@@ -22,6 +22,11 @@ const enqueueing = ref(false)
 const SIGNAL_MODE_KEY = 'zak2:watchlist:signal_mode'
 type SignalMode = 'heuristic_v2' | 'double_ma' | 'trend_ma'
 const VALID_SIGNAL_MODES: SignalMode[] = ['heuristic_v2', 'double_ma', 'trend_ma']
+const SIGNAL_MODES: { value: SignalMode; label: string }[] = [
+  { value: 'heuristic_v2', label: '启发式确认' },
+  { value: 'double_ma', label: '回测双均线' },
+  { value: 'trend_ma', label: '趋势均线' },
+]
 
 function loadSignalMode(): SignalMode {
   try {
@@ -111,10 +116,8 @@ async function refreshBoard(quiet = false) {
   }
 }
 
-function setSignalMode(mode: SignalMode) {
-  if (signalMode.value === mode) return
-  signalMode.value = mode
-  saveSignalMode(mode)
+function onSignalModeChange() {
+  saveSignalMode(signalMode.value)
   void refreshBoard()
 }
 
@@ -359,31 +362,13 @@ onUnmounted(() => {
       <p v-if="boardError" class="err">{{ boardError }}</p>
 
       <div class="topbar">
-        <div class="mode-tabs">
-          <button
-            type="button"
-            class="ghost"
-            :class="{ on: signalMode === 'heuristic_v2' }"
-            @click="setSignalMode('heuristic_v2')"
-          >
-            启发式确认
-          </button>
-          <button
-            type="button"
-            class="ghost"
-            :class="{ on: signalMode === 'double_ma' }"
-            @click="setSignalMode('double_ma')"
-          >
-            回测双均线
-          </button>
-          <button
-            type="button"
-            class="ghost"
-            :class="{ on: signalMode === 'trend_ma' }"
-            @click="setSignalMode('trend_ma')"
-          >
-            趋势均线
-          </button>
+        <div class="mode-select">
+          <span>策略</span>
+          <select v-model="signalMode" @change="onSignalModeChange">
+            <option v-for="m in SIGNAL_MODES" :key="m.value" :value="m.value">
+              {{ m.label }}
+            </option>
+          </select>
         </div>
 
         <div class="risk-form">
@@ -683,9 +668,24 @@ onUnmounted(() => {
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
-.mode-tabs {
-  display: inline-flex;
+.mode-select {
+  display: grid;
   gap: 4px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.mode-select select {
+  min-width: 130px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  padding: 6px 8px;
+}
+.mode-select select:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(230, 100, 50, 0.15);
+  outline: none;
 }
 .risk-form {
   display: flex;
