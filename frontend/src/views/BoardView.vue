@@ -4,11 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import StockAnalysisModal from '../components/StockAnalysisModal.vue'
 import { confirmDialog } from '../lib/dialog'
-import {
-  watchlistApi,
-  type PositionItem,
-  type StrategyBoard,
-} from '../api/watchlist'
+import { watchlistApi, type PositionItem, type StrategyBoard } from '../api/watchlist'
 import { backtestApi } from '../api/backtest'
 import { buildAlignedBacktestQuery, buildEnqueueRunBody } from '../lib/boardBacktestParams'
 import { useStockAnalysis } from '../composables/useStockAnalysis'
@@ -74,6 +70,29 @@ let boardTimer: number | undefined
 const panelSymbols = computed(() => board.value?.panel_symbols || [])
 const panelMax = 10
 const riskSummary = computed(() => board.value?.risk_summary ?? null)
+
+const signalFilter = ref<'all' | 'buy' | 'sell' | 'neutral'>('all')
+
+const signalCounts = computed(() => {
+  let buy = 0
+  let sell = 0
+  let neutral = 0
+  for (const s of board.value?.signals || []) {
+    if (s.signal === 'buy') buy += 1
+    else if (s.signal === 'sell') sell += 1
+    else neutral += 1
+  }
+  return { buy, sell, neutral }
+})
+
+const filteredSignals = computed(() => {
+  const all = board.value?.signals || []
+  if (signalFilter.value === 'all') return all
+  if (signalFilter.value === 'neutral') {
+    return all.filter((s) => s.signal !== 'buy' && s.signal !== 'sell')
+  }
+  return all.filter((s) => s.signal === signalFilter.value)
+})
 
 function formatPctRatio(v: number | null | undefined): string {
   if (v == null || Number.isNaN(v)) return '—'
@@ -423,6 +442,47 @@ onUnmounted(() => {
           <p v-else-if="riskMsg" class="muted">{{ riskMsg }}</p>
           <p class="muted tip">止损按百分数（如 5 = 5%）；浮亏警戒为负数（如 -5）。</p>
         </section>
+
+        <section class="card signal-summary">
+          <h3>
+            信号统计
+            <span class="muted">{{ board?.signals.length || 0 }}</span>
+          </h3>
+          <div class="signal-blocks">
+            <button
+              type="button"
+              class="signal-block up"
+              :class="{ on: signalFilter === 'buy' }"
+              @click="signalFilter = signalFilter === 'buy' ? 'all' : 'buy'"
+            >
+              <span class="signal-count">{{ signalCounts.buy }}</span>
+              <span class="signal-label">买入</span>
+            </button>
+            <button
+              type="button"
+              class="signal-block down"
+              :class="{ on: signalFilter === 'sell' }"
+              @click="signalFilter = signalFilter === 'sell' ? 'all' : 'sell'"
+            >
+              <span class="signal-count">{{ signalCounts.sell }}</span>
+              <span class="signal-label">卖出</span>
+            </button>
+            <button
+              type="button"
+              class="signal-block"
+              :class="{ on: signalFilter === 'neutral' }"
+              @click="signalFilter = signalFilter === 'neutral' ? 'all' : 'neutral'"
+            >
+              <span class="signal-count">{{ signalCounts.neutral }}</span>
+              <span class="signal-label">中性</span>
+            </button>
+          </div>
+          <p v-if="signalFilter !== 'all'" class="muted tip">
+            正在筛选「{{
+              signalFilter === 'buy' ? '买入' : signalFilter === 'sell' ? '卖出' : '中性'
+            }}」信号，再次点击取消
+          </p>
+        </section>
       </div>
 
       <div class="board-head">
@@ -495,7 +555,9 @@ onUnmounted(() => {
                 <button type="button" class="link" @click="removeFromSignalPanel(vt)">×</button>
               </span>
             </div>
-            <p v-else class="muted tip">名单为空时回退「自选 ∩ 策略 cache」；上限 {{ panelMax }} 只。</p>
+            <p v-else class="muted tip">
+              名单为空时回退「自选 ∩ 策略 cache」；上限 {{ panelMax }} 只。
+            </p>
             <p v-if="signalError" class="err">{{ signalError }}</p>
             <p v-else-if="signalMsg" class="muted">{{ signalMsg }}</p>
           </div>
@@ -514,7 +576,7 @@ onUnmounted(() => {
               </thead>
               <tbody>
                 <tr
-                  v-for="row in board.signals"
+                  v-for="row in filteredSignals"
                   :key="row.vt_symbol"
                   :class="{ on: activeSignalVt === row.vt_symbol }"
                   @click="pickSignal(row.vt_symbol)"
@@ -559,9 +621,13 @@ onUnmounted(() => {
                     </button>
                   </td>
                 </tr>
-                <tr v-if="!board.signals.length">
+                <tr v-if="!filteredSignals.length">
                   <td colspan="7" class="empty">
-                    无信号（可先编辑名单，或确认策略 cache 已写入）
+                    {{
+                      signalFilter !== 'all'
+                        ? '该分类暂无信号'
+                        : '无信号（可先编辑名单，或确认策略 cache 已写入）'
+                    }}
                   </td>
                 </tr>
               </tbody>
@@ -623,10 +689,7 @@ onUnmounted(() => {
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="row in board.positions"
-                  :key="row.vt_symbol + row.buy_date"
-                >
+                <tr v-for="row in board.positions" :key="row.vt_symbol + row.buy_date">
                   <td class="mono">
                     <button type="button" class="chip-link" @click="selectVt(row.vt_symbol)">
                       {{ row.vt_symbol }}
@@ -696,6 +759,7 @@ onUnmounted(() => {
 }
 .summary-grid {
   display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   align-items: start;
 }
@@ -708,6 +772,53 @@ onUnmounted(() => {
 }
 .risk-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.signal-summary {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.signal-blocks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.signal-block {
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.signal-block:hover {
+  border-color: var(--brand-soft);
+}
+.signal-block.on {
+  background: var(--brand-light);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(230, 100, 50, 0.15);
+}
+.signal-count {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.signal-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.signal-block.up .signal-count {
+  color: var(--danger);
+}
+.signal-block.down .signal-count {
+  color: var(--ok);
 }
 .pos-grid {
   display: grid;
