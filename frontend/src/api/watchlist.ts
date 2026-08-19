@@ -310,7 +310,7 @@ export const watchlistApi = {
       `/api/v1/bars/${encodeURIComponent(vtSymbol)}?interval=${interval}&limit=${limit}`,
     ),
   quotes: (symbols: string) =>
-    api<QuoteOut[]>(`/api/v1/watchlist/quotes?symbols=${encodeURIComponent(symbols)}`),
+    api<QuoteOut[]>(`/api/v1/quotes?symbols=${encodeURIComponent(symbols)}`),
   fundamentals: (vtSymbol: string) =>
     api<Fundamentals>(`/api/v1/watchlist/items/${encodeURIComponent(vtSymbol)}/fundamentals`),
 }

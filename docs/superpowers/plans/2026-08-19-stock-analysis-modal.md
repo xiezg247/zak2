@@ -295,8 +295,10 @@ export type QuoteOut = {
 
 ```ts
   quotes: (symbols: string) =>
-    api<QuoteOut[]>(`/api/v1/watchlist/quotes?symbols=${encodeURIComponent(symbols)}`),
+    api<QuoteOut[]>(`/api/v1/quotes?symbols=${encodeURIComponent(symbols)}`),
 ```
+
+> 注意：后端 `/quotes` 挂在 watchlist router 下但无 `/watchlist` 前缀，正确路径为 `/api/v1/quotes`（曾误用 `/api/v1/watchlist/quotes`，会被 `/watchlist/{vt_symbol}` DELETE 路由 405）。
 
 - [ ] **Step 2: script 增加行情状态**
 
