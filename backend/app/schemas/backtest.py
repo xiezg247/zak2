@@ -57,6 +57,20 @@ class BacktestRunRequest(BaseModel):
     trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
     signal_period: int = Field(default=9, ge=2, le=60)
     trend_ma_window: int = Field(default=60, ge=10, le=250)
+    entry_window: int = Field(default=20, ge=2, le=120)
+    exit_window: int = Field(default=10, ge=2, le=120)
+    rsi_period: int = Field(default=14, ge=2, le=60)
+    oversold: int = Field(default=30, ge=0, le=50)
+    overbought: int = Field(default=70, ge=50, le=100)
+    boll_period: int = Field(default=20, ge=2, le=120)
+    boll_dev: float = Field(default=2.0, gt=0, le=5)
+    ma_fast: int = Field(default=5, ge=2, le=120)
+    ma_mid: int = Field(default=10, ge=2, le=120)
+    ma_slow: int = Field(default=20, ge=2, le=120)
+    ma_long: int = Field(default=60, ge=2, le=250)
+    channel_period: int = Field(default=20, ge=2, le=120)
+    atr_period: int = Field(default=14, ge=2, le=120)
+    atr_mult: float = Field(default=2.0, gt=0, le=10)
     max_trading_days: int = Field(default=20, ge=1, le=60)
 
 
@@ -77,6 +91,20 @@ class BatchBacktestRequest(BaseModel):
     trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
     signal_period: int = Field(default=9, ge=2, le=60)
     trend_ma_window: int = Field(default=60, ge=10, le=250)
+    entry_window: int = Field(default=20, ge=2, le=120)
+    exit_window: int = Field(default=10, ge=2, le=120)
+    rsi_period: int = Field(default=14, ge=2, le=60)
+    oversold: int = Field(default=30, ge=0, le=50)
+    overbought: int = Field(default=70, ge=50, le=100)
+    boll_period: int = Field(default=20, ge=2, le=120)
+    boll_dev: float = Field(default=2.0, gt=0, le=5)
+    ma_fast: int = Field(default=5, ge=2, le=120)
+    ma_mid: int = Field(default=10, ge=2, le=120)
+    ma_slow: int = Field(default=20, ge=2, le=120)
+    ma_long: int = Field(default=60, ge=2, le=250)
+    channel_period: int = Field(default=20, ge=2, le=120)
+    atr_period: int = Field(default=14, ge=2, le=120)
+    atr_mult: float = Field(default=2.0, gt=0, le=10)
     max_trading_days: int = Field(default=20, ge=1, le=60)
 
 
@@ -95,6 +123,20 @@ class OptimizeBacktestRequest(BaseModel):
     trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
     signal_period: int = Field(default=9, ge=2, le=60)
     trend_ma_window: int = Field(default=60, ge=10, le=250)
+    entry_window: int = Field(default=20, ge=2, le=120)
+    exit_window: int = Field(default=10, ge=2, le=120)
+    rsi_period: int = Field(default=14, ge=2, le=60)
+    oversold: int = Field(default=30, ge=0, le=50)
+    overbought: int = Field(default=70, ge=50, le=100)
+    boll_period: int = Field(default=20, ge=2, le=120)
+    boll_dev: float = Field(default=2.0, gt=0, le=5)
+    ma_fast: int = Field(default=5, ge=2, le=120)
+    ma_mid: int = Field(default=10, ge=2, le=120)
+    ma_slow: int = Field(default=20, ge=2, le=120)
+    ma_long: int = Field(default=60, ge=2, le=250)
+    channel_period: int = Field(default=20, ge=2, le=120)
+    atr_period: int = Field(default=14, ge=2, le=120)
+    atr_mult: float = Field(default=2.0, gt=0, le=10)
     max_trading_days: int = Field(default=20, ge=1, le=60)
     space: dict[str, list[int]] = Field(default_factory=dict)
     objective: str = "sharpe_ratio"
@@ -112,6 +154,7 @@ class StrategyInfo(BaseModel):
     name: str
     interval: str
     description: str
+    scenario: str = ""
     implemented: bool = True
     engine: str = "vnpy"
 

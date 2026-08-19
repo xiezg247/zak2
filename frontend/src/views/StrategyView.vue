@@ -36,6 +36,9 @@ onMounted(() => {
           <div v-for="s in strategies" :key="s.id" class="bt-card">
             <div class="k">{{ s.name }}</div>
             <p class="s muted">{{ s.description }}</p>
+            <p v-if="s.scenario" class="s scenario">
+              <span class="tag">适用场景</span>{{ s.scenario }}
+            </p>
             <p class="s mono muted">interval {{ s.interval }} · {{ s.engine }}</p>
             <div class="card-actions">
               <button type="button" class="ghost tiny-btn" @click="gotoBacktestStrategy(s.id)">
@@ -118,8 +121,23 @@ onMounted(() => {
   background: var(--surface-muted);
   padding: 12px 14px;
   display: grid;
-  gap: 2px;
+  gap: 4px;
   align-content: start;
+}
+.scenario {
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.tag {
+  display: inline-block;
+  border: 1px solid var(--brand-soft);
+  background: var(--brand-light);
+  color: var(--brand);
+  border-radius: 999px;
+  padding: 0 6px;
+  margin-right: 6px;
+  font-size: 0.7rem;
+  vertical-align: 1px;
 }
 .muted {
   color: var(--muted);

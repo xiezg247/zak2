@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import PagerBar from '../components/PagerBar.vue'
@@ -36,11 +36,6 @@ const capital = ref(100000)
 const strategy = ref('double_ma')
 const interval = ref<'d' | '1m'>('d')
 const maxTradingDays = ref(20)
-const adxPeriod = ref(14)
-const adxThreshold = ref(25)
-const trailingStopPct = ref(0.12)
-const signalPeriod = ref(9)
-const trendMaWindow = ref(60)
 const rate = ref(0.00045)
 const slippage = ref(0)
 const stampDuty = ref(0.0005)
@@ -48,6 +43,67 @@ const showFees = ref(false)
 const showAllTrades = ref(false)
 const optFastSpace = ref('3,5,8,10')
 const optSlowSpace = ref('10,20,30,60')
+
+type ParamSpec = { key: string; label: string; min?: number; max?: number; step?: number }
+const STRATEGY_PARAM_SPECS: Record<string, ParamSpec[]> = {
+  trend_ma: [
+    { key: 'adx_period', label: 'ADX 周期', min: 2 },
+    { key: 'adx_threshold', label: 'ADX 阈值', min: 0, step: 0.1 },
+    { key: 'trailing_stop_pct', label: '追踪止损', min: 0.01, max: 1, step: 0.01 },
+  ],
+  medium_swing: [
+    { key: 'signal_period', label: '信号线', min: 2 },
+    { key: 'trend_ma_window', label: '趋势均线', min: 10 },
+  ],
+  donchian: [
+    { key: 'entry_window', label: '入场通道', min: 2 },
+    { key: 'exit_window', label: '出场通道', min: 2 },
+  ],
+  rsi_reversal: [
+    { key: 'rsi_period', label: 'RSI 周期', min: 2 },
+    { key: 'oversold', label: '超卖阈值', min: 0 },
+    { key: 'overbought', label: '超买阈值', min: 50, max: 100 },
+  ],
+  bollinger: [
+    { key: 'boll_period', label: '布林周期', min: 2 },
+    { key: 'boll_dev', label: '标准差倍数', min: 0.5, step: 0.1 },
+  ],
+  ma_band: [
+    { key: 'ma_fast', label: '快线', min: 2 },
+    { key: 'ma_mid', label: '中线', min: 2 },
+    { key: 'ma_slow', label: '慢线', min: 2 },
+    { key: 'ma_long', label: '长线', min: 2 },
+  ],
+  atr_breakout: [
+    { key: 'channel_period', label: '通道周期', min: 2 },
+    { key: 'atr_period', label: 'ATR 周期', min: 2 },
+    { key: 'atr_mult', label: 'ATR 倍数', min: 0.5, step: 0.1 },
+  ],
+}
+
+const paramsModel = reactive<Record<string, number>>({
+  adx_period: 14,
+  adx_threshold: 25,
+  trailing_stop_pct: 0.12,
+  signal_period: 9,
+  trend_ma_window: 60,
+  entry_window: 20,
+  exit_window: 10,
+  rsi_period: 14,
+  oversold: 30,
+  overbought: 70,
+  boll_period: 20,
+  boll_dev: 2,
+  ma_fast: 5,
+  ma_mid: 10,
+  ma_slow: 20,
+  ma_long: 60,
+  channel_period: 20,
+  atr_period: 14,
+  atr_mult: 2,
+})
+
+const strategyParamSpecs = computed(() => STRATEGY_PARAM_SPECS[strategy.value] || [])
 
 const running = ref(false)
 const statusText = ref('')
@@ -69,21 +125,10 @@ function feePayload() {
   }
 }
 
-function trendPayload() {
-  if (strategy.value === 'trend_ma') {
-    return {
-      adx_period: adxPeriod.value,
-      adx_threshold: adxThreshold.value,
-      trailing_stop_pct: trailingStopPct.value,
-    }
-  }
-  if (strategy.value === 'medium_swing') {
-    return {
-      signal_period: signalPeriod.value,
-      trend_ma_window: trendMaWindow.value,
-    }
-  }
-  return {}
+function strategyParamsPayload() {
+  const body: Record<string, unknown> = {}
+  for (const spec of strategyParamSpecs.value) body[spec.key] = paramsModel[spec.key]
+  return body
 }
 
 function intervalPayload() {
@@ -212,7 +257,7 @@ async function runSingle() {
       capital: capital.value,
       ...intervalPayload(),
       ...feePayload(),
-      ...trendPayload(),
+      ...strategyParamsPayload(),
     })
     await pollJob(job_id)
     statusText.value = '完成'
@@ -242,7 +287,7 @@ async function runBatch() {
       capital: capital.value,
       ...intervalPayload(),
       ...feePayload(),
-      ...trendPayload(),
+      ...strategyParamsPayload(),
     })
     await pollJob(job_id)
     compare.value = await backtestApi.runs(batch_id)
@@ -279,7 +324,7 @@ async function runOptimize() {
       objective: 'sharpe_ratio',
       ...intervalPayload(),
       ...feePayload(),
-      ...trendPayload(),
+      ...strategyParamsPayload(),
     })
     await pollJob(job_id)
     optimizeSummary.value = await backtestApi.optimizeSummary(batch_id)
@@ -315,16 +360,30 @@ onMounted(async () => {
     fast.value = Number(q.fast_window)
   if (typeof q.slow_window === 'string' && Number(q.slow_window) > 0)
     slow.value = Number(q.slow_window)
-  if (typeof q.adx_period === 'string' && Number(q.adx_period) > 0)
-    adxPeriod.value = Number(q.adx_period)
-  if (typeof q.adx_threshold === 'string' && Number(q.adx_threshold) > 0)
-    adxThreshold.value = Number(q.adx_threshold)
-  if (typeof q.trailing_stop_pct === 'string' && Number(q.trailing_stop_pct) > 0)
-    trailingStopPct.value = Number(q.trailing_stop_pct)
-  if (typeof q.signal_period === 'string' && Number(q.signal_period) > 0)
-    signalPeriod.value = Number(q.signal_period)
-  if (typeof q.trend_ma_window === 'string' && Number(q.trend_ma_window) > 0)
-    trendMaWindow.value = Number(q.trend_ma_window)
+  const extraKeys = [
+    'adx_period',
+    'adx_threshold',
+    'trailing_stop_pct',
+    'signal_period',
+    'trend_ma_window',
+    'entry_window',
+    'exit_window',
+    'rsi_period',
+    'oversold',
+    'overbought',
+    'boll_period',
+    'boll_dev',
+    'ma_fast',
+    'ma_mid',
+    'ma_slow',
+    'ma_long',
+    'channel_period',
+    'atr_period',
+    'atr_mult',
+  ]
+  for (const key of extraKeys) {
+    if (typeof q[key] === 'string' && Number(q[key]) > 0) paramsModel[key] = Number(q[key])
+  }
 
   loading.value = true
   try {
@@ -431,19 +490,17 @@ onMounted(async () => {
             <label>快均线候选<input v-model="optFastSpace" placeholder="3,5,8,10" /></label>
             <label>慢均线候选<input v-model="optSlowSpace" placeholder="10,20,30,60" /></label>
           </template>
-          <div v-if="strategy === 'trend_ma' && mode !== 'optimize'" class="row2">
-            <label>ADX 周期<input v-model.number="adxPeriod" type="number" min="2" /></label>
-            <label
-              >ADX 阈值<input v-model.number="adxThreshold" type="number" min="0" step="0.1"
-            /></label>
-          </div>
-          <label v-if="strategy === 'trend_ma' && mode !== 'optimize'">
-            追踪止损
-            <input v-model.number="trailingStopPct" type="number" min="0.01" max="1" step="0.01" />
-          </label>
-          <div v-if="strategy === 'medium_swing' && mode !== 'optimize'" class="row2">
-            <label>信号线<input v-model.number="signalPeriod" type="number" min="2" /></label>
-            <label>趋势均线<input v-model.number="trendMaWindow" type="number" min="10" /></label>
+          <div v-if="strategyParamSpecs.length && mode !== 'optimize'" class="strategy-params">
+            <label v-for="p in strategyParamSpecs" :key="p.key">
+              {{ p.label }}
+              <input
+                v-model.number="paramsModel[p.key]"
+                type="number"
+                :min="p.min"
+                :max="p.max"
+                :step="p.step ?? 1"
+              />
+            </label>
           </div>
           <p v-if="strategy === 'medium_swing'" class="hint muted">
             MACD 金叉且站上趋势均线买入；死叉或跌破趋势均线卖出。
@@ -795,6 +852,15 @@ textarea {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+.strategy-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.strategy-params label {
+  flex: 1 1 40%;
+  min-width: 0;
 }
 .primary {
   background: var(--accent);

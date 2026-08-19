@@ -27,9 +27,11 @@ from app.services.ops.arq_jobs import BACKTEST_FUNCS, enqueue_app_job
 
 router = APIRouter(prefix="/backtest", tags=["backtest"])
 
+MA_WINDOW_STRATEGIES = {"double_ma", "trend_ma", "medium_swing"}
 
-def _validate_ma_windows(fast: int, slow: int) -> None:
-    if fast >= slow:
+
+def _validate_ma_windows(strategy: str, fast: int, slow: int) -> None:
+    if strategy in MA_WINDOW_STRATEGIES and fast >= slow:
         raise HTTPException(status_code=400, detail="fast_window 须小于 slow_window")
 
 
@@ -88,7 +90,7 @@ def get_batches(
 
 @router.post("/runs", response_model=ApiResponse[JobAccepted])
 async def post_run(body: BacktestRunRequest, user: User = Depends(get_current_user)) -> ApiResponse[JobAccepted]:
-    _validate_ma_windows(body.fast_window, body.slow_window)
+    _validate_ma_windows(body.strategy, body.fast_window, body.slow_window)
     kind = "backtest.single"
     job_id = await enqueue_app_job(
         function=BACKTEST_FUNCS[kind],
@@ -101,7 +103,7 @@ async def post_run(body: BacktestRunRequest, user: User = Depends(get_current_us
 
 @router.post("/runs/batch", response_model=ApiResponse[JobAccepted])
 async def post_batch(body: BatchBacktestRequest, user: User = Depends(get_current_user)) -> ApiResponse[JobAccepted]:
-    _validate_ma_windows(body.fast_window, body.slow_window)
+    _validate_ma_windows(body.strategy, body.fast_window, body.slow_window)
     batch_id = uuid4().hex
     kind = "backtest.batch"
     job_id = await enqueue_app_job(

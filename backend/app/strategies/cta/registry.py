@@ -16,4 +16,24 @@ def get_strategy_class(strategy_id: str) -> type:
         from app.strategies.cta.medium_swing import MediumSwingStrategy
 
         return MediumSwingStrategy
+    if strategy_id == "donchian":
+        from app.strategies.cta.donchian import DonchianStrategy
+
+        return DonchianStrategy
+    if strategy_id == "rsi_reversal":
+        from app.strategies.cta.rsi_reversal import RsiReversalStrategy
+
+        return RsiReversalStrategy
+    if strategy_id == "bollinger":
+        from app.strategies.cta.bollinger import BollingerStrategy
+
+        return BollingerStrategy
+    if strategy_id == "ma_band":
+        from app.strategies.cta.ma_band import MaBandStrategy
+
+        return MaBandStrategy
+    if strategy_id == "atr_breakout":
+        from app.strategies.cta.atr_breakout import AtrBreakoutStrategy
+
+        return AtrBreakoutStrategy
     raise KeyError(f"未知策略：{strategy_id}")

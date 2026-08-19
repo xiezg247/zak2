@@ -217,7 +217,7 @@ class BacktestRepository(BaseRepository[BacktestRun]):
         batch_id: str | None = None,
         source: str = "single",
     ) -> BacktestRunOut:
-        if req.fast_window >= req.slow_window:
+        if req.strategy in {"double_ma", "trend_ma", "medium_swing"} and req.fast_window >= req.slow_window:
             raise HTTPException(status_code=400, detail="fast_window 须小于 slow_window")
         try:
             from app.strategies.cta.registry import get_strategy_class
@@ -239,6 +239,20 @@ class BacktestRepository(BaseRepository[BacktestRun]):
             "trailing_stop_pct": req.trailing_stop_pct,
             "signal_period": req.signal_period,
             "trend_ma_window": req.trend_ma_window,
+            "entry_window": req.entry_window,
+            "exit_window": req.exit_window,
+            "rsi_period": req.rsi_period,
+            "oversold": req.oversold,
+            "overbought": req.overbought,
+            "boll_period": req.boll_period,
+            "boll_dev": req.boll_dev,
+            "ma_fast": req.ma_fast,
+            "ma_mid": req.ma_mid,
+            "ma_slow": req.ma_slow,
+            "ma_long": req.ma_long,
+            "channel_period": req.channel_period,
+            "atr_period": req.atr_period,
+            "atr_mult": req.atr_mult,
             "interval": req.interval or "d",
             "max_trading_days": req.max_trading_days,
             "setting": setting,

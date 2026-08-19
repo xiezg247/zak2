@@ -28,6 +28,7 @@ export type StrategyInfo = {
   name: string
   interval: string
   description: string
+  scenario?: string
   implemented: boolean
   engine?: string
 }
