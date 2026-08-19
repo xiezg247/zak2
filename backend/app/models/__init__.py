@@ -1,5 +1,6 @@
 from app.models.backtest import BacktestRun
 from app.models.bars import DbBarData
+from app.models.channel import NotifyChannel
 from app.models.chat import ChatMessage, ChatSession
 from app.models.content import (
     DisciplineDaily,
@@ -42,6 +43,7 @@ __all__ = [
     "LimitListDaily",
     "RadarCardSnapshot",
     "NotifyDeliveryLog",
+    "NotifyChannel",
     "WebTeamReport",
     "PlaybookSection",
     "DisciplineDaily",
