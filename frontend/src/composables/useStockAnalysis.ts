@@ -30,8 +30,14 @@ export function useStockAnalysis() {
   function markLoaded(tab: AnalysisTabKey) {
     loadedTabs.value = new Set([...loadedTabs.value, tab])
   }
+  function invalidate(tab: AnalysisTabKey) {
+    if (!loadedTabs.value.has(tab)) return
+    const next = new Set(loadedTabs.value)
+    next.delete(tab)
+    loadedTabs.value = next
+  }
   function isLoaded(tab: AnalysisTabKey): boolean {
     return loadedTabs.value.has(tab)
   }
-  return { isOpen, vtSymbol, name, activeTab, open, close, markLoaded, isLoaded }
+  return { isOpen, vtSymbol, name, activeTab, open, close, markLoaded, invalidate, isLoaded }
 }

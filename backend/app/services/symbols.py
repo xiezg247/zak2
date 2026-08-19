@@ -5,6 +5,9 @@ from __future__ import annotations
 # VeighNa exchange.name ↔ TickFlow 前缀
 _VT_TO_TF = {"SSE": "SHSE", "SZSE": "SZSE", "BSE": "BJSE"}
 _TF_TO_VT = {v: k for k, v in _VT_TO_TF.items()}
+# TickFlow 官方 SDK 符号后缀（代码.SH / .SZ / .BJ）
+_TF_TO_TC = {"SHSE": "SH", "SZSE": "SZ", "BJSE": "BJ"}
+_TC_TO_TF = {v: k for k, v in _TF_TO_TC.items()}
 
 
 def normalize_exchange(exchange: str) -> str:
@@ -39,6 +42,24 @@ def parse_vt_symbol(vt_symbol: str) -> tuple[str, str]:
         raise ValueError(f"无效 vt_symbol：{vt_symbol}")
     code, exch = text.rsplit(".", 1)
     return code, normalize_exchange(exch)
+
+
+def to_tickflow_symbol(tf_symbol: str) -> str:
+    """SHSE.600519 → 600519.SH（TickFlow 官方 SDK 符号格式）。"""
+    text = (tf_symbol or "").strip()
+    if "." not in text:
+        return text
+    exchange, code = text.split(".", 1)
+    return f"{code}.{_TF_TO_TC.get(exchange, exchange)}"
+
+
+def from_tickflow_symbol(tc_symbol: str) -> str:
+    """600519.SH → SHSE.600519（zak2 内部 tf_symbol 格式）。"""
+    text = (tc_symbol or "").strip()
+    if "." not in text:
+        return text
+    code, exchange = text.split(".", 1)
+    return f"{_TC_TO_TF.get(exchange, exchange)}.{code}"
 
 
 def parse_flexible_symbol(raw: str) -> tuple[str, str]:

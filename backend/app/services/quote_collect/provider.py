@@ -10,6 +10,7 @@ from typing import Any, Protocol
 
 from app.integrations.tickflow.client import get_tickflow_client
 from app.services.quote_collect.models import QuoteSnapshot
+from app.services.symbols import from_tickflow_symbol, to_tickflow_symbol
 
 QUOTE_BATCH_SIZE = 80
 DEFAULT_QUOTE_FETCH_MAX_WORKERS = 1
@@ -146,8 +147,16 @@ class TickFlowProvider:
             last_error: BaseException | None = None
             for attempt in range(_RATE_LIMIT_MAX_ATTEMPTS):
                 try:
-                    df = client.quotes.get(symbols=batch, as_dataframe=True)
-                    return _quotes_from_dataframe(df)
+                    # 官方 SDK 使用「代码.SH/SZ/BJ」格式，与内部 tf_symbol 互换
+                    tc_batch = [to_tickflow_symbol(s) for s in batch]
+                    df = client.quotes.get(symbols=tc_batch, as_dataframe=True)
+                    quotes = _quotes_from_dataframe(df)
+                    remapped: dict[str, QuoteSnapshot] = {}
+                    for tc_symbol, quote in quotes.items():
+                        tf_symbol = from_tickflow_symbol(tc_symbol)
+                        quote.symbol = tf_symbol
+                        remapped[tf_symbol] = quote
+                    return remapped
                 except BaseException as exc:  # noqa: BLE001 — SDK 异常兜底后按限流补偿
                     last_error = exc
                     wait = _rate_limit_wait(exc)

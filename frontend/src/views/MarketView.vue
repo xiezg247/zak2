@@ -12,6 +12,9 @@ const analysis = useStockAnalysis()
 
 const overview = ref<MarketOverview | null>(null)
 const field = ref('change_pct')
+// 0 表示全部（后端全量上限以内）
+const rankLimit = ref(50)
+const rankLimitChoices = [50, 100, 200, 500, 0]
 const ranks = ref<RankRow[]>([])
 const error = ref('')
 const loading = ref(false)
@@ -35,6 +38,18 @@ const barLimit = computed({
 const barLimitChoices = computed(() =>
   barInterval.value === '1m' ? [240, 480, 1200] : [60, 90, 120],
 )
+
+// 0 表示全部：请求一个覆盖全市场的上限（后端 le=20000）
+const FULL_RANK_TOP = 20000
+// 搜索关键词激活时强制全量拉取，确保过滤/搜索覆盖全部标的
+const searchActive = computed(() => listFilter.value.trim() !== '')
+function rankTopN(): number {
+  if (searchActive.value) return FULL_RANK_TOP
+  return rankLimit.value === 0 ? FULL_RANK_TOP : rankLimit.value
+}
+function rankLimitLabel(n: number): string {
+  return n === 0 ? '全部' : String(n)
+}
 const watchSet = ref<Set<string>>(new Set())
 const fundVt = ref('')
 const fundData = ref<Fundamentals | null>(null)
@@ -163,9 +178,32 @@ const scoreSortKey = computed((): Exclude<SortKey, null> | null => {
   return null
 })
 
+// —— 板块过滤 ——
+type BoardKey = 'all' | 'main' | 'gem' | 'star' | 'bse'
+const boardFilter = ref<BoardKey>('all')
+const boardOptions: { key: BoardKey; label: string }[] = [
+  { key: 'all', label: '全部' },
+  { key: 'main', label: '沪深主板' },
+  { key: 'gem', label: '创业板' },
+  { key: 'star', label: '科创板' },
+  { key: 'bse', label: '北交所' },
+]
+
+function boardOf(r: RankRow): BoardKey {
+  const vt = (r.vt_symbol || '').toUpperCase()
+  const code = vt.split('.')[0] || ''
+  if (vt.endsWith('.SSE')) return code.startsWith('68') ? 'star' : 'main'
+  if (vt.endsWith('.SZSE')) return code.startsWith('30') ? 'gem' : 'main'
+  if (vt.endsWith('.BSE')) return 'bse'
+  return 'all'
+}
+
 const displayedRanks = computed(() => {
   const q = listFilter.value.trim().toLowerCase()
   let list = ranks.value
+  if (boardFilter.value !== 'all') {
+    list = list.filter((r) => boardOf(r) === boardFilter.value)
+  }
   if (q) {
     list = list.filter((r) => {
       const vt = (r.vt_symbol || '').toLowerCase()
@@ -177,6 +215,59 @@ const displayedRanks = computed(() => {
   if (!key) return list
   const dir = sortDir.value
   return [...list].sort((a, b) => cmpNullable(a[key], b[key], dir))
+})
+
+// —— 虚拟滚动 ——
+// 固定行高 + 滚动容器测高，只渲染可视窗口内的行；列表 < 阈值时退化为普通渲染
+const ROW_H = 33
+const OVERSCAN = 12
+const VIRTUAL_MIN = 300
+const tableWrapEl = ref<HTMLElement | null>(null)
+const scrollTop = ref(0)
+const viewportH = ref(0)
+const rowH = ref(ROW_H)
+
+const useVirtual = computed(
+  () => (ranks.value.length > VIRTUAL_MIN && displayedRanks.value.length > VIRTUAL_MIN) || false,
+)
+
+const virtualWindow = computed(() => {
+  const list = displayedRanks.value
+  const total = list.length
+  if (total === 0) return { rows: [], padTop: 0, padBottom: 0, offset: 0 }
+  const h = rowH.value || ROW_H
+  const start = Math.max(0, Math.floor(scrollTop.value / h) - OVERSCAN)
+  const end = Math.min(total, Math.ceil((scrollTop.value + viewportH.value) / h) + OVERSCAN)
+  return {
+    rows: list.slice(start, end),
+    padTop: start * h,
+    padBottom: Math.max(0, (total - end) * h),
+    offset: start,
+  }
+})
+
+function measureTable() {
+  const el = tableWrapEl.value
+  if (!el) return
+  viewportH.value = el.clientHeight
+  const tr = el.querySelector('tbody tr:not(.vpad)')
+  if (tr) rowH.value = tr.getBoundingClientRect().height || ROW_H
+}
+
+function onTableScroll() {
+  scrollTop.value = tableWrapEl.value?.scrollTop || 0
+}
+
+watch(displayedRanks, () => {
+  scrollTop.value = 0
+  void nextTick(() => measureTable())
+})
+
+// 搜索关键词在「空 ↔ 非空」间切换时，需要重新拉取（全量 vs 档位量）数据
+watch(searchActive, (active, prev) => {
+  if (active === prev) return
+  scrollTop.value = 0
+  void load(true)
 })
 
 // 接口未返回对应字段（或全为空值）时隐藏列；有数据则展示
@@ -216,9 +307,7 @@ const subtitle = computed(() => {
     const gate = cycle.allow_new_positions ? '可新开' : '不宜新开'
     return `行情 ${o.quote_count} · ${cycle.stage_label} · ${gate}`
   }
-  const emo = o.emotion
-  const emoText = emo ? `最高板 ${emo.max_limit_times} · ${emo.max_board_vt_symbol}` : '无情绪梯队'
-  return `行情 ${o.quote_count} · ${emoText}`
+  return `行情 ${o.quote_count}`
 })
 
 const refreshLabel = computed(() => {
@@ -353,7 +442,7 @@ async function load(quiet = false) {
   try {
     overview.value = await marketApi.overview()
     try {
-      ranks.value = await marketApi.ranks(field.value, 50)
+      ranks.value = await marketApi.ranks(field.value, rankTopN())
     } catch (e) {
       ranks.value = []
       if (overview.value.quote_count === 0) {
@@ -376,7 +465,7 @@ async function onField() {
   chartBarsError.value = ''
   chartBarsLoading.value = false
   try {
-    ranks.value = await marketApi.ranks(field.value, 50)
+    ranks.value = await marketApi.ranks(field.value, rankTopN())
   } catch (e) {
     ranks.value = []
     error.value = e instanceof Error ? e.message : '排行加载失败'
@@ -488,14 +577,25 @@ watch([barLimit, barInterval], () => {
   if (chartVt.value) void loadChartBars(chartVt.value)
 })
 
+watch(rankLimit, () => {
+  scrollTop.value = 0
+  void load(true)
+})
+
+let resizeObs: ResizeObserver | undefined
+
 onMounted(() => {
   void load()
   void loadWatchSet()
   restartPoll()
   document.addEventListener('keydown', onKeydown)
+  void nextTick(() => measureTable())
+  resizeObs = new ResizeObserver(() => measureTable())
+  if (tableWrapEl.value) resizeObs.observe(tableWrapEl.value)
 })
 
 onUnmounted(() => {
+  resizeObs?.disconnect()
   document.removeEventListener('keydown', onKeydown)
   if (timer) window.clearInterval(timer)
 })
@@ -570,18 +670,6 @@ onUnmounted(() => {
             可到 Ops 执行 warm_market_summary 预热。
             <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
           </p>
-        </div>
-        <div v-if="overview.emotion" class="card">
-          <div class="k">连板情绪</div>
-          <div class="v">最高 {{ overview.emotion.max_limit_times }} 板</div>
-          <div class="s muted">
-            {{ overview.emotion.trade_date }} · {{ overview.emotion.max_board_vt_symbol }} · 关联
-            {{ overview.emotion.linked_board_count }}
-          </div>
-        </div>
-        <div v-else class="card">
-          <div class="k">连板情绪</div>
-          <div class="v muted">暂无数据</div>
         </div>
       </section>
 
@@ -659,6 +747,19 @@ onUnmounted(() => {
             <input v-model="autoRefresh" type="checkbox" />
             {{ refreshLabel }}
           </label>
+          <div class="limits">
+            <button
+              v-for="n in rankLimitChoices"
+              :key="n"
+              type="button"
+              class="chip"
+              :class="{ on: searchActive ? n === 0 : rankLimit === n }"
+              :disabled="searchActive"
+              @click="rankLimit = n"
+            >
+              {{ rankLimitLabel(n) }}
+            </button>
+          </div>
           <button class="ghost" type="button" :disabled="loading" @click="load()">刷新</button>
           <RouterLink to="/sectors" class="cross-link">板块资金 →</RouterLink>
         </div>
@@ -668,13 +769,30 @@ onUnmounted(() => {
 
       <div v-if="ranks.length" class="filter-row">
         <input v-model="listFilter" placeholder="过滤代码/名称" />
+        <div class="board-filter">
+          <button
+            v-for="b in boardOptions"
+            :key="b.key"
+            type="button"
+            class="chip"
+            :class="{ on: boardFilter === b.key }"
+            @click="boardFilter = b.key"
+          >
+            {{ b.label }}
+          </button>
+        </div>
+        <span class="muted count-hint"
+          >{{ displayedRanks.length }} 只<span v-if="searchActive" class="search-all-tag"
+            >全量搜索</span
+          ></span
+        >
         <button type="button" class="ghost" :class="{ on: !sortKey }" @click="clearSort">
           默认序
         </button>
       </div>
 
       <div class="split">
-        <div class="table-wrap">
+        <div ref="tableWrapEl" class="table-wrap" @scroll.passive="onTableScroll">
           <p v-if="ranks.length && !displayedRanks.length" class="muted empty-hint">无匹配标的</p>
           <table v-else>
             <thead>
@@ -714,10 +832,18 @@ onUnmounted(() => {
               </tr>
             </thead>
             <tbody>
-              <template v-for="(r, i) in displayedRanks" :key="r.tf_symbol">
+              <tr v-if="useVirtual && virtualWindow.padTop" class="vpad">
+                <td :colspan="emptyColspan" :style="{ height: virtualWindow.padTop + 'px' }"></td>
+              </tr>
+              <template
+                v-for="(r, j) in useVirtual ? virtualWindow.rows : displayedRanks"
+                :key="r.tf_symbol"
+              >
                 <tr>
                   <td>
-                    <span class="rank-badge" :class="'rank-' + (i + 1)">{{ i + 1 }}</span>
+                    <span class="rank-badge" :class="'rank-' + ((useVirtual ? virtualWindow.offset + j : j) + 1)">{{
+                      (useVirtual ? virtualWindow.offset + j : j) + 1
+                    }}</span>
                   </td>
                   <td class="mono">{{ r.vt_symbol }}</td>
                   <td>{{ r.name || '—' }}</td>
@@ -825,6 +951,9 @@ onUnmounted(() => {
                   </td>
                 </tr>
               </template>
+              <tr v-if="useVirtual && virtualWindow.padBottom" class="vpad">
+                <td :colspan="emptyColspan" :style="{ height: virtualWindow.padBottom + 'px' }"></td>
+              </tr>
               <tr v-if="!ranks.length">
                 <td :colspan="emptyColspan" class="empty">
                   暂无排行（需 Redis 行情快照）
@@ -1219,6 +1348,25 @@ onUnmounted(() => {
   gap: 8px;
   align-items: center;
 }
+.board-filter {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.count-hint {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.search-all-tag {
+  margin-left: 6px;
+  font-size: 0.72rem;
+  color: var(--brand);
+  background: var(--brand-light);
+  border: 1px solid var(--brand-soft);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-variant-numeric: normal;
+}
 .filter-row input {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -1276,6 +1424,10 @@ onUnmounted(() => {
   padding: 4px 8px;
   font-size: 0.75rem;
   cursor: pointer;
+}
+.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .chip.on {
   background: var(--brand-light);
@@ -1437,6 +1589,15 @@ th.sortable {
 }
 tbody tr:hover td {
   background: var(--surface-muted);
+}
+/* 虚拟滚动占位行：透明、无边框、不触发 hover */
+tbody tr.vpad td {
+  padding: 0;
+  border-bottom: 0;
+  background: transparent !important;
+}
+tbody tr.vpad {
+  pointer-events: none;
 }
 .rank-badge {
   display: inline-grid;

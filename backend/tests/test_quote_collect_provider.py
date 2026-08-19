@@ -50,6 +50,17 @@ def test_get_provider_unknown() -> None:
         get_provider("nope")
 
 
+def test_symbol_conversion_roundtrip() -> None:
+    from app.services.symbols import from_tickflow_symbol, to_tickflow_symbol
+
+    assert to_tickflow_symbol("SHSE.600519") == "600519.SH"
+    assert to_tickflow_symbol("SZSE.000001") == "000001.SZ"
+    assert to_tickflow_symbol("BJSE.920000") == "920000.BJ"
+    assert to_tickflow_symbol("600519") == "600519"
+    assert from_tickflow_symbol("600519.SH") == "SHSE.600519"
+    assert from_tickflow_symbol("920000.BJ") == "BJSE.920000"
+
+
 def test_fetch_batches(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.services.quote_collect import provider as p
 
@@ -57,6 +68,7 @@ def test_fetch_batches(monkeypatch: pytest.MonkeyPatch) -> None:
 
     class FakeQuotes:
         def get(self, symbols, as_dataframe=True):
+            # 官方 SDK 实际返回「代码.SH/SZ/BJ」格式的 symbol 列
             calls.append(list(symbols))
             import pandas as pd
 
@@ -79,7 +91,8 @@ def test_fetch_batches(monkeypatch: pytest.MonkeyPatch) -> None:
     out = p.TickFlowProvider(api_key="x").fetch(["SHSE.600000", "SHSE.600001"])
     assert "SHSE.600000" in out
     assert "SHSE.600001" in out
-    assert calls
+    assert out["SHSE.600000"].symbol == "SHSE.600000"
+    assert calls == [["600000.SH", "600001.SH"]]
 
 
 def test_fetch_applies_batch_delay(monkeypatch: pytest.MonkeyPatch) -> None:

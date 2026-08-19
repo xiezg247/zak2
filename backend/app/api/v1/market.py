@@ -103,7 +103,7 @@ def reset_emotion_thresholds(
 @router.get("/market/ranks", response_model=ApiResponse[list[RankRow]])
 def get_market_ranks(
     field: str = Query(default="change_pct"),
-    top_n: int = Query(default=50, ge=1, le=200),
+    top_n: int = Query(default=50, ge=1, le=20000),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[list[RankRow]]:
