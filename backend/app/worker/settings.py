@@ -7,6 +7,7 @@ from arq.worker import func
 
 from app.core.settings import get_settings
 from app.worker.tasks import run_ops_job
+from app.worker.tasks_auto_schedule import run_auto_schedule_task
 from app.worker.tasks_screener import (
     run_screener_condition,
     run_screener_pattern,
@@ -24,6 +25,7 @@ class WorkerSettings:
         run_screener_recipe,
         run_screener_pattern,
         run_screener_reference_peer,
+        run_auto_schedule_task,
     ]
     max_jobs = 2
     redis_settings = RedisSettings.from_dsn(_settings.redis_url)
