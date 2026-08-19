@@ -11,7 +11,6 @@ import {
   type ResonanceWeightItem,
 } from '../api/market'
 import { watchlistApi } from '../api/watchlist'
-import { contentApi } from '../api/content'
 
 const router = useRouter()
 const cards = ref<RadarCard[]>([])
@@ -41,8 +40,6 @@ const weightItems = ref<ResonanceWeightItem[]>([])
 const weightDraft = ref<Record<string, number>>({})
 const weightBusy = ref(false)
 const weightErr = ref('')
-const draftBusy = ref(false)
-const draftMsg = ref('')
 const horizon = ref<RadarHorizon | null>(null)
 const horizonErr = ref('')
 const horizonOpen = ref(false)
@@ -349,20 +346,6 @@ function goResonanceScreen() {
   void router.push({ path: '/screener', query: { recipe: 'radar_resonance' } })
 }
 
-async function createPlanDraft() {
-  if (draftBusy.value) return
-  draftBusy.value = true
-  draftMsg.value = ''
-  try {
-    const r = await marketApi.createPlanDraft()
-    draftMsg.value = `已写入 draft · ${r.trade_date} · ${r.symbol_count} 只${r.replaced ? '（已覆盖）' : ''}`
-  } catch (e) {
-    draftMsg.value = e instanceof Error ? e.message : '生成草案失败'
-  } finally {
-    draftBusy.value = false
-  }
-}
-
 async function addWatchTo(vt: string, name: string | undefined, msg: { value: string }) {
   if (!vt || actingVt.value) return
   actingVt.value = vt
@@ -389,24 +372,6 @@ async function addWatchFromHorizonRow(vt: string, name?: string) {
   await addWatchTo(vt, name, rowActionMsg)
 }
 
-async function appendDraftFromRow(
-  vt: string,
-  name: string | undefined,
-  source: 'horizon' | 'predict',
-) {
-  if (!vt || actingVt.value) return
-  actingVt.value = vt
-  rowActionMsg.value = ''
-  try {
-    const r = await contentApi.draftAppend({ vt_symbol: vt, name, source })
-    rowActionMsg.value = r.message || (r.added ? `已加入草案 ${vt}` : `已在草案 ${vt}`)
-  } catch (e) {
-    rowActionMsg.value = e instanceof Error ? e.message : '加入草案失败'
-  } finally {
-    actingVt.value = ''
-  }
-}
-
 onMounted(() => {
   void load()
 })
@@ -420,14 +385,6 @@ onMounted(() => {
         <span v-if="loading" class="muted">加载中…</span>
         <button class="primary" type="button" @click="goLeaderScreen">龙头选股 → Hub</button>
         <button class="ghost" type="button" @click="goResonanceScreen">共振选股 → Hub</button>
-        <button
-          class="ghost"
-          type="button"
-          :disabled="draftBusy || loading"
-          @click="createPlanDraft"
-        >
-          生成次日计划草案
-        </button>
         <button class="ghost" type="button" @click="sideOpen = !sideOpen">
           {{ sideOpen ? '收起共振' : '展开共振' }}
         </button>
@@ -436,17 +393,8 @@ onMounted(() => {
         >
       </div>
       <p v-if="error" class="err">{{ error }}</p>
-      <p v-if="draftMsg" class="draft-msg">
-        {{ draftMsg }}
-        <RouterLink v-if="draftMsg.startsWith('已写入')" to="/playbook" class="draft-link"
-          >去守则看计划</RouterLink
-        >
-      </p>
       <p v-if="rowActionMsg" class="draft-msg">
         {{ rowActionMsg }}
-        <RouterLink v-if="rowActionMsg.includes('草案')" to="/playbook" class="draft-link">
-          去守则看计划
-        </RouterLink>
       </p>
 
       <div class="horizon-block">
@@ -535,14 +483,6 @@ onMounted(() => {
                       >
                         自选
                       </button>
-                      <button
-                        type="button"
-                        class="ghost tiny-btn"
-                        :disabled="!!actingVt"
-                        @click="appendDraftFromRow(row.vt_symbol, row.name, 'horizon')"
-                      >
-                        草案
-                      </button>
                     </td>
                   </tr>
                 </tbody>
@@ -614,14 +554,6 @@ onMounted(() => {
                         @click="addWatchFromHorizonRow(row.vt_symbol, row.name)"
                       >
                         自选
-                      </button>
-                      <button
-                        type="button"
-                        class="ghost tiny-btn"
-                        :disabled="!!actingVt"
-                        @click="appendDraftFromRow(row.vt_symbol, row.name, 'predict')"
-                      >
-                        草案
                       </button>
                     </td>
                   </tr>

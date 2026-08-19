@@ -48,6 +48,11 @@ class QuoteRow:
     name: str = ""
     last_price: float = 0.0
     change_pct: float = 0.0
+    change_amount: float = 0.0
+    prev_close: float = 0.0
+    open_price: float = 0.0
+    high_price: float = 0.0
+    low_price: float = 0.0
     turnover_rate: float = 0.0
     volume: float = 0.0
     amount: float = 0.0
@@ -55,6 +60,7 @@ class QuoteRow:
     volume_ratio: float = 0.0
     net_mf_amount: float = 0.0
     limit_times: float = 0.0
+    trade_time: str = ""
     industry: str = ""
     total_mv: float = 0.0  # 万元（与 Tushare daily_basic 一致）
     circ_mv: float = 0.0
@@ -66,6 +72,11 @@ class QuoteRow:
             "name": self.name,
             "last_price": self.last_price,
             "change_pct": self.change_pct,
+            "change_amount": self.change_amount,
+            "prev_close": self.prev_close,
+            "open_price": self.open_price,
+            "high_price": self.high_price,
+            "low_price": self.low_price,
             "turnover_rate": self.turnover_rate,
             "volume": self.volume,
             "amount": self.amount,
@@ -73,6 +84,7 @@ class QuoteRow:
             "volume_ratio": self.volume_ratio,
             "net_mf_amount": self.net_mf_amount,
             "limit_times": self.limit_times,
+            "trade_time": self.trade_time,
             "industry": self.industry,
             "total_mv": self.total_mv,
             "circ_mv": self.circ_mv,
@@ -116,6 +128,11 @@ def hash_to_quote(symbol: str, data: dict[str, str]) -> QuoteRow:
         name=norm.get("name") or "",
         last_price=_f(norm, "last_price"),
         change_pct=_f(norm, "change_pct"),
+        change_amount=_f(norm, "change_amount"),
+        prev_close=_f(norm, "prev_close"),
+        open_price=_f(norm, "open_price"),
+        high_price=_f(norm, "high_price"),
+        low_price=_f(norm, "low_price"),
         turnover_rate=_f(norm, "turnover_rate"),
         volume=_f(norm, "volume"),
         amount=_f(norm, "amount"),
@@ -123,6 +140,7 @@ def hash_to_quote(symbol: str, data: dict[str, str]) -> QuoteRow:
         volume_ratio=_f(norm, "volume_ratio"),
         net_mf_amount=_f(norm, "net_mf_amount"),
         limit_times=_f(norm, "limit_times"),
+        trade_time=str(norm.get("trade_time") or "").strip(),
         industry=str(norm.get("industry") or "").strip(),
         total_mv=_f(norm, "total_mv"),
         circ_mv=_f(norm, "circ_mv"),

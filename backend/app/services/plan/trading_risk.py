@@ -129,11 +129,3 @@ def compute_actual_position_pct(total_mv: float, total_capital: float | None) ->
     if total_capital is None or total_capital <= 0:
         return None
     return float(total_mv) / float(total_capital)
-
-
-def normalize_plan_max_pct(raw: float) -> float | None:
-    if raw <= 0:
-        return None
-    if raw > 1:
-        return float(raw) / 100.0
-    return float(raw)

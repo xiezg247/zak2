@@ -113,7 +113,6 @@ def test_get_positions_limit_and_shape() -> None:
             "buy_date": "2026-08-01",
             "notes": "",
             "source": "manual",
-            "plan_pct": None,
             "sort_order": 0,
             "created_at": "",
             "updated_at": "",
@@ -127,7 +126,6 @@ def test_get_positions_limit_and_shape() -> None:
             "buy_date": "2026-07-01",
             "notes": "",
             "source": "manual",
-            "plan_pct": 0.1,
             "sort_order": 1,
             "created_at": "",
             "updated_at": "",
@@ -167,7 +165,6 @@ def test_get_positions_with_quotes_false_skips_store() -> None:
             "buy_date": "2026-08-01",
             "notes": "",
             "source": "manual",
-            "plan_pct": None,
             "sort_order": 0,
             "created_at": "",
             "updated_at": "",
@@ -194,7 +191,6 @@ def test_get_positions_quote_store_failure_still_returns() -> None:
             "buy_date": "2026-08-01",
             "notes": "",
             "source": "manual",
-            "plan_pct": None,
             "sort_order": 0,
             "created_at": "",
             "updated_at": "",
@@ -258,13 +254,6 @@ def test_get_trading_risk_prefs_and_summary() -> None:
         "risk_summary": {
             "total_capital": 100000.0,
             "actual_position_pct": 0.2,
-            "plan_max_pct": 0.5,
-            "off_plan_count": 0,
-            "off_plan_symbols": [],
-            "active_plan_date": "2026-08-11",
-            "plan_symbols": [
-                {"vt_symbol": "600519.SSE", "status": "in_position", "name": "茅台", "extra": "drop_me"},
-            ],
         }
     }
     with (
@@ -276,4 +265,3 @@ def test_get_trading_risk_prefs_and_summary() -> None:
         out = art.get_trading_risk(MagicMock(), "u", {})
     assert out["prefs"]["total_capital"] == 100000.0
     assert out["risk_summary"]["actual_position_pct"] == 0.2
-    assert out["risk_summary"]["plan_symbols"] == [{"vt_symbol": "600519.SSE", "status": "in_position"}]

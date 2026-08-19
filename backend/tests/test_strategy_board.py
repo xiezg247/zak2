@@ -141,18 +141,6 @@ def test_enrich_position_risk_no_quote_skips_intraday() -> None:
     assert "大涨" not in out["risk_tags"]
 
 
-def test_enrich_position_risk_off_plan() -> None:
-    out = enrich_position_risk(
-        {"exit_signal": "hold", "unrealized_pnl_pct": None},
-        change_pct=None,
-        volume_ratio=None,
-        off_plan=True,
-    )
-    assert out["off_plan"] is True
-    assert "计划外" in out["risk_tags"]
-    assert out["risk_primary"] == "计划外"
-
-
 def test_load_strategy_board_empty() -> None:
     from app.services.strategy import strategy_board
 
@@ -184,14 +172,6 @@ def test_load_strategy_board_empty() -> None:
                 realized_pnl_today=None,
             ),
         ),
-        patch(
-            "app.services.strategy.strategy_board.load_active_plan_snapshot",
-            return_value=None,
-        ),
-        patch(
-            "app.services.strategy.strategy_board.latest_open_yyyymmdd",
-            return_value="20260805",
-        ),
     ):
         gs.return_value.available.return_value = False
         out = strategy_board.load_strategy_board(db, "u1")
@@ -206,14 +186,9 @@ def test_load_strategy_board_empty() -> None:
     rs = out["risk_summary"]
     assert rs["total_capital"] is None
     assert rs["actual_position_pct"] is None
-    assert rs["plan_max_pct"] is None
-    assert rs["off_plan_count"] == 0
-    assert rs["off_plan_symbols"] == []
-    assert rs["active_plan_date"] == ""
-    assert rs["plan_symbols"] == []
 
 
-def test_load_strategy_board_risk_summary_with_off_plan() -> None:
+def test_load_strategy_board_risk_summary_with_positions() -> None:
     from app.services.strategy import strategy_board
 
     db = MagicMock()
@@ -250,7 +225,6 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
                     buy_date="2020-01-01",
                     notes="",
                     source="manual",
-                    plan_pct=None,
                 ),
                 SimpleNamespace(
                     symbol="600519",
@@ -260,7 +234,6 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
                     buy_date="2020-01-01",
                     notes="",
                     source="manual",
-                    plan_pct=None,
                 ),
             ],
         ),
@@ -276,51 +249,17 @@ def test_load_strategy_board_risk_summary_with_off_plan() -> None:
                 realized_pnl_today=None,
             ),
         ),
-        patch(
-            "app.services.strategy.strategy_board.load_active_plan_snapshot",
-            return_value={
-                "vt_symbols": {"600519.SSE", "300750.SZSE"},
-                "ordered_vt_symbols": ["600519.SSE", "300750.SZSE"],
-                "max_position_pct": 80.0,
-                "trade_date": "2026-08-05",
-            },
-        ) as snap,
-        patch(
-            "app.services.strategy.strategy_board.latest_open_yyyymmdd",
-            return_value="20260805",
-        ),
     ):
         gs.return_value.available.return_value = False
         out = strategy_board.load_strategy_board(db, "u1")
 
-    snap.assert_called_once_with(db, "u1", "2026-08-05")
     by_vt = {p["vt_symbol"]: p for p in out["positions"]}
-    assert by_vt["000001.SZSE"]["off_plan"] is True
-    assert "计划外" in by_vt["000001.SZSE"]["risk_tags"]
-    assert by_vt["600519.SSE"]["off_plan"] is False
-    assert "计划外" not in by_vt["600519.SSE"]["risk_tags"]
+    assert by_vt["000001.SZSE"]["risk_tags"] == []
+    assert by_vt["600519.SSE"]["risk_tags"] == []
 
     rs = out["risk_summary"]
     assert rs["total_capital"] == 100_000.0
     assert rs["actual_position_pct"] == 0.0  # 无行情 → market_value 计 0
-    assert rs["plan_max_pct"] == 0.8
-    assert rs["off_plan_count"] == 1
-    assert rs["off_plan_symbols"] == ["000001.SZSE"]
-    assert rs["active_plan_date"] == "2026-08-05"
-    assert rs["plan_symbols"] == [
-        {
-            "vt_symbol": "600519.SSE",
-            "name": "茅台",
-            "in_watchlist": True,
-            "in_position": True,
-        },
-        {
-            "vt_symbol": "300750.SZSE",
-            "name": "",
-            "in_watchlist": False,
-            "in_position": False,
-        },
-    ]
 
 
 def test_load_strategy_board_note_panel_no_signals() -> None:
@@ -357,14 +296,6 @@ def test_load_strategy_board_note_panel_no_signals() -> None:
                 caution_float_pct=-5.0,
                 realized_pnl_today=None,
             ),
-        ),
-        patch(
-            "app.services.strategy.strategy_board.load_active_plan_snapshot",
-            return_value=None,
-        ),
-        patch(
-            "app.services.strategy.strategy_board.latest_open_yyyymmdd",
-            return_value="20260805",
         ),
     ):
         gs.return_value.available.return_value = False
@@ -408,7 +339,6 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
                     buy_date="2026-01-01",
                     notes="",
                     source="manual",
-                    plan_pct=None,
                 )
             ],
         ),
@@ -423,14 +353,6 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
                 caution_float_pct=-5.0,
                 realized_pnl_today=None,
             ),
-        ),
-        patch(
-            "app.services.strategy.strategy_board.load_active_plan_snapshot",
-            return_value=None,
-        ),
-        patch(
-            "app.services.strategy.strategy_board.latest_open_yyyymmdd",
-            return_value="20260805",
         ),
     ):
         gs.return_value.available.return_value = False
@@ -473,14 +395,6 @@ def test_note_empty_mentions_heuristic_job() -> None:
                 caution_float_pct=-5.0,
                 realized_pnl_today=None,
             ),
-        ),
-        patch(
-            "app.services.strategy.strategy_board.load_active_plan_snapshot",
-            return_value=None,
-        ),
-        patch(
-            "app.services.strategy.strategy_board.latest_open_yyyymmdd",
-            return_value="20260805",
         ),
     ):
         gs.return_value.available.return_value = False

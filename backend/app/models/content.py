@@ -88,30 +88,3 @@ class FeedItemRead(Base):
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     item_id: Mapped[str] = mapped_column(Text, primary_key=True)
     read_at: Mapped[str] = mapped_column(Text, nullable=False)
-
-
-class TradingPlan(Base):
-    __tablename__ = "trading_plans"
-
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
-    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False, index=True)
-    trade_date: Mapped[str] = mapped_column(Text, nullable=False)
-    emotion_expected: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    max_position_pct: Mapped[float] = mapped_column(Float, nullable=False, default=0)
-    notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    status: Mapped[str] = mapped_column(Text, nullable=False, default="draft")
-    created_at: Mapped[str] = mapped_column(Text, nullable=False)
-    updated_at: Mapped[str] = mapped_column(Text, nullable=False)
-
-
-class TradingPlanSymbol(Base):
-    __tablename__ = "trading_plan_symbols"
-
-    plan_id: Mapped[str] = mapped_column(Text, primary_key=True)
-    symbol: Mapped[str] = mapped_column(Text, primary_key=True)
-    exchange: Mapped[str] = mapped_column(Text, primary_key=True)
-    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
-    allowed_modes: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    entry_conditions: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    exit_conditions: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

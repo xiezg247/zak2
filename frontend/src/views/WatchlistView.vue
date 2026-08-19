@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import CandleChart from '../components/CandleChart.vue'
 import { confirmDialog, promptDialog } from '../lib/dialog'
@@ -15,7 +15,6 @@ import {
 import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
 
 const route = useRoute()
-const router = useRouter()
 const items = ref<WatchlistItem[]>([])
 const groups = ref<WatchlistGroup[]>([])
 const groupId = ref<string>('')
@@ -564,10 +563,13 @@ onUnmounted(() => {
           <div class="block">
             <div class="block-head">
               <span class="block-title">自选</span>
-              <label class="auto">
-                <input v-model="autoRefresh" type="checkbox" />
-                {{ connected ? 'WS 推送 + 慢轮询' : '每 15s 刷新行情' }}
-              </label>
+              <div class="block-head-actions">
+                <RouterLink class="ghost sm" to="/board">看板</RouterLink>
+                <label class="auto">
+                  <input v-model="autoRefresh" type="checkbox" />
+                  {{ connected ? 'WS 推送 + 慢轮询' : '每 15s 刷新行情' }}
+                </label>
+              </div>
             </div>
             <div class="row add-row">
               <input v-model="addSymbol" placeholder="添加代码 600519.SSE" @keyup.enter="onAdd" />
@@ -1311,11 +1313,7 @@ tbody tr.off-plan.on td {
   text-align: left;
 }
 @media (max-width: 900px) {
-  .workspace,
-  .strategy-grid,
-  .summary-grid,
-  .pos-grid,
-  .risk-grid {
+  .workspace {
     grid-template-columns: 1fr;
   }
   .left {

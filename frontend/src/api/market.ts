@@ -54,10 +54,22 @@ export type RankRow = {
   score: number
   last_price: number | null
   change_pct: number | null
+  change_amount: number | null
+  prev_close: number | null
+  open_price: number | null
+  high_price: number | null
+  low_price: number | null
   turnover_rate: number | null
   amount: number | null
+  volume: number | null
+  amplitude: number | null
   volume_ratio: number | null
+  net_mf_amount: number | null
   limit_times: number | null
+  trade_time: string | null
+  industry: string | null
+  total_mv: number | null
+  circ_mv: number | null
 }
 
 export type SectorFlowRow = {
@@ -195,16 +207,6 @@ export type EmotionThresholds = {
 
 export type EmotionThresholdsPatch = Partial<Omit<EmotionThresholds, 'is_default'>>
 
-export type PlanDraftOut = {
-  plan_id: string
-  trade_date: string
-  status: string
-  emotion_expected: string
-  symbol_count: number
-  symbols: { vt_symbol: string; name?: string }[]
-  replaced: boolean
-}
-
 export const marketApi = {
   overview: () => api<MarketOverview>('/api/v1/market/overview'),
   emotionCycle: () => api<EmotionCycle>('/api/v1/market/emotion-cycle'),
@@ -249,10 +251,5 @@ export const marketApi = {
   resetEmotionThresholds: () =>
     api<EmotionThresholds>('/api/v1/market/emotion-cycle/thresholds/reset', {
       method: 'POST',
-    }),
-  createPlanDraft: (body: { top_n?: number; trade_date?: string } = {}) =>
-    api<PlanDraftOut>('/api/v1/radar/plan-draft', {
-      method: 'POST',
-      body: JSON.stringify(body),
     }),
 }

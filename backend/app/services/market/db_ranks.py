@@ -63,14 +63,14 @@ def _latest_trade_dates(db: Session) -> tuple[str, str]:
 
 
 def _load_daily_bars(db: Session, trade_date: str) -> dict[str, dict[str, Any]]:
-    """tf_symbol -> {symbol, exchange, last_price, amount, volume}（当日日K）。"""
+    """tf_symbol -> {symbol, exchange, last_price, open_price, high_price, low_price, amount, volume}。"""
     if not trade_date:
         return {}
     rows = (
         db.execute(
             text(
                 """
-                SELECT symbol, exchange, close_price, turnover, volume
+                SELECT symbol, exchange, open_price, high_price, low_price, close_price, turnover, volume
                 FROM public.dbbardata
                 WHERE interval = 'd' AND datetime::date = :d
                 """
@@ -87,6 +87,9 @@ def _load_daily_bars(db: Session, trade_date: str) -> dict[str, dict[str, Any]]:
             "symbol": str(r["symbol"]),
             "exchange": normalize_exchange(str(r["exchange"])),
             "last_price": _f(r["close_price"]),
+            "open_price": _f(r["open_price"]),
+            "high_price": _f(r["high_price"]),
+            "low_price": _f(r["low_price"]),
             "amount": _f(r["turnover"]) * _QIANYUAN_TO_YUAN,
             "volume": _f(r["volume"]),
         }
@@ -200,12 +203,16 @@ def db_rank_fallback(db: Session, field: str, *, top_n: int = 50) -> list[RankRo
         last_price = bar["last_price"]
         prev_close = prev_closes.get(tf, 0.0)
         change_pct = (last_price - prev_close) / prev_close * 100 if prev_close > 0 else 0.0
+        change_amount = last_price - prev_close
         f = factors.get(tf, {})
         turnover_rate = f.get("turnover_rate", 0.0)
         volume_ratio = f.get("volume_ratio", 0.0)
         lt = limit_times.get(tf, 0.0)
         amount = bar["amount"]
         volume = bar["volume"]
+        high = bar["high_price"]
+        low = bar["low_price"]
+        amplitude = (high - low) / prev_close * 100 if prev_close > 0 and high > 0 else 0.0
 
         score = {
             "change_pct": change_pct,
@@ -227,8 +234,15 @@ def db_rank_fallback(db: Session, field: str, *, top_n: int = 50) -> list[RankRo
                 score=score,
                 last_price=last_price,
                 change_pct=change_pct,
+                change_amount=change_amount,
+                prev_close=prev_close if prev_close > 0 else None,
+                open_price=bar["open_price"] if bar["open_price"] > 0 else None,
+                high_price=high if high > 0 else None,
+                low_price=low if low > 0 else None,
                 turnover_rate=turnover_rate,
                 amount=amount,
+                volume=volume,
+                amplitude=amplitude,
                 volume_ratio=volume_ratio,
                 limit_times=lt,
             )

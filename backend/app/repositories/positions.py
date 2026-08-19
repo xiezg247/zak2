@@ -90,7 +90,6 @@ class PositionRepository:
             buy_date=str(p.buy_date)[:10],
             notes=str(p.notes or ""),
             source=str(p.source or "manual"),
-            plan_pct=float(p.plan_pct) if p.plan_pct is not None else None,
             sort_order=int(p.sort_order or 0),
             created_at=str(p.created_at or ""),
             updated_at=str(p.updated_at or ""),
@@ -122,7 +121,6 @@ class PositionRepository:
         volume: int,
         buy_date: str,
         notes: str = "",
-        plan_pct: float | None = None,
     ) -> PositionOut:
         validate_inputs(cost_price=cost_price, volume=volume, buy_date=buy_date)
         exch = normalize_exchange(exchange)
@@ -144,7 +142,6 @@ class PositionRepository:
             buy_date=buy_date[:10],
             notes=(notes or "").strip(),
             source="manual",
-            plan_pct=plan_pct,
             sort_order=count,
             created_at=now,
             updated_at=now,
@@ -163,7 +160,6 @@ class PositionRepository:
         volume: int,
         buy_date: str,
         notes: str = "",
-        plan_pct: float | None = None,
     ) -> PositionOut:
         validate_inputs(cost_price=cost_price, volume=volume, buy_date=buy_date)
         exch = normalize_exchange(exchange)
@@ -174,7 +170,6 @@ class PositionRepository:
         row.volume = normalize_volume(volume)
         row.buy_date = buy_date[:10]
         row.notes = (notes or "").strip()
-        row.plan_pct = plan_pct
         row.updated_at = _now_iso()
         self.db.commit()
         self.db.refresh(row)

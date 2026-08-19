@@ -27,8 +27,6 @@ DEFAULT_COPY_TABLES: list[str] = [
     "app.feed_items",
     "app.feed_item_reads",
     "app.feed_cursors",
-    "app.trading_plans",
-    "app.trading_plan_symbols",
     "app.notify_delivery_log",
     "app.backtest_runs",
     "app.web_team_reports",

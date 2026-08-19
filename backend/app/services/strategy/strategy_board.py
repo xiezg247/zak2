@@ -16,16 +16,9 @@ from app.repositories import positions as positions_repo
 from app.repositories import signal_panel as signal_panel_repo
 from app.repositories import watchlist as repo
 from app.services.market.quotes import get_quote_store
-from app.services.market.tushare_screener import latest_open_yyyymmdd
-from app.services.plan.off_plan import (
-    build_plan_symbol_statuses,
-    list_off_plan_vt_symbols,
-    load_active_plan_snapshot,
-)
 from app.services.plan.trading_risk import (
     compute_actual_position_pct,
     load_trading_risk_prefs,
-    normalize_plan_max_pct,
 )
 from app.services.strategy.position_risk_tags import compute_position_risk_tags, primary_risk_tag
 from app.services.symbols import to_tf_symbol, to_vt_symbol
@@ -287,30 +280,16 @@ def enrich_position_risk(
     *,
     change_pct: float | None,
     volume_ratio: float | None,
-    off_plan: bool = False,
 ) -> dict[str, Any]:
-    row["off_plan"] = bool(off_plan)
     tags = compute_position_risk_tags(
         exit_signal=str(row.get("exit_signal") or ""),
         unrealized_pnl_pct=row.get("unrealized_pnl_pct"),
         change_pct=change_pct,
         volume_ratio=volume_ratio,
-        off_plan=off_plan,
     )
     row["risk_tags"] = tags
     row["risk_primary"] = primary_risk_tag(tags)
     return row
-
-
-def _resolve_plan_trade_date(db: Session, as_of: str | None) -> str:
-    text_v = (as_of or "").strip()[:10]
-    if len(text_v) == 10 and text_v[4] == "-" and text_v[7] == "-":
-        return text_v
-    ymd = latest_open_yyyymmdd(db)
-    ymd = str(ymd).replace("-", "")[:8]
-    if len(ymd) == 8 and ymd.isdigit():
-        return f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:8]}"
-    return text_v
 
 
 def _pack_signal_row(
@@ -449,16 +428,10 @@ def load_strategy_board(
             as_of = str(s["bar_as_of"])
             break
 
-    trade_date = _resolve_plan_trade_date(db, as_of or None)
     prefs = load_trading_risk_prefs(db, user_id)
-    plan_snap = load_active_plan_snapshot(db, user_id, trade_date)
-    plan_vts: set[str] | None = plan_snap["vt_symbols"] if plan_snap else None
 
     # 持仓记账
     pos_rows = positions_repo.PositionRepository(db, user_id).list_positions()
-
-    position_vts = [to_vt_symbol(str(r.symbol), str(r.exchange)) for r in pos_rows]
-    off_set = set(list_off_plan_vt_symbols(position_vts, plan_vts))
 
     positions: list[dict[str, Any]] = []
     for row in pos_rows:
@@ -490,7 +463,6 @@ def load_strategy_board(
         if q is not None:
             pos_change_pct = float(getattr(q, "change_pct", 0) or 0)
             pos_volume_ratio = float(getattr(q, "volume_ratio", 0) or 0)
-        op = vt in off_set
         positions.append(
             enrich_position_risk(
                 {
@@ -501,7 +473,6 @@ def load_strategy_board(
                     "buy_date": buy_date,
                     "notes": str(row.notes or ""),
                     "source": str(row.source or "manual"),
-                    "plan_pct": _safe_float(row.plan_pct),
                     "last_price": last,
                     "market_value": market_value,
                     "unrealized_pnl": pnl,
@@ -514,34 +485,13 @@ def load_strategy_board(
                 },
                 change_pct=pos_change_pct,
                 volume_ratio=pos_volume_ratio,
-                off_plan=op,
             )
         )
 
     total_mv = sum(float(p["market_value"] or 0) for p in positions)
-    if plan_snap is None:
-        ordered_plan = []
-    else:
-        ordered_plan = list(plan_snap.get("ordered_vt_symbols") or [])
-        if not ordered_plan:
-            ordered_plan = sorted(plan_snap.get("vt_symbols") or [])
-
-    plan_symbols = build_plan_symbol_statuses(
-        ordered_vt_symbols=ordered_plan,
-        watchlist_vts=set(watchlist_vts),
-        position_vts=set(position_vts),
-        name_by_vt={k: (v or "") for k, v in name_by_vt.items()},
-    )
     risk_summary = {
         "total_capital": prefs.total_capital,
         "actual_position_pct": compute_actual_position_pct(total_mv, prefs.total_capital),
-        "plan_max_pct": (
-            normalize_plan_max_pct(float(plan_snap["max_position_pct"])) if plan_snap is not None else None
-        ),
-        "off_plan_count": len(off_set),
-        "off_plan_symbols": sorted(off_set),
-        "active_plan_date": str(plan_snap["trade_date"]) if plan_snap else "",
-        "plan_symbols": plan_symbols,
     }
 
     note = ""

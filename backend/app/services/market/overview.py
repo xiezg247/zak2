@@ -110,10 +110,22 @@ def _redis_rank_rows(store: QuoteStore, field: str, ranked: list[tuple[str, floa
                 score=float(score),
                 last_price=q.last_price if q else None,
                 change_pct=q.change_pct if q else (score if field == "change_pct" else None),
+                change_amount=q.change_amount if q else None,
+                prev_close=q.prev_close if q else None,
+                open_price=q.open_price if q else None,
+                high_price=q.high_price if q else None,
+                low_price=q.low_price if q else None,
                 turnover_rate=q.turnover_rate if q else (score if field == "turnover_rate" else None),
                 amount=q.amount if q else (score if field == "amount" else None),
+                volume=q.volume if q else None,
+                amplitude=q.amplitude if q else None,
                 volume_ratio=q.volume_ratio if q else (score if field == "volume_ratio" else None),
+                net_mf_amount=q.net_mf_amount if q else None,
                 limit_times=q.limit_times if q else (score if field == "limit_times" else None),
+                trade_time=q.trade_time if q else None,
+                industry=q.industry if q else None,
+                total_mv=q.total_mv if q else None,
+                circ_mv=q.circ_mv if q else None,
             )
         )
     return out

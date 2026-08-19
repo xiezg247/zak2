@@ -13,8 +13,6 @@ from app.schemas.market import (
     EmotionThresholdsPut,
     LimitListOut,
     MarketOverview,
-    PlanDraftOut,
-    PlanDraftRequest,
     RadarCardOut,
     RadarHorizonOut,
     RadarPredictOut,
@@ -30,7 +28,6 @@ from app.services.emotion import emotion_thresholds as emotion_thresholds_svc
 from app.services.market import overview as market_svc
 from app.services.market import sector as sector_svc
 from app.services.market.limit_list_store import list_limit_list
-from app.services.plan import plan_draft as plan_draft_svc
 from app.services.radar import cards as radar_svc
 from app.services.radar import radar_horizon as radar_horizon_svc
 from app.services.radar import radar_predict as radar_predict_svc
@@ -219,21 +216,6 @@ def get_radar_predict(
 ) -> ApiResponse[RadarPredictOut]:
     _ = user
     return ApiResponse(data=radar_predict_svc.load_predict(db))
-
-
-@router.post("/radar/plan-draft", response_model=ApiResponse[PlanDraftOut])
-def post_radar_plan_draft(
-    body: PlanDraftRequest,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> ApiResponse[PlanDraftOut]:
-    result = plan_draft_svc.create_resonance_plan_draft(
-        db,
-        str(user.id),
-        top_n=body.top_n,
-        trade_date=body.trade_date,
-    )
-    return ApiResponse(data=result)
 
 
 @router.get("/market/limit-list", response_model=ApiResponse[LimitListOut])

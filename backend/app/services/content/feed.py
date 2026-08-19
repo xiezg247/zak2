@@ -13,12 +13,11 @@ from sqlalchemy.orm import Session
 from app.core.settings import get_settings
 from app.integrations.bilibili.client import BilibiliApiError, BilibiliClient
 from app.integrations.bilibili.user import get_user_profile, search_users
-from app.models.content import FeedItem, FeedItemRead, FeedSubscription, TradingPlan, TradingPlanSymbol
+from app.models.content import FeedItem, FeedItemRead, FeedSubscription
 from app.repositories.pagination import Page, paginate
 from app.schemas.common import OkOut
-from app.schemas.content import FeedItemOut, FeedSubOut, PlanOut
+from app.schemas.content import FeedItemOut, FeedSubOut
 from app.services.ops.sync_bilibili_feed import SOURCE_TYPE, sync_one_subscription
-from app.services.symbols import to_vt_symbol
 
 logger = logging.getLogger(__name__)
 
@@ -272,47 +271,3 @@ def mark_feed_read(db: Session, user_id: str, item_id: str) -> OkOut:
         db.add(FeedItemRead(user_id=user_id, item_id=item_id, read_at=_now()))
         db.commit()
     return OkOut()
-
-
-def plan_to_out(plan: TradingPlan, symbols: list[TradingPlanSymbol]) -> PlanOut:
-    return PlanOut(
-        id=plan.id,
-        trade_date=plan.trade_date,
-        emotion_expected=plan.emotion_expected or "",
-        max_position_pct=float(plan.max_position_pct or 0),
-        notes=plan.notes or "",
-        status=plan.status,
-        symbols=[
-            {
-                "symbol": s.symbol,
-                "exchange": s.exchange,
-                "vt_symbol": to_vt_symbol(s.symbol, s.exchange),
-                "allowed_modes": s.allowed_modes,
-                "entry_conditions": s.entry_conditions,
-                "exit_conditions": s.exit_conditions,
-            }
-            for s in symbols
-        ],
-    )
-
-
-def list_plans(db: Session, user_id: str, *, limit: int = 20) -> list[PlanOut]:
-    plans = list(
-        db.scalars(
-            select(TradingPlan)
-            .where(TradingPlan.user_id == user_id)
-            .order_by(desc(TradingPlan.trade_date), desc(TradingPlan.updated_at))
-            .limit(limit)
-        )
-    )
-    out: list[PlanOut] = []
-    for p in plans:
-        syms = list(
-            db.scalars(
-                select(TradingPlanSymbol)
-                .where(TradingPlanSymbol.plan_id == p.id, TradingPlanSymbol.user_id == user_id)
-                .order_by(TradingPlanSymbol.sort_order)
-            )
-        )
-        out.append(plan_to_out(p, syms))
-    return out

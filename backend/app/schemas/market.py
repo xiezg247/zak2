@@ -104,10 +104,22 @@ class RankRow(BaseModel):
     score: float
     last_price: float | None = None
     change_pct: float | None = None
+    change_amount: float | None = None
+    prev_close: float | None = None
+    open_price: float | None = None
+    high_price: float | None = None
+    low_price: float | None = None
     turnover_rate: float | None = None
     amount: float | None = None
+    volume: float | None = None
+    amplitude: float | None = None
     volume_ratio: float | None = None
+    net_mf_amount: float | None = None
     limit_times: float | None = None
+    trade_time: str | None = None
+    industry: str | None = None
+    total_mv: float | None = None
+    circ_mv: float | None = None
 
 
 class SectorFlowRow(BaseModel):
@@ -239,23 +251,3 @@ class LimitListOut(BaseModel):
     trade_date: str = ""
     total: int = 0
     rows: list[LimitListRow] = Field(default_factory=list)
-
-
-class PlanDraftRequest(BaseModel):
-    top_n: int | None = None
-    trade_date: str | None = None
-
-
-class PlanDraftSymbol(BaseModel):
-    vt_symbol: str
-    name: str = ""
-
-
-class PlanDraftOut(BaseModel):
-    plan_id: str
-    trade_date: str
-    status: str
-    emotion_expected: str
-    symbol_count: int
-    symbols: list[PlanDraftSymbol] = Field(default_factory=list)
-    replaced: bool

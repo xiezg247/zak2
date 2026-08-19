@@ -11,7 +11,6 @@ from app.models.content import DisciplineDaily, PlaybookSection
 from app.schemas.content import DisciplineCheckOut, PlaybookSectionOut, PlaybookSectionUpdate
 
 DEFAULT_DISCIPLINE_CHECKS: tuple[tuple[str, str], ...] = (
-    ("no_off_plan", "不在计划外开新仓"),
     ("morning_exit", "11:30 前评估上午必卖"),
     ("recession_flat", "退潮期不新开仓"),
     ("stop_first", "止损铁则优先于「再等等」"),

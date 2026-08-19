@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     quote_collect_interval_sec: int = 30
     quote_provider: str = "tickflow"
     tickflow_api_key: str = ""
+    tickflow_max_retries: int = 3
+    tickflow_timeout_s: int = 60
+    quote_fetch_batch_delay_ms: int = 600
 
     @model_validator(mode="after")
     def _validate_production_secret(self) -> Settings:

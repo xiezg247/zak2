@@ -19,10 +19,6 @@ from app.schemas.content import (
     NoteMemoOut,
     NoteMemoUpdate,
     NoteSymbolOut,
-    PlanDraftAppendIn,
-    PlanDraftAppendOut,
-    PlanOut,
-    PlanUpdate,
     PlaybookSectionOut,
     PlaybookSectionUpdate,
     TeamReportListItem,
@@ -30,8 +26,6 @@ from app.schemas.content import (
 )
 from app.services.content import feed as feed_svc
 from app.services.content import notes as notes_svc
-from app.services.plan import plan_draft as plan_draft_svc
-from app.services.plan import plan_manage as plan_manage_svc
 from app.services.plan import playbook as playbook_svc
 from app.services.team import team_reports
 
@@ -75,64 +69,6 @@ def put_discipline(
     db: Session = Depends(get_db),
 ) -> ApiResponse[DisciplineCheckOut]:
     return ApiResponse(data=playbook_svc.set_discipline(db, str(user.id), check_id, body.checked, trade_date))
-
-
-@router.get("/playbook/plans", response_model=ApiResponse[list[PlanOut]])
-def get_plans(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ApiResponse[list[PlanOut]]:
-    return ApiResponse(data=feed_svc.list_plans(db, str(user.id)))
-
-
-@router.post("/playbook/plans/draft-append", response_model=ApiResponse[PlanDraftAppendOut])
-def post_draft_append(
-    body: PlanDraftAppendIn,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> ApiResponse[PlanDraftAppendOut]:
-    result = plan_draft_svc.append_symbol_to_draft(
-        db,
-        str(user.id),
-        vt_symbol=body.vt_symbol,
-        name=body.name,
-        source=body.source,
-    )
-    return ApiResponse(data=result)
-
-
-@router.patch("/playbook/plans/{plan_id}", response_model=ApiResponse[PlanOut])
-def patch_plan(
-    plan_id: str,
-    body: PlanUpdate,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> ApiResponse[PlanOut]:
-    return ApiResponse(
-        data=plan_manage_svc.update_plan(
-            db,
-            str(user.id),
-            plan_id,
-            notes=body.notes,
-            max_position_pct=body.max_position_pct,
-            symbols=body.symbols,
-        )
-    )
-
-
-@router.post("/playbook/plans/{plan_id}/activate", response_model=ApiResponse[PlanOut])
-def post_activate_plan(
-    plan_id: str,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> ApiResponse[PlanOut]:
-    return ApiResponse(data=plan_manage_svc.activate_plan(db, str(user.id), plan_id))
-
-
-@router.post("/playbook/plans/{plan_id}/abandon", response_model=ApiResponse[PlanOut])
-def post_abandon_plan(
-    plan_id: str,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> ApiResponse[PlanOut]:
-    return ApiResponse(data=plan_manage_svc.abandon_plan(db, str(user.id), plan_id))
 
 
 @router.get("/notes/symbols", response_model=ApiResponse[list[NoteSymbolOut]])

@@ -124,13 +124,6 @@ def test_compute_actual_position_pct() -> None:
     assert tr.compute_actual_position_pct(12000, 0) is None
 
 
-def test_normalize_plan_max_pct() -> None:
-    assert tr.normalize_plan_max_pct(0.3) == pytest.approx(0.3)
-    assert tr.normalize_plan_max_pct(30) == pytest.approx(0.3)
-    assert tr.normalize_plan_max_pct(0) is None
-    assert tr.normalize_plan_max_pct(-1) is None
-
-
 def test_get_trading_risk_api_defaults() -> None:
     db = MagicMock()
     db.execute.return_value.scalar.return_value = None

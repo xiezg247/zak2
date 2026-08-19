@@ -17,8 +17,6 @@ APP_TABLES = (
     "stock_note_memos",
     "stock_note_entries",
     "stock_analysis_reports",
-    "trading_plans",
-    "trading_plan_symbols",
     "trading_playbook_discipline_daily",
     "screener_schemes",
     "screener_recipes",

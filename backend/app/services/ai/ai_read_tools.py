@@ -173,16 +173,4 @@ def get_trading_risk(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     board = strategy_board.load_strategy_board(db, user_id, config_key=str(config_key) if config_key else None)
     prefs_d = prefs.model_dump() if isinstance(prefs, BaseModel) else prefs
     raw_summary = dict(board.get("risk_summary") or {})
-    plan_symbols = []
-    for row in list(raw_summary.get("plan_symbols") or []):
-        if isinstance(row, dict):
-            plan_symbols.append(
-                {
-                    "vt_symbol": row.get("vt_symbol"),
-                    "status": row.get("status"),
-                }
-            )
-        else:
-            plan_symbols.append(row)
-    raw_summary["plan_symbols"] = plan_symbols
     return {"prefs": prefs_d, "risk_summary": raw_summary}

@@ -124,34 +124,3 @@ class FeedItemOut(BaseModel):
     author_name: str
     published_at: str
     is_read: bool
-
-
-class PlanOut(BaseModel):
-    id: str
-    trade_date: str
-    emotion_expected: str
-    max_position_pct: float
-    notes: str
-    status: str
-    symbols: list[dict] = Field(default_factory=list)
-
-
-class PlanUpdate(BaseModel):
-    notes: str | None = None
-    max_position_pct: float | None = None
-    symbols: list[str] | None = None
-
-
-class PlanDraftAppendIn(BaseModel):
-    vt_symbol: str
-    name: str | None = None
-    source: str | None = None
-
-
-class PlanDraftAppendOut(BaseModel):
-    added: bool
-    plan_id: str
-    trade_date: str
-    symbol_count: int
-    status: str = "draft"
-    message: str = ""

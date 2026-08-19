@@ -17,6 +17,7 @@ const router = createRouter({
       name: 'watchlist',
       component: () => import('../views/WatchlistView.vue'),
     },
+    { path: '/board', name: 'board', component: () => import('../views/BoardView.vue') },
     { path: '/market', name: 'market', component: () => import('../views/MarketView.vue') },
     { path: '/sectors', name: 'sectors', component: () => import('../views/SectorView.vue') },
     { path: '/radar', name: 'radar', component: () => import('../views/RadarView.vue') },

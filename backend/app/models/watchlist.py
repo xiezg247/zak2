@@ -30,7 +30,6 @@ class WatchlistPosition(Base):
     buy_date: Mapped[str] = mapped_column(Text, nullable=False)
     notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     source: Mapped[str] = mapped_column(Text, nullable=False, default="manual")
-    plan_pct: Mapped[float | None] = mapped_column(Float)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
     updated_at: Mapped[str] = mapped_column(Text, nullable=False)

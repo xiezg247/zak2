@@ -256,7 +256,6 @@ def post_position(
         volume=body.volume,
         buy_date=body.buy_date,
         notes=body.notes,
-        plan_pct=body.plan_pct,
     )
     return ApiResponse(data=row)
 
@@ -276,7 +275,6 @@ def put_position(
         volume=body.volume,
         buy_date=body.buy_date,
         notes=body.notes,
-        plan_pct=body.plan_pct,
     )
     return ApiResponse(data=row)
 

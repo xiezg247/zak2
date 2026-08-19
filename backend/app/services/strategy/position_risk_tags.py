@@ -4,7 +4,7 @@ INTRADAY_DROP_PCT = -3.0
 INTRADAY_SURGE_PCT = 5.0
 VOLUME_RATIO_ACTIVE = 1.2
 VOLUME_CHANGE_ABS_MIN = 1.5
-TAG_ORDER: tuple[str, ...] = ("卖出信号", "计划外", "急跌", "浮亏", "放量", "大涨", "浮盈")
+TAG_ORDER: tuple[str, ...] = ("卖出信号", "急跌", "浮亏", "放量", "大涨", "浮盈")
 
 
 def compute_position_risk_tags(
@@ -13,13 +13,10 @@ def compute_position_risk_tags(
     unrealized_pnl_pct: float | None,
     change_pct: float | None,
     volume_ratio: float | None,
-    off_plan: bool = False,
 ) -> list[str]:
     hit: set[str] = set()
     if (exit_signal or "").strip().lower() == "sell":
         hit.add("卖出信号")
-    if off_plan:
-        hit.add("计划外")
     if change_pct is not None:
         cp = float(change_pct)
         if cp <= INTRADAY_DROP_PCT:

@@ -143,7 +143,12 @@ def run_forever() -> None:
     name = (settings.quote_provider or "tickflow").strip().lower()
     if name != "tickflow":
         raise ValueError(f"未知行情 Provider：{settings.quote_provider}")
-    provider: QuoteProvider = TickFlowProvider(api_key=settings.tickflow_api_key)
+    provider: QuoteProvider = TickFlowProvider(
+        api_key=settings.tickflow_api_key,
+        max_retries=settings.tickflow_max_retries,
+        timeout=settings.tickflow_timeout_s,
+        batch_delay_ms=settings.quote_fetch_batch_delay_ms,
+    )
 
     backoff = interval
     force_event = threading.Event()

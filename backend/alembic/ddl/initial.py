@@ -53,7 +53,6 @@ APP_TABLES = (
         buy_date TEXT NOT NULL,
         notes TEXT NOT NULL DEFAULT '',
         source TEXT NOT NULL DEFAULT 'manual',
-        plan_pct DOUBLE PRECISION,
         sort_order INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -298,32 +297,6 @@ APP_TABLES = (
     )
     """,
     "CREATE INDEX IF NOT EXISTS idx_notify_delivery_log_created ON app.notify_delivery_log(created_at DESC)",
-    """
-    CREATE TABLE IF NOT EXISTS app.trading_plans (
-        id TEXT PRIMARY KEY,
-        trade_date TEXT NOT NULL,
-        emotion_expected TEXT NOT NULL DEFAULT '',
-        max_position_pct DOUBLE PRECISION NOT NULL DEFAULT 0,
-        notes TEXT NOT NULL DEFAULT '',
-        status TEXT NOT NULL DEFAULT 'draft',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    )
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_trading_plans_trade_date ON app.trading_plans(trade_date DESC, status)",
-    """
-    CREATE TABLE IF NOT EXISTS app.trading_plan_symbols (
-        plan_id TEXT NOT NULL,
-        symbol TEXT NOT NULL,
-        exchange TEXT NOT NULL,
-        allowed_modes TEXT NOT NULL DEFAULT '',
-        entry_conditions TEXT NOT NULL DEFAULT '',
-        exit_conditions TEXT NOT NULL DEFAULT '',
-        sort_order INTEGER NOT NULL DEFAULT 0,
-        PRIMARY KEY (plan_id, symbol, exchange),
-        FOREIGN KEY (plan_id) REFERENCES app.trading_plans(id) ON DELETE CASCADE
-    )
-    """,
     """
     CREATE TABLE IF NOT EXISTS app.emotion_limit_ladder_daily (
         trade_date TEXT PRIMARY KEY,

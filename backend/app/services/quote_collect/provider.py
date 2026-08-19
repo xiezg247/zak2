@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Protocol
 
@@ -10,7 +12,9 @@ from app.integrations.tickflow.client import get_tickflow_client
 from app.services.quote_collect.models import QuoteSnapshot
 
 QUOTE_BATCH_SIZE = 80
-DEFAULT_QUOTE_FETCH_MAX_WORKERS = 4
+DEFAULT_QUOTE_FETCH_MAX_WORKERS = 1
+_RATE_LIMIT_MAX_ATTEMPTS = 3
+_RATE_LIMIT_RE = re.compile(r"请\s*(\d+(?:\.\d+)?)\s*ms")
 
 
 class QuoteProvider(Protocol):
@@ -50,6 +54,13 @@ def parse_tickflow_row(row: dict[str, Any]) -> QuoteSnapshot:
         volume=_f(row, "volume"),
         amount=_f(row, "amount"),
         amplitude=amplitude,
+        volume_ratio=_f(row, "ext.volume_ratio", "volume_ratio"),
+        net_mf_amount=_f(row, "ext.net_mf_amount", "net_mf_amount"),
+        limit_times=_f(row, "ext.limit_times", "limit_times"),
+        trade_time=str(row.get("trade_time", "") or row.get("ext.trade_time", "") or ""),
+        industry=str(row.get("ext.industry", "") or row.get("industry", "") or ""),
+        total_mv=_f(row, "ext.total_mv", "total_mv"),
+        circ_mv=_f(row, "ext.circ_mv", "circ_mv"),
     )
 
 
@@ -88,11 +99,34 @@ def quote_fetch_max_workers(*, batch_count: int) -> int:
     return min(configured, max(1, batch_count))
 
 
+def _rate_limit_wait(exc: BaseException) -> float | None:
+    """解析 TickFlow 429 提示中的服务端建议等待时长（如「请 44ms 后重试」）。
+
+    返回秒数并留 1.5 倍余量；无法解析时返回 None（交由调用方按退避处理）。
+    """
+    if type(exc).__name__ != "RateLimitError":
+        return None
+    m = _RATE_LIMIT_RE.search(str(exc))
+    if not m:
+        return None
+    return min(5.0, float(m.group(1)) / 1000.0 * 1.5 + 0.1)
+
+
 class TickFlowProvider:
     name = "tickflow"
 
-    def __init__(self, *, api_key: str = "") -> None:
+    def __init__(
+        self,
+        *,
+        api_key: str = "",
+        max_retries: int | None = None,
+        timeout: float | None = None,
+        batch_delay_ms: int = 0,
+    ) -> None:
         self._api_key = api_key
+        self._max_retries = max_retries
+        self._timeout = timeout
+        self._batch_delay_s = max(0, int(batch_delay_ms)) / 1000.0
 
     def fetch(self, symbols: list[str]) -> dict[str, QuoteSnapshot]:
         if not symbols:
@@ -102,9 +136,26 @@ class TickFlowProvider:
         result: dict[str, QuoteSnapshot] = {}
 
         def _one(batch: list[str]) -> dict[str, QuoteSnapshot]:
-            client = get_tickflow_client(api_key=self._api_key)
-            df = client.quotes.get(symbols=batch, as_dataframe=True)
-            return _quotes_from_dataframe(df)
+            if self._batch_delay_s > 0:
+                time.sleep(self._batch_delay_s)
+            client = get_tickflow_client(
+                api_key=self._api_key,
+                max_retries=self._max_retries,
+                timeout=self._timeout,
+            )
+            last_error: BaseException | None = None
+            for attempt in range(_RATE_LIMIT_MAX_ATTEMPTS):
+                try:
+                    df = client.quotes.get(symbols=batch, as_dataframe=True)
+                    return _quotes_from_dataframe(df)
+                except BaseException as exc:  # noqa: BLE001 — SDK 异常兜底后按限流补偿
+                    last_error = exc
+                    wait = _rate_limit_wait(exc)
+                    if wait is None or attempt + 1 >= _RATE_LIMIT_MAX_ATTEMPTS:
+                        raise
+                    time.sleep(wait)
+            assert last_error is not None
+            raise last_error
 
         if workers <= 1 or len(batches) <= 1:
             for batch in batches:

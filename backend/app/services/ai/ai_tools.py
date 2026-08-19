@@ -294,14 +294,6 @@ def _upsert_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
     if not buy_date:
         return {"error": "需要 buy_date（YYYY-MM-DD）"}
     notes_text = str(args.get("notes") or "")
-    plan_pct = args.get("plan_pct")
-    if plan_pct is not None and plan_pct != "":
-        try:
-            plan_pct = float(plan_pct)
-        except (TypeError, ValueError):
-            return {"error": "plan_pct 无效"}
-    else:
-        plan_pct = None
     try:
         symbol, exchange = watchlist_repo.resolve_symbol_pair(raw, args.get("exchange"))
         existing = positions_repo.PositionRepository(db, user_id).get_position(symbol, exchange)
@@ -313,7 +305,6 @@ def _upsert_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
                 volume=volume,
                 buy_date=buy_date,
                 notes=notes_text,
-                plan_pct=plan_pct,
             )
             action = "updated"
         else:
@@ -324,7 +315,6 @@ def _upsert_position(db: Session, user_id: str, args: dict[str, Any]) -> Any:
                 volume=volume,
                 buy_date=buy_date,
                 notes=notes_text,
-                plan_pct=plan_pct,
             )
             action = "created"
     except Exception as exc:
@@ -480,7 +470,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "get_trading_risk",
-            "description": "获取交易风控偏好与仓位/计划外摘要（risk_summary）",
+            "description": "获取交易风控偏好与仓位摘要（risk_summary）",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -704,7 +694,6 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "volume": {"type": "integer", "description": "100 股整手"},
                     "buy_date": {"type": "string", "description": "YYYY-MM-DD"},
                     "notes": {"type": "string"},
-                    "plan_pct": {"type": "number"},
                 },
                 "required": ["symbol", "cost_price", "volume", "buy_date"],
             },

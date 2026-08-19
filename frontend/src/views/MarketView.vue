@@ -103,7 +103,14 @@ const fields = [
 const fieldMeta = computed(() => fields.find((f) => f.id === field.value) || fields[0])
 
 type SortKey =
-  'last_price' | 'change_pct' | 'turnover_rate' | 'amount' | 'volume_ratio' | 'limit_times' | null
+  | 'last_price'
+  | 'change_pct'
+  | 'turnover_rate'
+  | 'amount'
+  | 'volume_ratio'
+  | 'limit_times'
+  | 'amplitude'
+  | null
 
 const listFilter = ref('')
 const sortKey = ref<SortKey>(null)
@@ -206,6 +213,37 @@ function scoreLabel(r: RankRow): string {
   if (id === 'volume_ratio') return r.volume_ratio != null ? r.volume_ratio.toFixed(2) : '—'
   if (id === 'limit_times') return r.limit_times != null ? String(r.limit_times) : '—'
   return r.score.toFixed(2)
+}
+
+function fmtNum(v: number | null | undefined, digits = 2): string {
+  if (v == null || Number.isNaN(v)) return '—'
+  return v.toFixed(digits)
+}
+
+function fmtAmount(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v) || v <= 0) return '—'
+  if (v >= 1e8) return (v / 1e8).toFixed(2) + '亿'
+  if (v >= 1e4) return (v / 1e4).toFixed(1) + '万'
+  return v.toFixed(0)
+}
+
+function fmtSigned(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v)) return '—'
+  return (v > 0 ? '+' : '') + v.toFixed(2)
+}
+
+function fmtMv(v: number | null | undefined): string {
+  // 万元为单位（与 Tushare daily_basic 一致）
+  if (v == null || Number.isNaN(v) || v <= 0) return '—'
+  if (v >= 1e8) return (v / 1e8).toFixed(2) + '万亿'
+  if (v >= 1e4) return (v / 1e4).toFixed(2) + '亿'
+  return v.toFixed(0) + '万'
+}
+
+function fmtTime(raw: string | null | undefined): string {
+  if (!raw) return '—'
+  // TickFlow trade_time 形如 "HH:MM:SS"，取时分
+  return raw.slice(0, 5)
 }
 
 function applyThresholds(t: EmotionThresholds) {
@@ -562,6 +600,9 @@ onUnmounted(() => {
                   {{ fieldMeta.col }}{{ sortMark(scoreSortKey) }}
                 </th>
                 <th v-else>{{ fieldMeta.col }}</th>
+                <th>时间</th>
+                <th class="sortable" @click="toggleSort('amplitude')">振幅%{{ sortMark('amplitude') }}</th>
+                <th class="sortable" @click="toggleSort('amount')">成交额{{ sortMark('amount') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -581,9 +622,12 @@ onUnmounted(() => {
                   {{ r.change_pct != null ? r.change_pct.toFixed(2) : '—' }}
                 </td>
                 <td>{{ scoreLabel(r) }}</td>
+                <td class="mono muted">{{ fmtTime(r.trade_time) }}</td>
+                <td>{{ fmtNum(r.amplitude, 2) }}</td>
+                <td>{{ fmtAmount(r.amount) }}</td>
               </tr>
               <tr v-if="!ranks.length">
-                <td colspan="6" class="empty">
+                <td colspan="9" class="empty">
                   暂无排行（需 Redis 行情快照）
                   <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
                 </td>
@@ -620,6 +664,22 @@ onUnmounted(() => {
           <div class="detail-actions">
             <button type="button" class="primary" @click="addSelected">加自选</button>
             <button type="button" class="ghost" @click="openInWatchlist">在自选打开</button>
+          </div>
+          <div v-if="selected" class="quote-grid">
+            <div class="q-item"><span class="q-k">今开</span><span class="q-v mono">{{ fmtNum(selected.open_price) }}</span></div>
+            <div class="q-item"><span class="q-k">最高</span><span class="q-v mono up">{{ fmtNum(selected.high_price) }}</span></div>
+            <div class="q-item"><span class="q-k">最低</span><span class="q-v mono down">{{ fmtNum(selected.low_price) }}</span></div>
+            <div class="q-item"><span class="q-k">昨收</span><span class="q-v mono">{{ fmtNum(selected.prev_close) }}</span></div>
+            <div class="q-item"><span class="q-k">涨跌</span><span class="q-v mono">{{ fmtSigned(selected.change_amount) }}</span></div>
+            <div class="q-item"><span class="q-k">振幅</span><span class="q-v mono">{{ fmtNum(selected.amplitude) }}%</span></div>
+            <div class="q-item"><span class="q-k">量比</span><span class="q-v mono">{{ fmtNum(selected.volume_ratio) }}</span></div>
+            <div class="q-item"><span class="q-k">换手</span><span class="q-v mono">{{ fmtNum(selected.turnover_rate) }}%</span></div>
+            <div class="q-item"><span class="q-k">净流入</span><span class="q-v mono">{{ fmtAmount(selected.net_mf_amount) }}</span></div>
+            <div class="q-item"><span class="q-k">成交额</span><span class="q-v mono">{{ fmtAmount(selected.amount) }}</span></div>
+            <div class="q-item"><span class="q-k">总市值</span><span class="q-v mono">{{ fmtMv(selected.total_mv) }}</span></div>
+            <div class="q-item"><span class="q-k">流通值</span><span class="q-v mono">{{ fmtMv(selected.circ_mv) }}</span></div>
+            <div v-if="selected.industry" class="q-item"><span class="q-k">行业</span><span class="q-v">{{ selected.industry }}</span></div>
+            <div class="q-item"><span class="q-k">时间</span><span class="q-v mono">{{ fmtTime(selected.trade_time) }}</span></div>
           </div>
           <div class="bar-controls">
             <div class="limits">
@@ -986,6 +1046,40 @@ onUnmounted(() => {
 .detail-actions {
   display: flex;
   gap: 8px;
+}
+.quote-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 0.75rem;
+  background: var(--surface-muted);
+}
+.q-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.q-k {
+  color: var(--muted);
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+.q-v {
+  font-size: 0.82rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.q-v.up {
+  color: var(--danger);
+}
+.q-v.down {
+  color: var(--ok);
 }
 .bar-controls {
   display: flex;

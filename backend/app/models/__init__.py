@@ -9,8 +9,6 @@ from app.models.content import (
     PlaybookSection,
     StockNoteEntry,
     StockNoteMemo,
-    TradingPlan,
-    TradingPlanSymbol,
 )
 from app.models.market import (
     EmotionLimitLadderDaily,
@@ -52,6 +50,4 @@ __all__ = [
     "FeedSubscription",
     "FeedItem",
     "FeedItemRead",
-    "TradingPlan",
-    "TradingPlanSymbol",
 ]

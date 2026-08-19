@@ -2,31 +2,20 @@
 import { computed, onMounted, ref } from 'vue'
 import AppShell from '../components/AppShell.vue'
 import MarkdownView from '../components/MarkdownView.vue'
-import { confirmDialog } from '../lib/dialog'
-import { contentApi, type DisciplineCheck, type Plan, type PlaybookSection } from '../api/content'
+import { contentApi, type DisciplineCheck, type PlaybookSection } from '../api/content'
 
 const sections = ref<PlaybookSection[]>([])
 const activeId = ref('')
 const checks = ref<DisciplineCheck[]>([])
-const plans = ref<Plan[]>([])
 const editing = ref(false)
 const draft = ref('')
 const error = ref('')
 const saving = ref(false)
 const msg = ref('')
-const historyOpen = ref(false)
-const editingId = ref('')
-const editNotes = ref('')
-const editMaxPct = ref(30)
-const editSymbols = ref<string[]>([])
-const symbolDraft = ref('')
-const acting = ref(false)
 
 const active = computed(
   () => sections.value.find((s) => s.section_id === activeId.value) || sections.value[0],
 )
-const livePlans = computed(() => plans.value.filter((p) => p.status !== 'abandoned'))
-const historyPlans = computed(() => plans.value.filter((p) => p.status === 'abandoned'))
 const doneCount = computed(() => checks.value.filter((c) => c.checked).length)
 const donePct = computed(() =>
   checks.value.length ? Math.round((doneCount.value / checks.value.length) * 100) : 0,
@@ -35,23 +24,14 @@ const donePct = computed(() =>
 async function load() {
   error.value = ''
   try {
-    const [secs, disc, pls] = await Promise.all([
-      contentApi.sections(),
-      contentApi.discipline(),
-      contentApi.plans(),
-    ])
+    const [secs, disc] = await Promise.all([contentApi.sections(), contentApi.discipline()])
     sections.value = secs
     checks.value = disc
-    plans.value = pls
     if (!activeId.value && secs.length) activeId.value = secs[0].section_id
     draft.value = active.value?.body_md || ''
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败'
   }
-}
-
-async function reloadPlans() {
-  plans.value = await contentApi.plans()
 }
 
 function selectSection(id: string) {
@@ -85,105 +65,13 @@ async function saveSection() {
   }
 }
 
-function startEdit(p: Plan) {
-  editingId.value = p.id
-  editNotes.value = p.notes || ''
-  editMaxPct.value = Math.round((p.max_position_pct || 0) * 100)
-  editSymbols.value = p.symbols.map((s) => s.vt_symbol)
-  symbolDraft.value = ''
-  msg.value = ''
-}
-
-function cancelEdit() {
-  editingId.value = ''
-}
-
-function addSymbol() {
-  const t = symbolDraft.value.trim()
-  if (!t) return
-  if (editSymbols.value.length >= 20) {
-    error.value = '标的最多 20 只'
-    return
-  }
-  if (!editSymbols.value.includes(t)) editSymbols.value = [...editSymbols.value, t]
-  symbolDraft.value = ''
-}
-
-function removeSymbol(vt: string) {
-  editSymbols.value = editSymbols.value.filter((x) => x !== vt)
-}
-
-async function saveEdit(id: string) {
-  acting.value = true
-  error.value = ''
-  msg.value = ''
-  try {
-    const plan = plans.value.find((p) => p.id === id)
-    const current = plan?.symbols.map((s) => s.vt_symbol) ?? []
-    const next = [...editSymbols.value]
-    const symbolsChanged = current.length !== next.length || current.some((vt, i) => vt !== next[i])
-    const pct = Math.min(100, Math.max(1, Number(editMaxPct.value) || 1))
-    editMaxPct.value = pct
-    const body: { notes: string; max_position_pct: number; symbols?: string[] } = {
-      notes: editNotes.value,
-      max_position_pct: pct / 100,
-    }
-    if (symbolsChanged) body.symbols = next
-    await contentApi.patchPlan(id, body)
-    await reloadPlans()
-    editingId.value = ''
-    msg.value = '已保存'
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '保存失败'
-  } finally {
-    acting.value = false
-  }
-}
-
-async function activate(id: string) {
-  acting.value = true
-  error.value = ''
-  msg.value = ''
-  try {
-    await contentApi.activatePlan(id)
-    await reloadPlans()
-    msg.value = '已激活，回自选可看计划外'
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '激活失败'
-  } finally {
-    acting.value = false
-  }
-}
-
-async function abandon(id: string) {
-  const ok = await confirmDialog({
-    title: '废弃计划',
-    message: '确认废弃该计划？',
-    danger: true,
-  })
-  if (!ok) return
-  acting.value = true
-  error.value = ''
-  msg.value = ''
-  try {
-    await contentApi.abandonPlan(id)
-    await reloadPlans()
-    msg.value = '已废弃'
-    if (editingId.value === id) editingId.value = ''
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '废弃失败'
-  } finally {
-    acting.value = false
-  }
-}
-
 onMounted(() => {
   void load()
 })
 </script>
 
 <template>
-  <AppShell title="守则" subtitle="Playbook · 纪律 · 计划" active="playbook">
+  <AppShell title="守则" subtitle="Playbook · 纪律" active="playbook">
     <div class="page">
       <p v-if="error" class="banner err">{{ error }}</p>
       <p v-if="msg" class="banner ok">{{ msg }}</p>
@@ -243,124 +131,6 @@ onMounted(() => {
           <p v-else class="empty muted">暂无守则内容</p>
         </article>
       </div>
-
-      <section v-if="livePlans.length || historyPlans.length" class="plans">
-        <div class="plans-head">
-          <h2>交易计划</h2>
-          <span class="plans-meta muted">
-            {{ livePlans.length }} 条进行中{{
-              historyPlans.length ? ` · 历史 ${historyPlans.length}` : ''
-            }}
-          </span>
-        </div>
-
-        <div class="plan-grid">
-          <div
-            v-for="p in livePlans"
-            :key="p.id"
-            class="plan"
-            :class="{ active: p.status === 'active' }"
-          >
-            <div class="plan-head">
-              <div class="plan-title">
-                <strong class="mono">{{ p.trade_date }}</strong>
-                <span class="badge" :data-status="p.status">{{ p.status }}</span>
-              </div>
-              <span class="pct">
-                仓位上限 <b class="mono">{{ (p.max_position_pct * 100).toFixed(0) }}%</b>
-              </span>
-            </div>
-            <p v-if="p.status === 'active'" class="tip">自选「计划外」以此为准</p>
-
-            <template v-if="editingId === p.id">
-              <label class="field">
-                仓位上限 %
-                <input v-model.number="editMaxPct" type="number" min="1" max="100" step="1" />
-              </label>
-              <label class="field">
-                备注
-                <input v-model="editNotes" type="text" />
-              </label>
-              <div v-if="editSymbols.length" class="syms">
-                <span v-for="vt in editSymbols" :key="vt" class="chip">
-                  <span class="mono">{{ vt }}</span>
-                  <button type="button" class="chip-x" @click="removeSymbol(vt)">×</button>
-                </span>
-              </div>
-              <div class="add-row">
-                <input
-                  v-model="symbolDraft"
-                  placeholder="代码 如 600519.SSE"
-                  @keydown.enter.prevent="addSymbol"
-                />
-                <button type="button" class="ghost" @click="addSymbol">添加</button>
-              </div>
-              <div class="actions">
-                <button type="button" class="primary" :disabled="acting" @click="saveEdit(p.id)">
-                  保存
-                </button>
-                <button type="button" class="ghost" :disabled="acting" @click="cancelEdit">
-                  取消
-                </button>
-              </div>
-            </template>
-
-            <template v-else>
-              <div v-if="p.symbols.length" class="syms">
-                <span v-for="s in p.symbols" :key="s.vt_symbol" class="chip mono">{{
-                  s.vt_symbol
-                }}</span>
-              </div>
-              <p v-else class="empty-hint muted">暂无标的</p>
-              <p v-if="p.notes" class="notes">{{ p.notes }}</p>
-              <div class="actions">
-                <button
-                  v-if="p.status === 'draft'"
-                  type="button"
-                  class="primary"
-                  :disabled="acting"
-                  @click="activate(p.id)"
-                >
-                  激活
-                </button>
-                <button type="button" class="ghost" :disabled="acting" @click="startEdit(p)">
-                  编辑
-                </button>
-                <button
-                  type="button"
-                  class="ghost danger"
-                  :disabled="acting"
-                  @click="abandon(p.id)"
-                >
-                  废弃
-                </button>
-              </div>
-            </template>
-          </div>
-        </div>
-
-        <div v-if="historyPlans.length" class="history">
-          <button type="button" class="ghost" @click="historyOpen = !historyOpen">
-            {{ historyOpen ? '收起历史' : `历史（${historyPlans.length}）` }}
-          </button>
-          <template v-if="historyOpen">
-            <div v-for="p in historyPlans" :key="p.id" class="plan history-item">
-              <div class="plan-head">
-                <div class="plan-title">
-                  <strong class="mono">{{ p.trade_date }}</strong>
-                  <span class="badge" data-status="abandoned">abandoned</span>
-                </div>
-              </div>
-              <div v-if="p.symbols.length" class="syms">
-                <span v-for="s in p.symbols" :key="s.vt_symbol" class="chip mono">{{
-                  s.vt_symbol
-                }}</span>
-              </div>
-              <p v-if="p.notes" class="notes muted">{{ p.notes }}</p>
-            </div>
-          </template>
-        </div>
-      </section>
     </div>
   </AppShell>
 </template>
@@ -583,203 +353,6 @@ textarea:focus {
   outline: none;
 }
 
-/* ── 交易计划 ─────────────────────────── */
-.plans-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 2px;
-}
-.plans-head h2 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-.plans-meta {
-  font-size: 0.8rem;
-}
-.plan-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.plan {
-  position: relative;
-  border: 1px solid var(--line);
-  border-radius: 0.875rem;
-  padding: 14px 16px;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-  display: grid;
-  gap: 10px;
-}
-.plan.active {
-  border-color: var(--brand-soft);
-}
-.plan.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 14px;
-  bottom: 14px;
-  width: 3px;
-  border-radius: 999px;
-  background: var(--brand);
-}
-.plan-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-.plan-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.plan-title strong {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-.pct {
-  font-size: 0.78rem;
-  color: var(--ink-muted);
-  white-space: nowrap;
-}
-.pct b {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.badge {
-  font-size: 0.7rem;
-  font-weight: 500;
-  padding: 2px 9px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--surface-muted);
-  color: var(--ink-muted);
-  text-transform: lowercase;
-}
-.badge[data-status='active'] {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
-}
-.badge[data-status='draft'] {
-  color: var(--ink-muted);
-}
-.badge[data-status='abandoned'] {
-  color: var(--ink-faint);
-}
-
-.tip {
-  margin: -4px 0 0;
-  font-size: 0.78rem;
-  color: var(--brand);
-}
-
-.field {
-  display: grid;
-  gap: 5px;
-  font-size: 0.8rem;
-  color: var(--ink-muted);
-}
-.field input {
-  background: var(--surface-muted);
-  border: 1px solid var(--line);
-  border-radius: 0.5rem;
-  color: var(--ink);
-  padding: 8px 10px;
-  font-size: 0.875rem;
-}
-.field input:focus {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(230, 100, 50, 0.15);
-  outline: none;
-}
-.add-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.add-row input {
-  flex: 1;
-  background: var(--surface-muted);
-  border: 1px solid var(--line);
-  border-radius: 0.5rem;
-  color: var(--ink);
-  padding: 8px 10px;
-  font-size: 0.875rem;
-}
-.add-row input:focus {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(230, 100, 50, 0.15);
-  outline: none;
-}
-
-.syms {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.chip {
-  background: var(--surface-muted);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: 0.78rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.chip-x {
-  border: none;
-  background: transparent;
-  color: var(--ink-faint);
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  font-size: 0.95rem;
-}
-.chip-x:hover {
-  color: var(--danger);
-}
-
-.notes {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--ink-muted);
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-.empty-hint {
-  margin: 0;
-  font-size: 0.8rem;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 2px;
-}
-
-/* ── 历史 ─────────────────────────── */
-.history {
-  margin-top: 4px;
-  display: grid;
-  gap: 10px;
-}
-.history-item {
-  opacity: 0.78;
-}
-.history-item:hover {
-  opacity: 1;
-}
-
 /* ── 按钮 ─────────────────────────── */
 .ghost,
 .primary {
@@ -802,11 +375,6 @@ textarea:focus {
   background: var(--brand-light);
   color: var(--brand);
   border-color: var(--brand-soft);
-}
-.ghost.danger:hover:not(:disabled) {
-  background: #fef2f2;
-  color: var(--danger);
-  border-color: #fecaca;
 }
 .primary {
   background: var(--brand);
@@ -842,9 +410,6 @@ textarea:focus {
   }
   .discipline {
     position: static;
-  }
-  .plan-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

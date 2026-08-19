@@ -142,7 +142,6 @@ class StrategyPositionRow(BaseModel):
     buy_date: str
     notes: str = ""
     source: str = "manual"
-    plan_pct: float | None = None
     last_price: float | None = None
     market_value: float | None = None
     unrealized_pnl: float | None = None
@@ -154,24 +153,11 @@ class StrategyPositionRow(BaseModel):
     reason_summary: str = ""
     risk_tags: list[str] = Field(default_factory=list)
     risk_primary: str = ""
-    off_plan: bool = False
-
-
-class PlanSymbolStatus(BaseModel):
-    vt_symbol: str
-    name: str = ""
-    in_watchlist: bool = False
-    in_position: bool = False
 
 
 class RiskSummaryOut(BaseModel):
     total_capital: float | None = None
     actual_position_pct: float | None = None
-    plan_max_pct: float | None = None
-    off_plan_count: int = 0
-    off_plan_symbols: list[str] = Field(default_factory=list)
-    active_plan_date: str = ""
-    plan_symbols: list[PlanSymbolStatus] = Field(default_factory=list)
 
 
 class StrategyBoardOut(BaseModel):
@@ -242,7 +228,6 @@ class PositionOut(BaseModel):
     buy_date: str
     notes: str = ""
     source: str = "manual"
-    plan_pct: float | None = None
     sort_order: int = 0
     created_at: str = ""
     updated_at: str = ""
@@ -255,7 +240,6 @@ class PositionUpsertRequest(BaseModel):
     volume: int = Field(gt=0, description="须为 100 股整手")
     buy_date: str = Field(description="YYYY-MM-DD")
     notes: str = ""
-    plan_pct: float | None = None
 
 
 class TradingRiskPrefsOut(BaseModel):

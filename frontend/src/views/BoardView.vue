@@ -5,7 +5,6 @@ import AppShell from '../components/AppShell.vue'
 import { confirmDialog } from '../lib/dialog'
 import {
   watchlistApi,
-  type PlanSymbolStatus,
   type PositionItem,
   type StrategyBoard,
 } from '../api/watchlist'
@@ -64,20 +63,12 @@ const prefsReady = ref(false)
 const riskError = ref('')
 const riskMsg = ref('')
 const riskSaving = ref(false)
-const showOffPlanChips = ref(false)
 
 let boardTimer: number | undefined
 
 const panelSymbols = computed(() => board.value?.panel_symbols || [])
 const panelMax = 10
 const riskSummary = computed(() => board.value?.risk_summary ?? null)
-const planSymbols = computed(() => riskSummary.value?.plan_symbols ?? [])
-
-function planSymbolLabel(row: PlanSymbolStatus): string {
-  if (row.in_position) return '持仓'
-  if (row.in_watchlist) return '自选'
-  return '仅计划'
-}
 
 function formatPctRatio(v: number | null | undefined): string {
   if (v == null || Number.isNaN(v)) return '—'
@@ -100,11 +91,6 @@ function applyRiskPrefs(prefs: {
     caution_float_pct: String(prefs.caution_float_pct),
   }
   prefsReady.value = true
-}
-
-function toggleOffPlanChips() {
-  if (!riskSummary.value || riskSummary.value.off_plan_count <= 0) return
-  showOffPlanChips.value = !showOffPlanChips.value
 }
 
 function signalClass(sig: string) {
@@ -268,7 +254,6 @@ function editBoardPosition(row: {
     buy_date: row.buy_date,
     notes: '',
     source: 'manual',
-    plan_pct: null,
     sort_order: 0,
     created_at: '',
     updated_at: '',
@@ -377,21 +362,6 @@ onUnmounted(() => {
           <h3>仓位与风控</h3>
           <div v-if="riskSummary" class="risk-summary muted">
             <span>实际仓位 {{ formatPctRatio(riskSummary.actual_position_pct) }}</span>
-            <button
-              v-if="riskSummary.off_plan_count > 0"
-              type="button"
-              class="link"
-              @click="toggleOffPlanChips"
-            >
-              计划外 {{ riskSummary.off_plan_count }}
-            </button>
-            <span v-else>计划外 {{ riskSummary.off_plan_count }}</span>
-            <span>计划日 {{ riskSummary.active_plan_date || '—' }}</span>
-          </div>
-          <div v-if="showOffPlanChips && riskSummary?.off_plan_symbols?.length" class="chips">
-            <span v-for="vt in riskSummary.off_plan_symbols" :key="vt" class="chip-tag">
-              <button type="button" class="chip-link mono" @click="selectVt(vt)">{{ vt }}</button>
-            </span>
           </div>
           <div class="pos-grid risk-grid">
             <label>
@@ -441,25 +411,6 @@ onUnmounted(() => {
           <p v-else-if="riskError" class="err">{{ riskError }}</p>
           <p v-else-if="riskMsg" class="muted">{{ riskMsg }}</p>
           <p class="muted tip">止损按百分数（如 5 = 5%）；浮亏警戒为负数（如 -5）。</p>
-        </section>
-
-        <section class="card plan-card">
-          <h3>
-            当日计划
-            <span v-if="riskSummary?.active_plan_date" class="muted">
-              {{ riskSummary.active_plan_date }}
-            </span>
-          </h3>
-          <p v-if="!planSymbols.length" class="muted">当日无 active 计划</p>
-          <ul v-else class="plan-list">
-            <li v-for="row in planSymbols" :key="row.vt_symbol">
-              <button type="button" class="chip-link mono" @click="selectVt(row.vt_symbol)">
-                {{ row.vt_symbol }}
-              </button>
-              <span class="plan-name">{{ row.name || '—' }}</span>
-              <span class="plan-tag">{{ planSymbolLabel(row) }}</span>
-            </li>
-          </ul>
         </section>
       </div>
 
@@ -657,7 +608,6 @@ onUnmounted(() => {
                 <tr
                   v-for="row in board.positions"
                   :key="row.vt_symbol + row.buy_date"
-                  :class="{ 'off-plan': row.off_plan }"
                 >
                   <td class="mono">
                     <button type="button" class="chip-link" @click="selectVt(row.vt_symbol)">
@@ -678,9 +628,7 @@ onUnmounted(() => {
                   </td>
                   <td>{{ row.t1_locked ? '锁定' : '可卖' }}</td>
                   <td :class="signalClass(row.exit_signal)">{{ row.exit_signal_label }}</td>
-                  <td :class="{ warn: row.off_plan || row.risk_tags?.includes('计划外') }">
-                    {{ row.risk_tags?.length ? row.risk_tags.join(' · ') : '—' }}
-                  </td>
+                  <td>{{ row.risk_tags?.length ? row.risk_tags.join(' · ') : '—' }}</td>
                   <td>
                     <button type="button" class="link" @click.stop="editBoardPosition(row)">
                       改
@@ -722,7 +670,6 @@ onUnmounted(() => {
 }
 .summary-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 12px;
   align-items: start;
 }
@@ -746,36 +693,6 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
-}
-.plan-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 4px;
-}
-.plan-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 6px;
-  border-radius: 6px;
-}
-.plan-list li:hover {
-  background: var(--brand-light);
-}
-.plan-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.85rem;
-}
-.plan-tag {
-  font-size: 0.75rem;
-  color: var(--muted);
-  flex-shrink: 0;
 }
 .board-head {
   display: flex;
@@ -929,9 +846,6 @@ tbody tr:hover td {
 }
 tbody tr.on td {
   background: var(--brand-light);
-}
-tbody tr.off-plan td {
-  background: #fee2e2;
 }
 .clip {
   max-width: 220px;

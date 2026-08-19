@@ -85,24 +85,11 @@ export type StrategyPositionRow = {
   reason_summary: string
   risk_tags?: string[]
   risk_primary?: string
-  off_plan?: boolean
-}
-
-export type PlanSymbolStatus = {
-  vt_symbol: string
-  name: string
-  in_watchlist: boolean
-  in_position: boolean
 }
 
 export type RiskSummary = {
   total_capital: number | null
   actual_position_pct: number | null
-  plan_max_pct: number | null
-  off_plan_count: number
-  off_plan_symbols: string[]
-  active_plan_date: string
-  plan_symbols: PlanSymbolStatus[]
 }
 
 export type TradingRiskPrefs = {
@@ -146,7 +133,6 @@ export type PositionItem = {
   buy_date: string
   notes: string
   source: string
-  plan_pct: number | null
   sort_order: number
   created_at: string
   updated_at: string
@@ -159,7 +145,6 @@ export type PositionUpsert = {
   volume: number
   buy_date: string
   notes?: string
-  plan_pct?: number | null
 }
 
 export type NotifyLogItem = {

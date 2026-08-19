@@ -52,14 +52,3 @@ def test_missing_fields_empty() -> None:
         )
         == []
     )
-
-
-def test_off_plan_tag_order() -> None:
-    tags = compute_position_risk_tags(
-        exit_signal="sell",
-        unrealized_pnl_pct=-6,
-        change_pct=None,
-        volume_ratio=None,
-        off_plan=True,
-    )
-    assert tags[:2] == ["卖出信号", "计划外"]

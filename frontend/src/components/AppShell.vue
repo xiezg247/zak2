@@ -11,6 +11,7 @@ defineProps<{
   active:
     | 'screener'
     | 'watchlist'
+    | 'board'
     | 'market'
     | 'sectors'
     | 'radar'
@@ -30,6 +31,7 @@ const router = useRouter()
 type NavKey =
   | 'playbook'
   | 'watchlist'
+  | 'board'
   | 'market'
   | 'sectors'
   | 'radar'
@@ -55,6 +57,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { key: 'playbook', label: '守则', to: '/playbook', enabled: true },
       { key: 'watchlist', label: '自选', to: '/watchlist', enabled: true },
+      { key: 'board', label: '看板', to: '/board', enabled: true },
       { key: 'market', label: '市场', to: '/market', enabled: true },
       { key: 'sectors', label: '板块资金', to: '/sectors', enabled: true },
       { key: 'radar', label: '雷达', to: '/radar', enabled: true },
