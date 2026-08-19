@@ -99,7 +99,7 @@ JOB_SPECS: tuple[JobSpec, ...] = (
     JobSpec(
         "warm_watchlist_strategy_cache",
         "策略信号磁盘预热",
-        "Redis 桥 + 日 K 启发式 v2 + double_ma + trend_ma 三轨 → watchlist_signal_cache（Web 可跑）",
+        "Redis 桥 + 日 K 启发式 v2 + double_ma + trend_ma + medium_swing 四轨 → watchlist_signal_cache（Web 可跑）",
         "warm_watchlist_strategy_cache",
     ),
     JobSpec(

@@ -22,12 +22,13 @@ const enqueueing = ref(false)
 const autoRefresh = ref(true)
 
 const SIGNAL_MODE_KEY = 'zak2:watchlist:signal_mode'
-type SignalMode = 'heuristic_v2' | 'double_ma' | 'trend_ma'
-const VALID_SIGNAL_MODES: SignalMode[] = ['heuristic_v2', 'double_ma', 'trend_ma']
+type SignalMode = 'heuristic_v2' | 'double_ma' | 'trend_ma' | 'medium_swing'
+const VALID_SIGNAL_MODES: SignalMode[] = ['heuristic_v2', 'double_ma', 'trend_ma', 'medium_swing']
 const SIGNAL_MODES: { value: SignalMode; label: string }[] = [
   { value: 'heuristic_v2', label: '启发式确认' },
   { value: 'double_ma', label: '回测双均线' },
   { value: 'trend_ma', label: '趋势均线' },
+  { value: 'medium_swing', label: '中线波段' },
 ]
 
 function loadSignalMode(): SignalMode {

@@ -12,4 +12,8 @@ def get_strategy_class(strategy_id: str) -> type:
         from app.strategies.cta.trend_ma import TrendMaStrategy
 
         return TrendMaStrategy
+    if strategy_id == "medium_swing":
+        from app.strategies.cta.medium_swing import MediumSwingStrategy
+
+        return MediumSwingStrategy
     raise KeyError(f"未知策略：{strategy_id}")

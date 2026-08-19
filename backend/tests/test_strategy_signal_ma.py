@@ -153,3 +153,82 @@ def test_trend_ma_sell_on_structure_break(monkeypatch) -> None:
     out = m.compute_trend_ma_signal(highs, lows, closes, fast=20, slow=60, vt_symbol="600519.SSE", as_of="2026-08-14")
     assert out is not None
     assert out["signal"] == "sell"
+
+
+def test_medium_swing_buy_on_golden_cross_above_trend(monkeypatch) -> None:
+    n = 80
+    closes = [10.0] * n
+
+    def fake_ema(values: list[float], window: int) -> list[float | None]:
+        out: list[float | None] = [None] * len(values)
+        if window == 12:
+            out[-2], out[-1] = 1.0, 3.0
+        elif window == 26:
+            out[-2], out[-1] = 2.0, 2.0
+        else:
+            out[-2], out[-1] = 0.5, 0.5
+        return out
+
+    monkeypatch.setattr(m, "ema", fake_ema)
+    monkeypatch.setattr(m, "sma", lambda values, window: [None] * (len(values) - 2) + [9.0, 9.0])
+    out = m.compute_medium_swing_signal(closes, vt_symbol="600519.SSE", as_of="2026-08-14")
+    assert out is not None
+    assert out["signal"] == "buy"
+    assert out["signal_mode"] == "medium_swing"
+    assert "对齐回测 medium_swing" in out["reason_summary"]
+    assert "dif" in out and "dea" in out
+
+
+def test_medium_swing_sell_on_dead_cross(monkeypatch) -> None:
+    n = 80
+    closes = [10.0] * n
+
+    def fake_ema(values: list[float], window: int) -> list[float | None]:
+        out: list[float | None] = [None] * len(values)
+        if window == 12:
+            out[-2], out[-1] = 3.0, 1.0
+        elif window == 26:
+            out[-2], out[-1] = 2.0, 2.0
+        else:
+            out[-2], out[-1] = 0.5, 0.5
+        return out
+
+    monkeypatch.setattr(m, "ema", fake_ema)
+    monkeypatch.setattr(m, "sma", lambda values, window: [None] * (len(values) - 2) + [9.0, 9.0])
+    out = m.compute_medium_swing_signal(closes, vt_symbol="600519.SSE", as_of="2026-08-14")
+    assert out is not None
+    assert out["signal"] == "sell"
+
+
+def test_medium_swing_sell_on_below_trend(monkeypatch) -> None:
+    n = 80
+    closes = [9.0] * n
+
+    def fake_ema(values: list[float], window: int) -> list[float | None]:
+        out: list[float | None] = [None] * len(values)
+        out[-2], out[-1] = 2.0, 2.0
+        return out
+
+    monkeypatch.setattr(m, "ema", fake_ema)
+    monkeypatch.setattr(m, "sma", lambda values, window: [None] * (len(values) - 2) + [9.5, 9.5])
+    out = m.compute_medium_swing_signal(closes, vt_symbol="600519.SSE", as_of="2026-08-14")
+    assert out is not None
+    assert out["signal"] == "sell"
+
+
+def test_medium_swing_insufficient_bars_returns_none() -> None:
+    assert (
+        m.compute_medium_swing_signal(
+            [10.0] * 30,
+            vt_symbol="600519.SSE",
+            as_of="2026-08-14",
+        )
+        is None
+    )
+
+
+def test_ema_basic() -> None:
+    out = m.ema([1.0, 2.0, 3.0], 2)
+    assert out[0] == 1.0
+    assert out[1] is not None and 1.0 < out[1] < 2.0
+    assert out[2] is not None and out[2] > out[1]

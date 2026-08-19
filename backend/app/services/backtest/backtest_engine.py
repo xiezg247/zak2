@@ -29,6 +29,14 @@ STRATEGIES = (
         "implemented": True,
         "engine": "vnpy",
     },
+    {
+        "id": "medium_swing",
+        "name": "中线波段（MACD）",
+        "interval": "d",
+        "description": "MACD 金叉+站上趋势均线买入；死叉或破趋势均线卖出；整手 T+1；支持 d/1m",
+        "implemented": True,
+        "engine": "vnpy",
+    },
 )
 
 PROFILES = (

@@ -18,12 +18,17 @@ from app.services.ops.bars_fill import list_watchlist_symbols
 from app.services.ops.scheduler import save_job_run_meta
 from app.services.strategy.strategy_board import DEFAULT_CONFIG_KEY, _parse_payload
 from app.services.strategy.strategy_signal_ma import (
+    MEDIUM_SWING_FAST,
+    MEDIUM_SWING_SIGNAL,
+    MEDIUM_SWING_SLOW,
+    MEDIUM_SWING_TREND_MA,
     TREND_ADX_PERIOD,
     TREND_ADX_THRESHOLD,
     TREND_MA_FAST,
     TREND_MA_SLOW,
     compute_double_ma_signal,
     compute_ma_signal,
+    compute_medium_swing_signal,
     compute_trend_ma_signal,
     parse_config_key,
 )
@@ -350,6 +355,30 @@ def _compute_pool(db: Session, config_keys: list[str]) -> tuple[int, int]:
                 continue
             _upsert_one(vt=vt, config_key=tm_key, as_of=as_of, snap=tm)
 
+    # 第四轨 medium_swing:12:26
+    if pool:
+        ms_key = f"medium_swing:{MEDIUM_SWING_FAST}:{MEDIUM_SWING_SLOW}"
+        limit_ms = min(200, max(MEDIUM_SWING_SLOW * 3, MEDIUM_SWING_TREND_MA + 10, 80))
+        for symbol, exchange in pool:
+            loaded = _load_daily_bars(db, symbol=symbol, exchange=exchange, limit=limit_ms)
+            if not loaded:
+                continue
+            _highs, _lows, closes, volumes, as_of = loaded
+            vt = to_vt_symbol(symbol, exchange)
+            ms = compute_medium_swing_signal(
+                closes,
+                volumes=volumes,
+                fast=MEDIUM_SWING_FAST,
+                slow=MEDIUM_SWING_SLOW,
+                signal=MEDIUM_SWING_SIGNAL,
+                trend_ma=MEDIUM_SWING_TREND_MA,
+                vt_symbol=vt,
+                as_of=as_of,
+            )
+            if not ms:
+                continue
+            _upsert_one(vt=vt, config_key=ms_key, as_of=as_of, snap=ms)
+
     return computed, skipped_bars
 
 
@@ -368,7 +397,7 @@ def warm_watchlist_strategy_cache(db: Session) -> SyncResult:
     db.commit()
     msg = (
         f"策略 cache：桥接 signals={written_s} positions={written_p}；"
-        f"启发式 v2 + double_ma + trend_ma 三轨 computed={computed} skipped_bars={skipped_bars}"
+        f"启发式 v2 + double_ma + trend_ma + medium_swing 四轨 computed={computed} skipped_bars={skipped_bars}"
     )
     save_job_run_meta(db, JOB_ID, last_message=msg, last_success=True)
     return SyncResult(

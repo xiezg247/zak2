@@ -1,4 +1,4 @@
-export type BoardSignalMode = 'heuristic_v2' | 'double_ma' | 'trend_ma'
+export type BoardSignalMode = 'heuristic_v2' | 'double_ma' | 'trend_ma' | 'medium_swing'
 
 export const BOARD_BT_START = '2020-01-01'
 export const BOARD_BT_END = '2026-06-01'
@@ -32,6 +32,16 @@ export function buildAlignedBacktestQuery(
       trailing_stop_pct: '0.12',
     }
   }
+  if (mode === 'medium_swing') {
+    return {
+      strategy: 'medium_swing',
+      vt_symbol: vt,
+      fast_window: '12',
+      slow_window: '26',
+      signal_period: '9',
+      trend_ma_window: '60',
+    }
+  }
   const { fast, slow } = parseFastSlowFromConfigKey(configKey)
   return {
     strategy: 'double_ma',
@@ -59,6 +69,20 @@ export function buildEnqueueRunBody(
       adx_period: 14,
       adx_threshold: 25,
       trailing_stop_pct: 0.12,
+    }
+  }
+  if (mode === 'medium_swing') {
+    return {
+      vt_symbol: vt,
+      strategy: 'medium_swing',
+      interval: 'd',
+      start_date: BOARD_BT_START,
+      end_date: BOARD_BT_END,
+      capital: BOARD_BT_CAPITAL,
+      fast_window: 12,
+      slow_window: 26,
+      signal_period: 9,
+      trend_ma_window: 60,
     }
   }
   const { fast, slow } = parseFastSlowFromConfigKey(configKey)

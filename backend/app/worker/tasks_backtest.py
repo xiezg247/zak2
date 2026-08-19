@@ -95,6 +95,8 @@ def _execute_with_optional_subprocess(
         "adx_period": req.adx_period,
         "adx_threshold": req.adx_threshold,
         "trailing_stop_pct": req.trailing_stop_pct,
+        "signal_period": req.signal_period,
+        "trend_ma_window": req.trend_ma_window,
         "interval": req.interval or "d",
         "max_trading_days": req.max_trading_days,
         "setting": setting,
@@ -173,6 +175,8 @@ def _run_batch(user_id: str, payload: dict, batch_id: str) -> dict[str, Any]:
                 adx_period=req.adx_period,
                 adx_threshold=req.adx_threshold,
                 trailing_stop_pct=req.trailing_stop_pct,
+                signal_period=req.signal_period,
+                trend_ma_window=req.trend_ma_window,
                 max_trading_days=req.max_trading_days,
             )
             out = _execute_with_optional_subprocess(db, user_id, single, batch_id=batch_id, source="batch")
@@ -213,6 +217,8 @@ def _run_optimize(user_id: str, payload: dict, batch_id: str) -> dict[str, Any]:
                 adx_period=req.adx_period,
                 adx_threshold=req.adx_threshold,
                 trailing_stop_pct=req.trailing_stop_pct,
+                signal_period=req.signal_period,
+                trend_ma_window=req.trend_ma_window,
                 max_trading_days=req.max_trading_days,
             )
             out = _execute_with_optional_subprocess(db, user_id, single, batch_id=batch_id, source="optimize")

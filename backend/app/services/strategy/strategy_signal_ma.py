@@ -210,6 +210,11 @@ TREND_ADX_PERIOD = 14
 TREND_ADX_THRESHOLD = 25.0
 TREND_TRAILING_STOP_PCT = 0.12
 
+MEDIUM_SWING_FAST = 12
+MEDIUM_SWING_SLOW = 26
+MEDIUM_SWING_SIGNAL = 9
+MEDIUM_SWING_TREND_MA = 60
+
 
 def wilder_adx(
     highs: list[float],
@@ -350,6 +355,109 @@ def compute_trend_ma_signal(
         "strength_tier_label": tier_label,
         "signal_mode": "trend_ma",
         "adx_value": round(float(adx_v), 4),
+    }
+    if vol_ratio is not None:
+        out["volume_ratio_5d"] = round(vol_ratio, 4)
+    return out
+
+
+def ema(values: list[float], window: int) -> list[float | None]:
+    out: list[float | None] = [None] * len(values)
+    if window <= 0 or not values:
+        return out
+    k = 2.0 / (window + 1)
+    prev: float | None = None
+    for i, v in enumerate(values):
+        prev = v if prev is None else prev * (1 - k) + v * k
+        out[i] = prev
+    return out
+
+
+def compute_medium_swing_signal(
+    closes: list[float],
+    *,
+    volumes: list[float] | None = None,
+    fast: int = MEDIUM_SWING_FAST,
+    slow: int = MEDIUM_SWING_SLOW,
+    signal: int = MEDIUM_SWING_SIGNAL,
+    trend_ma: int = MEDIUM_SWING_TREND_MA,
+    vt_symbol: str,
+    as_of: str,
+) -> dict[str, Any] | None:
+    """中线波段：MACD 金叉/死叉 + 收盘站上/跌破 trend_ma 均线，对齐回测 medium_swing。"""
+    min_bars = max(slow * 2, trend_ma) + 2
+    if fast >= slow or len(closes) < min_bars:
+        return None
+
+    fast_ema = ema(closes, fast)
+    slow_ema = ema(closes, slow)
+    dif = [
+        f - s if f is not None and s is not None else None
+        for f, s in zip(fast_ema, slow_ema, strict=True)
+    ]
+    seed = [0.0 if d is None else d for d in dif]
+    dea = ema(seed, signal)
+
+    i = len(closes) - 1
+    j = i - 1
+    d0 = dif[i]
+    d1 = dif[j]
+    e0 = dea[i]
+    e1 = dea[j]
+    if d0 is None or d1 is None or e0 is None or e1 is None:
+        return None
+
+    trend = sma(closes, trend_ma)
+    t0 = trend[i]
+    if t0 is None:
+        return None
+
+    close = closes[i]
+    golden_cross = d0 > e0 and d1 <= e1
+    dead_cross = d0 < e0 and d1 >= e1
+
+    if golden_cross and close > t0:
+        kind = "buy"
+    elif dead_cross or close < t0:
+        kind = "sell"
+    else:
+        kind = "hold"
+
+    gap = (close - t0) / t0 * 100.0 if t0 else 0.0
+    gap_abs = abs(gap)
+    tier, tier_label = strength_tier_for(gap_abs)
+
+    vol_ratio = None
+    if volumes and len(volumes) == len(closes) and len(volumes) >= 5:
+        last = volumes[-1]
+        avg5 = sum(volumes[-5:]) / 5.0
+        if avg5 > 0:
+            vol_ratio = last / avg5
+
+    tag = f"中线波段看盘（对齐回测 medium_swing）·{tier_label}"
+    if kind == "buy":
+        reason = f"MACD 金叉+站上{trend_ma}日线（{tag}）"
+    elif kind == "sell":
+        reason = f"MACD 死叉/破{trend_ma}日线（{tag}）"
+    else:
+        reason = f"MACD 观望（{tag}）"
+
+    out: dict[str, Any] = {
+        "signal": kind,
+        "signal_label": _LABEL[kind],
+        "vt_symbol": vt_symbol,
+        "as_of": as_of[:10],
+        "signal_date": as_of[:10],
+        "last_close": close,
+        "ma_gap_pct": round(gap, 4),
+        "reason_summary": reason,
+        "strength": round(gap_abs, 4),
+        "confirm_bars": 0,
+        "strength_tier": tier,
+        "strength_tier_label": tier_label,
+        "signal_mode": "medium_swing",
+        "dif": round(float(d0), 4),
+        "dea": round(float(e0), 4),
     }
     if vol_ratio is not None:
         out["volume_ratio_5d"] = round(vol_ratio, 4)

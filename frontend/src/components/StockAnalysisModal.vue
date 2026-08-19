@@ -168,6 +168,7 @@ const SIGNAL_MODES: { id: BoardSignalMode; label: string }[] = [
   { id: 'heuristic_v2', label: '启发式确认' },
   { id: 'double_ma', label: '回测双均线' },
   { id: 'trend_ma', label: '趋势均线' },
+  { id: 'medium_swing', label: '中线波段' },
 ]
 const signalRows = ref<{ mode: string; row: StrategySignalRow }[]>([])
 const signalErr = ref('')

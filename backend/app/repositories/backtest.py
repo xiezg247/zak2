@@ -237,6 +237,8 @@ class BacktestRepository(BaseRepository[BacktestRun]):
             "adx_period": req.adx_period,
             "adx_threshold": req.adx_threshold,
             "trailing_stop_pct": req.trailing_stop_pct,
+            "signal_period": req.signal_period,
+            "trend_ma_window": req.trend_ma_window,
             "interval": req.interval or "d",
             "max_trading_days": req.max_trading_days,
             "setting": setting,

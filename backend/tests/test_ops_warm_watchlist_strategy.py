@@ -100,21 +100,35 @@ def test_warm_computes_ma_signals() -> None:
                 "signal_mode": "trend_ma",
             },
         ) as comp_tm,
+        patch.object(
+            m,
+            "compute_medium_swing_signal",
+            return_value={
+                "signal": "hold",
+                "signal_label": "观望",
+                "vt_symbol": "600519.SSE",
+                "as_of": "2026-08-13",
+                "signal_mode": "medium_swing",
+            },
+        ) as comp_ms,
         patch.object(m, "_upsert_signal") as up,
         patch("app.services.ops.warm_watchlist_strategy.save_job_run_meta") as save,
     ):
         out = m.warm_watchlist_strategy_cache(db)
     assert out.skipped is False
     assert out.success is True
-    assert out.extra["computed"] >= 3
+    assert out.extra["computed"] >= 4
     assert "double_ma" in out.message
     assert "trend_ma" in out.message
+    assert "medium_swing" in out.message
     comp.assert_called()
     comp_dm.assert_called()
     comp_tm.assert_called()
+    comp_ms.assert_called()
     ck_args = [c.kwargs.get("config_key") for c in up.call_args_list]
     assert any(str(k).startswith("double_ma:") for k in ck_args)
     assert any(k == "trend_ma:20:60" for k in ck_args)
+    assert any(k == "medium_swing:12:26" for k in ck_args)
     assert save.call_args.kwargs["last_success"] is True
 
 

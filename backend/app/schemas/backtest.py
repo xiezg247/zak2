@@ -55,6 +55,8 @@ class BacktestRunRequest(BaseModel):
     adx_period: int = Field(default=14, ge=2, le=120)
     adx_threshold: float = Field(default=25.0, ge=0)
     trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
+    signal_period: int = Field(default=9, ge=2, le=60)
+    trend_ma_window: int = Field(default=60, ge=10, le=250)
     max_trading_days: int = Field(default=20, ge=1, le=60)
 
 
@@ -73,6 +75,8 @@ class BatchBacktestRequest(BaseModel):
     adx_period: int = Field(default=14, ge=2, le=120)
     adx_threshold: float = Field(default=25.0, ge=0)
     trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
+    signal_period: int = Field(default=9, ge=2, le=60)
+    trend_ma_window: int = Field(default=60, ge=10, le=250)
     max_trading_days: int = Field(default=20, ge=1, le=60)
 
 
@@ -89,6 +93,8 @@ class OptimizeBacktestRequest(BaseModel):
     adx_period: int = Field(default=14, ge=2, le=120)
     adx_threshold: float = Field(default=25.0, ge=0)
     trailing_stop_pct: float = Field(default=0.12, gt=0, le=1)
+    signal_period: int = Field(default=9, ge=2, le=60)
+    trend_ma_window: int = Field(default=60, ge=10, le=250)
     max_trading_days: int = Field(default=20, ge=1, le=60)
     space: dict[str, list[int]] = Field(default_factory=dict)
     objective: str = "sharpe_ratio"

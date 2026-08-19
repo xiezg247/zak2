@@ -27,6 +27,7 @@ DEFAULT_CONFIG_KEY = "AshareShortBreakoutStrategy:5:10"
 SIGNAL_MODE_HEURISTIC = "heuristic_v2"
 SIGNAL_MODE_DOUBLE_MA = "double_ma"
 SIGNAL_MODE_TREND_MA = "trend_ma"
+SIGNAL_MODE_MEDIUM_SWING = "medium_swing"
 DEFAULT_DOUBLE_MA_FAST = 5
 DEFAULT_DOUBLE_MA_SLOW = 20
 
@@ -100,6 +101,15 @@ def trend_ma_config_key() -> str:
     return f"trend_ma:{TREND_MA_FAST}:{TREND_MA_SLOW}"
 
 
+def medium_swing_config_key() -> str:
+    from app.services.strategy.strategy_signal_ma import (
+        MEDIUM_SWING_FAST,
+        MEDIUM_SWING_SLOW,
+    )
+
+    return f"medium_swing:{MEDIUM_SWING_FAST}:{MEDIUM_SWING_SLOW}"
+
+
 def _pref_fast_slow(db: Session, user_id: str) -> tuple[int, int]:
     row = db.execute(
         text(
@@ -140,6 +150,8 @@ def resolve_board_config_key(
         return double_ma_config_key(fast, slow)
     if mode == SIGNAL_MODE_TREND_MA:
         return trend_ma_config_key()
+    if mode == SIGNAL_MODE_MEDIUM_SWING:
+        return medium_swing_config_key()
     return resolve_config_key(db, user_id, None)
 
 
@@ -331,7 +343,12 @@ def load_strategy_board(
     signal_mode: str = SIGNAL_MODE_HEURISTIC,
 ) -> dict[str, Any]:
     mode = (signal_mode or SIGNAL_MODE_HEURISTIC).strip() or SIGNAL_MODE_HEURISTIC
-    if mode not in {SIGNAL_MODE_HEURISTIC, SIGNAL_MODE_DOUBLE_MA, SIGNAL_MODE_TREND_MA}:
+    if mode not in {
+        SIGNAL_MODE_HEURISTIC,
+        SIGNAL_MODE_DOUBLE_MA,
+        SIGNAL_MODE_TREND_MA,
+        SIGNAL_MODE_MEDIUM_SWING,
+    }:
         mode = SIGNAL_MODE_HEURISTIC
     ck = resolve_board_config_key(db, user_id, signal_mode=mode, override=config_key)
     items = repo.WatchlistItemRepository(db, user_id).list_items()
@@ -502,7 +519,8 @@ def load_strategy_board(
         )
     elif not signals and not positions:
         note = (
-            "暂无策略缓存。可 Ops 跑 warm_watchlist_strategy_cache（启发式 + double_ma + trend_ma 三轨），"
+            "暂无策略缓存。可 Ops 跑 warm_watchlist_strategy_cache"
+            "（启发式 + double_ma + trend_ma + medium_swing 四轨），"
             "或确认 Redis/PG 已有信号缓存；亦可先维护信号名单与持仓记账。"
         )
     elif not signals:
@@ -511,6 +529,8 @@ def load_strategy_board(
         mode_note = "模式：回测双均线（当日交叉，规则对齐 /backtest double_ma，非 vnpy 进程）。"
     elif mode == SIGNAL_MODE_TREND_MA:
         mode_note = "模式：趋势均线（入场对齐 CTA trend_ma；卖点不含追踪止损；非 vnpy 进程）。"
+    elif mode == SIGNAL_MODE_MEDIUM_SWING:
+        mode_note = "模式：中线波段（MACD 金叉/死叉+站上/跌破 60 日线，对齐 /backtest medium_swing；非 vnpy 进程）。"
     else:
         mode_note = "模式：启发式确认（交叉次日确认 N=2）。"
     note = f"{mode_note} {note}".strip() if note else mode_note

@@ -39,6 +39,8 @@ const maxTradingDays = ref(20)
 const adxPeriod = ref(14)
 const adxThreshold = ref(25)
 const trailingStopPct = ref(0.12)
+const signalPeriod = ref(9)
+const trendMaWindow = ref(60)
 const rate = ref(0.00045)
 const slippage = ref(0)
 const stampDuty = ref(0.0005)
@@ -68,12 +70,20 @@ function feePayload() {
 }
 
 function trendPayload() {
-  if (strategy.value !== 'trend_ma') return {}
-  return {
-    adx_period: adxPeriod.value,
-    adx_threshold: adxThreshold.value,
-    trailing_stop_pct: trailingStopPct.value,
+  if (strategy.value === 'trend_ma') {
+    return {
+      adx_period: adxPeriod.value,
+      adx_threshold: adxThreshold.value,
+      trailing_stop_pct: trailingStopPct.value,
+    }
   }
+  if (strategy.value === 'medium_swing') {
+    return {
+      signal_period: signalPeriod.value,
+      trend_ma_window: trendMaWindow.value,
+    }
+  }
+  return {}
 }
 
 function intervalPayload() {
@@ -311,6 +321,10 @@ onMounted(async () => {
     adxThreshold.value = Number(q.adx_threshold)
   if (typeof q.trailing_stop_pct === 'string' && Number(q.trailing_stop_pct) > 0)
     trailingStopPct.value = Number(q.trailing_stop_pct)
+  if (typeof q.signal_period === 'string' && Number(q.signal_period) > 0)
+    signalPeriod.value = Number(q.signal_period)
+  if (typeof q.trend_ma_window === 'string' && Number(q.trend_ma_window) > 0)
+    trendMaWindow.value = Number(q.trend_ma_window)
 
   loading.value = true
   try {
@@ -404,8 +418,14 @@ onMounted(async () => {
             <label>结束<input v-model="endDate" type="date" /></label>
           </div>
           <div v-if="mode !== 'optimize'" class="row2">
-            <label>快均线<input v-model.number="fast" type="number" min="2" /></label>
-            <label>慢均线<input v-model.number="slow" type="number" min="3" /></label>
+            <label>
+              {{ strategy === 'medium_swing' ? 'MACD 快线' : '快均线' }}
+              <input v-model.number="fast" type="number" min="2" />
+            </label>
+            <label>
+              {{ strategy === 'medium_swing' ? 'MACD 慢线' : '慢均线' }}
+              <input v-model.number="slow" type="number" min="3" />
+            </label>
           </div>
           <template v-else>
             <label>快均线候选<input v-model="optFastSpace" placeholder="3,5,8,10" /></label>
@@ -421,6 +441,13 @@ onMounted(async () => {
             追踪止损
             <input v-model.number="trailingStopPct" type="number" min="0.01" max="1" step="0.01" />
           </label>
+          <div v-if="strategy === 'medium_swing' && mode !== 'optimize'" class="row2">
+            <label>信号线<input v-model.number="signalPeriod" type="number" min="2" /></label>
+            <label>趋势均线<input v-model.number="trendMaWindow" type="number" min="10" /></label>
+          </div>
+          <p v-if="strategy === 'medium_swing'" class="hint muted">
+            MACD 金叉且站上趋势均线买入；死叉或跌破趋势均线卖出。
+          </p>
           <label>资金<input v-model.number="capital" type="number" step="1000" /></label>
 
           <button type="button" class="linkish" @click="showFees = !showFees">
