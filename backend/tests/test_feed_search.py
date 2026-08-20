@@ -6,9 +6,9 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 
-from app.services.content import feed as feed_svc
+from app.core.errors import UpstreamFailed, ValidationFailed
+from app.domains.content import feed as feed_svc
 
 
 def _settings(cookies: str = "SESSDATA=x") -> SimpleNamespace:
@@ -17,10 +17,9 @@ def _settings(cookies: str = "SESSDATA=x") -> SimpleNamespace:
 
 def test_search_requires_cookies(monkeypatch) -> None:
     monkeypatch.setattr(feed_svc, "get_settings", lambda: _settings(""))
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(ValidationFailed) as ei:
         feed_svc.search_bilibili_ups("量化")
-    assert ei.value.status_code == 400
-    assert "BILIBILI" in ei.value.detail or "COOKIE" in ei.value.detail.upper()
+    assert "BILIBILI" in ei.value.message or "COOKIE" in ei.value.message.upper()
 
 
 def test_search_empty_q_returns_empty(monkeypatch) -> None:
@@ -53,7 +52,6 @@ def test_search_maps_bilibili_error(monkeypatch) -> None:
         patch.object(feed_svc, "search_users", side_effect=BilibiliApiError("boom")),
     ):
         client_cls.return_value = MagicMock()
-        with pytest.raises(HTTPException) as ei:
+        with pytest.raises(UpstreamFailed) as ei:
             feed_svc.search_bilibili_ups("量化")
-    assert ei.value.status_code == 502
-    assert "boom" in ei.value.detail
+    assert "boom" in ei.value.message

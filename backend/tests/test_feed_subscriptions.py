@@ -6,9 +6,9 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 
-from app.services.content import feed as feed_svc
+from app.core.errors import NotFound, ValidationFailed
+from app.domains.content import feed as feed_svc
 
 
 def _settings(cookies: str = "SESSDATA=x") -> SimpleNamespace:
@@ -18,10 +18,9 @@ def _settings(cookies: str = "SESSDATA=x") -> SimpleNamespace:
 def test_add_requires_cookies(monkeypatch) -> None:
     monkeypatch.setattr(feed_svc, "get_settings", lambda: _settings(""))
     db = MagicMock()
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(ValidationFailed) as ei:
         feed_svc.add_bilibili_up(db, "user-1", "12345")
-    assert ei.value.status_code == 400
-    assert "COOKIE" in ei.value.detail.upper() or "cookie" in ei.value.detail.lower() or "BILIBILI" in ei.value.detail
+    assert "COOKIE" in ei.value.message.upper() or "cookie" in ei.value.message.lower() or "BILIBILI" in ei.value.message
 
 
 def test_add_duplicate(monkeypatch) -> None:
@@ -32,10 +31,9 @@ def test_add_duplicate(monkeypatch) -> None:
         1,  # count
         SimpleNamespace(id="existing"),  # duplicate row
     ]
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(ValidationFailed) as ei:
         feed_svc.add_bilibili_up(db, "user-1", "12345")
-    assert ei.value.status_code == 400
-    assert "已订阅" in ei.value.detail
+    assert "已订阅" in ei.value.message
 
 
 def test_add_success(monkeypatch) -> None:
@@ -76,20 +74,18 @@ def test_add_count_limit(monkeypatch) -> None:
     monkeypatch.setattr(feed_svc, "get_settings", lambda: _settings())
     db = MagicMock()
     db.scalar.return_value = 50
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(ValidationFailed) as ei:
         feed_svc.add_bilibili_up(db, "user-1", "12345")
-    assert ei.value.status_code == 400
-    assert "上限" in ei.value.detail
+    assert "上限" in ei.value.message
 
 
 @pytest.mark.parametrize("mid", ["", "  ", "abc", "12x3"])
 def test_add_invalid_mid(monkeypatch, mid: str) -> None:
     monkeypatch.setattr(feed_svc, "get_settings", lambda: _settings())
     db = MagicMock()
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(ValidationFailed) as ei:
         feed_svc.add_bilibili_up(db, "user-1", mid)
-    assert ei.value.status_code == 400
-    assert "mid" in ei.value.detail.lower()
+    assert "mid" in ei.value.message.lower()
 
 
 def test_add_profile_failure_still_creates(monkeypatch) -> None:
@@ -166,10 +162,9 @@ def test_delete_other_user_not_found(monkeypatch) -> None:
     db = MagicMock()
     db.scalar.return_value = None
 
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(NotFound) as ei:
         feed_svc.delete_subscription(db, "user-1", "sub-other")
 
-    assert ei.value.status_code == 404
-    assert "订阅不存在" in ei.value.detail
+    assert "订阅不存在" in ei.value.message
     db.execute.assert_not_called()
     db.commit.assert_not_called()
