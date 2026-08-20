@@ -2,9 +2,11 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppShell from '../../../components/AppShell.vue'
-import StockAnalysisModal from '../../../components/StockAnalysisModal.vue'
+import StockAnalysisModal from '../../analysis/components/StockAnalysisModal.vue'
 import RadarSummaryPanels from '../components/RadarSummaryPanels.vue'
 import RadarResonanceSide from '../components/RadarResonanceSide.vue'
+import RadarCardsPanel from '../components/RadarCardsPanel.vue'
+import RadarDetailPane from '../components/RadarDetailPane.vue'
 import { fmtDateTime } from '../../../lib/format'
 import {
   marketApi,
@@ -15,7 +17,7 @@ import {
   type ResonanceWeightItem,
 } from '../../../api/market'
 import { watchlistApi } from '../../../api/watchlist'
-import { useStockAnalysis } from '../../../composables/useStockAnalysis'
+import { useStockAnalysis } from '../../analysis/composables/useStockAnalysis'
 
 const analysis = useStockAnalysis()
 
@@ -39,11 +41,6 @@ const horizonErr = ref('')
 const predict = ref<RadarPredict | null>(null)
 const predictErr = ref('')
 
-const cardFilter = ref('')
-const sourceChip = ref('')
-const cardSortKey = ref<'title' | 'rows' | null>(null)
-const cardSortDir = ref<'asc' | 'desc'>('desc')
-
 const SOURCE_LABELS: Record<string, string> = {
   cache: '缓存',
   synthesized: '合成',
@@ -53,87 +50,9 @@ function sourceLabel(source: string): string {
   return SOURCE_LABELS[source] || source
 }
 
-const sourceOptions = computed(() => {
-  const set = new Set<string>()
-  for (const c of cards.value) {
-    const s = (c.source || '').trim()
-    if (s) set.add(s)
-  }
-  return [...set].sort((a, b) => a.localeCompare(b, 'zh'))
-})
-
-function cmpCardNullable(
-  a: number | string | null | undefined,
-  b: number | string | null | undefined,
-  dir: 'asc' | 'desc',
-): number {
-  const aM = a == null || a === '' || (typeof a === 'number' && Number.isNaN(a))
-  const bM = b == null || b === '' || (typeof b === 'number' && Number.isNaN(b))
-  if (aM && bM) return 0
-  if (aM) return 1
-  if (bM) return -1
-  if (typeof a === 'number' && typeof b === 'number') {
-    const d = a - b
-    return dir === 'asc' ? d : -d
-  }
-  const d = String(a).localeCompare(String(b), 'zh')
-  return dir === 'asc' ? d : -d
-}
-
-function toggleCardSort(key: 'title' | 'rows') {
-  if (cardSortKey.value === key) {
-    cardSortDir.value = cardSortDir.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    cardSortKey.value = key
-    cardSortDir.value = 'desc'
-  }
-}
-
-function clearCardSort() {
-  cardSortKey.value = null
-}
-
-function cardSortMark(key: 'title' | 'rows'): string {
-  if (cardSortKey.value !== key) return ''
-  return cardSortDir.value === 'asc' ? ' ▲' : ' ▼'
-}
-
-const displayedCards = computed(() => {
-  const q = cardFilter.value.trim().toLowerCase()
-  let list = cards.value
-  if (sourceChip.value) {
-    list = list.filter((c) => (c.source || '').trim() === sourceChip.value)
-  }
-  if (q) {
-    list = list.filter((c) => {
-      const t = (c.title || '').toLowerCase()
-      const sub = (c.subtitle || '').toLowerCase()
-      const src = (c.source || '').toLowerCase()
-      return t.includes(q) || sub.includes(q) || src.includes(q)
-    })
-  }
-  const key = cardSortKey.value
-  if (!key) return list
-  const dir = cardSortDir.value
-  return [...list].sort((a, b) => {
-    if (key === 'rows') return cmpCardNullable(a.rows.length, b.rows.length, dir)
-    return cmpCardNullable(a.title || '', b.title || '', dir)
-  })
-})
-
 const active = computed(() => {
   if (!activeId.value) return null
   return cards.value.find((c) => c.card_id === activeId.value) || null
-})
-
-watch(displayedCards, (list) => {
-  if (!list.length) {
-    if (cards.value.length) activeId.value = ''
-    return
-  }
-  if (!list.some((c) => c.card_id === activeId.value)) {
-    activeId.value = list[0].card_id
-  }
 })
 
 watch(activeId, () => {
@@ -267,59 +186,12 @@ async function resetWeights() {
   }
 }
 
-function rowLabel(row: Record<string, unknown>) {
-  return String(row.name || row.vt_symbol || row.tf_symbol || row.sector_id || '—')
-}
-
-function sealLabel(
-  row: Record<string, unknown> | { seal_time_label?: string; first_time?: string },
-) {
-  const label = String(row.seal_time_label || '').trim()
-  if (label) return label
-  const ft = String((row as { first_time?: string }).first_time || '').trim()
-  if (ft.length >= 4) return `${ft.slice(0, 2)}:${ft.slice(2, 4)} 封板`
-  return ''
-}
-
-function rowVt(row: Record<string, unknown>): string {
-  for (const k of ['vt_symbol', 'tf_symbol', 'symbol'] as const) {
-    const v = String(row[k] || '').trim()
-    if (v) return v
-  }
-  return ''
-}
-
-function rowVtKeys(row: Record<string, unknown>): string[] {
-  const keys: string[] = []
-  for (const k of ['vt_symbol', 'tf_symbol', 'symbol'] as const) {
-    const v = String(row[k] || '').trim()
-    if (v) keys.push(v)
-  }
-  return keys
-}
-
 function openInWatchlist(vt: string) {
   void router.push({ path: '/watchlist', query: { symbol: vt } })
 }
 
 function openInNotes(vt: string) {
   void router.push({ path: '/notes', query: { symbol: vt } })
-}
-
-function rowResonanceCount(row: Record<string, unknown>): number {
-  for (const k of rowVtKeys(row)) {
-    const n = cardCountByVt.value.get(k)
-    if (typeof n === 'number') return n
-  }
-  return 0
-}
-
-function cardResonanceCount(c: RadarCard): number {
-  for (const row of c.rows) {
-    const n = rowResonanceCount(row)
-    if (n > 0) return n
-  }
-  return 0
 }
 
 function goLeaderScreen() {
@@ -361,6 +233,10 @@ async function addWatchFromHorizonRow(vt: string, name?: string) {
 
 function openAnalysis(vt: string, name?: string) {
   analysis.open(vt, name)
+}
+
+function openCard(cardId: string) {
+  activeId.value = cardId
 }
 
 onMounted(() => {
@@ -416,161 +292,24 @@ onMounted(() => {
           @add-watch="addWatch"
         />
 
-        <main class="main">
-          <template v-if="!loading && !error && !cards.length">
-            <p class="muted empty-main">
-              暂无雷达卡片。可点刷新，或于 Ops 手动执行 warm_radar_card_snapshots 预热缓存。
-              <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
-            </p>
-          </template>
-          <template v-else>
-            <div v-if="cards.length" class="card-tools">
-              <div class="chips">
-                <button
-                  type="button"
-                  class="chip"
-                  :class="{ on: !sourceChip }"
-                  @click="sourceChip = ''"
-                >
-                  全部
-                </button>
-                <button
-                  v-for="s in sourceOptions"
-                  :key="s"
-                  type="button"
-                  class="chip"
-                  :class="{ on: sourceChip === s }"
-                  @click="sourceChip = s"
-                >
-                  {{ sourceLabel(s) }}
-                </button>
-              </div>
-              <div class="row filter-row">
-                <input v-model="cardFilter" placeholder="过滤标题/来源" />
-                <button
-                  type="button"
-                  class="ghost"
-                  :class="{ on: !cardSortKey }"
-                  @click="clearCardSort"
-                >
-                  默认序
-                </button>
-                <button type="button" class="ghost" @click="toggleCardSort('title')">
-                  标题{{ cardSortMark('title') }}
-                </button>
-                <button type="button" class="ghost" @click="toggleCardSort('rows')">
-                  行数{{ cardSortMark('rows') }}
-                </button>
-              </div>
-            </div>
-            <p v-if="cards.length && !displayedCards.length" class="muted empty-main">无匹配卡片</p>
-            <div v-else class="grid">
-              <button
-                v-for="c in displayedCards"
-                :key="c.card_id"
-                type="button"
-                class="card"
-                :class="{ on: active?.card_id === c.card_id }"
-                @click="activeId = c.card_id"
-              >
-                <div class="title-row">
-                  <span class="title">{{ c.title }}</span>
-                  <span v-if="cardResonanceCount(c) >= 2" class="res-badge" title="共振命中卡数">
-                    ★{{ cardResonanceCount(c) }}
-                  </span>
-                </div>
-                <div class="meta muted">{{ c.rows.length }} 行 · {{ sourceLabel(c.source) }}</div>
-                <div v-if="c.empty_message && !c.rows.length" class="preview muted">
-                  {{ c.empty_message }}
-                </div>
-                <div v-else-if="c.rows[0]" class="preview">{{ rowLabel(c.rows[0]) }}</div>
-              </button>
-            </div>
-          </template>
-        </main>
+        <RadarCardsPanel
+          :cards="cards"
+          :loading="loading"
+          :error="error"
+          :active-id="activeId"
+          :card-count-by-vt="cardCountByVt"
+          @open-card="openCard"
+        />
 
-        <section class="detail-pane">
-          <template v-if="active">
-            <div class="pane-head">
-              <h2>{{ active.title }}</h2>
-              <span class="muted tiny"
-                >{{ active.rows.length }} 行 · {{ sourceLabel(active.source) }}</span
-              >
-            </div>
-            <p v-if="active.subtitle || active.empty_message" class="muted pane-sub">
-              {{ active.subtitle }} {{ active.empty_message }}
-            </p>
-            <p v-if="detailMsg" class="detail-msg">{{ detailMsg }}</p>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>标的</th>
-                    <th>细节</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(row, i) in active.rows" :key="i">
-                    <td>{{ i + 1 }}</td>
-                    <td>
-                      <span v-if="rowResonanceCount(row) >= 2" class="star">★</span>
-                      {{ rowLabel(row) }}
-                    </td>
-                    <td class="mono muted">
-                      <template v-if="row.leader_tier">
-                        {{ row.leader_tier }} · 评分 {{ Number(row.leader_score || 0).toFixed(0) }}
-                        <template v-if="row.limit_times != null">
-                          · {{ row.limit_times }}板</template
-                        >
-                        <template v-if="sealLabel(row)"> · {{ sealLabel(row) }}</template>
-                      </template>
-                      <template v-else-if="row.change_pct != null"
-                        >涨幅 {{ Number(row.change_pct).toFixed(2) }}%</template
-                      >
-                      <template v-else-if="row.net_flow_yi != null"
-                        >净流入 {{ Number(row.net_flow_yi).toFixed(2) }} 亿</template
-                      >
-                      <template v-else-if="row.limit_times != null">
-                        {{ row.limit_times }} 板
-                        <template v-if="sealLabel(row)"> · {{ sealLabel(row) }}</template>
-                      </template>
-                      <template v-else-if="row.role">{{ row.role }}</template>
-                      <template v-else-if="sealLabel(row)">{{ sealLabel(row) }}</template>
-                      <template v-else>—</template>
-                    </td>
-                    <td class="row-actions">
-                      <template v-if="rowVt(row)">
-                        <button
-                          type="button"
-                          class="tiny-btn"
-                          :disabled="actingVt === rowVt(row)"
-                          @click="addWatchFromDetail(rowVt(row), String(row.name || ''))"
-                        >
-                          加自选
-                        </button>
-                        <button type="button" class="tiny-btn" @click="openInWatchlist(rowVt(row))">
-                          在自选打开
-                        </button>
-                        <button type="button" class="tiny-btn" @click="openInNotes(rowVt(row))">
-                          去笔记
-                        </button>
-                      </template>
-                      <template v-else>—</template>
-                    </td>
-                  </tr>
-                  <tr v-if="!active.rows.length">
-                    <td colspan="4" class="empty">{{ active.empty_message || '暂无行' }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </template>
-          <div v-else class="empty-pane">
-            <p class="muted">选择一张卡片查看详情</p>
-          </div>
-        </section>
+        <RadarDetailPane
+          :active="active"
+          :detail-msg="detailMsg"
+          :acting-vt="actingVt"
+          :card-count-by-vt="cardCountByVt"
+          @add-watch="addWatchFromDetail"
+          @open-watchlist="openInWatchlist"
+          @open-notes="openInNotes"
+        />
       </div>
     </div>
   </AppShell>
@@ -625,12 +364,6 @@ onMounted(() => {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.ghost.on {
-  border-color: var(--brand-soft);
-  background: var(--brand-light);
-  color: var(--brand);
-  font-weight: 500;
-}
 .primary {
   background: var(--brand);
   border: none;
@@ -645,16 +378,6 @@ onMounted(() => {
 .primary:hover:not(:disabled) {
   background: var(--brand-dark);
 }
-.primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.primary.full {
-  width: 100%;
-}
-.ghost.full {
-  width: 100%;
-}
 .err {
   margin: 0;
   color: var(--danger);
@@ -668,9 +391,8 @@ onMounted(() => {
   align-items: center;
   flex-wrap: wrap;
 }
-.draft-link {
-  color: var(--brand);
-  text-decoration: underline;
+.muted {
+  color: var(--muted);
   font-size: 0.85rem;
 }
 
@@ -696,256 +418,6 @@ onMounted(() => {
     max-height: calc(100vh - 200px);
     overflow: auto;
   }
-}
-.side {
-  grid-area: side;
-}
-.detail-pane {
-  grid-area: detail;
-}
-
-/* 主区 */
-.main {
-  grid-area: main;
-  min-width: 0;
-  display: grid;
-  gap: 12px;
-  align-content: start;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-}
-.card-tools {
-  display: grid;
-  gap: 10px;
-}
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.chip {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-muted);
-  padding: 4px 12px;
-  cursor: pointer;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
-}
-.chip:hover {
-  border-color: var(--brand-soft);
-  color: var(--ink);
-}
-.chip.on {
-  border-color: var(--brand-soft);
-  background: var(--brand-light);
-  color: var(--brand);
-  font-weight: 500;
-}
-.filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.filter-row input {
-  flex: 1;
-  min-width: 140px;
-  box-sizing: border-box;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.5rem;
-  color: var(--ink);
-  padding: 6px 10px;
-  font-size: 0.85rem;
-}
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-}
-.card {
-  position: relative;
-  text-align: left;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  box-shadow: var(--shadow-card);
-  padding: 12px 14px;
-  color: var(--ink);
-  display: grid;
-  gap: 5px;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
-}
-.card:hover {
-  border-color: var(--brand-soft);
-  box-shadow: var(--shadow-panel);
-  transform: translateY(-1px);
-}
-.card.on {
-  border-color: var(--brand);
-  background: var(--brand-light);
-}
-.card.on::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 3px;
-  border-radius: 999px;
-  background: var(--brand);
-}
-.title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.title {
-  font-weight: 600;
-  font-size: 0.9rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.res-badge {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--brand);
-  color: var(--brand-foreground);
-  font-size: 0.7rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.meta {
-  font-size: 0.75rem;
-}
-.preview {
-  font-size: 0.8rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 详情面板 */
-.detail-pane {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-}
-.pane-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
-}
-.pane-head h2 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pane-sub {
-  margin: 0;
-}
-.detail-msg {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-.empty-pane {
-  display: grid;
-  place-items: center;
-  padding: 32px 8px;
-  color: var(--ink-faint);
-  font-size: 0.9rem;
-}
-.empty-pane p {
-  margin: 0;
-}
-.row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-/* 表格与通用 */
-.table-wrap {
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  overflow: auto;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-}
-th,
-td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.85rem;
-  text-align: left;
-  white-space: nowrap;
-}
-th {
-  color: var(--ink-muted);
-  background: var(--surface-muted);
-  position: sticky;
-  top: 0;
-  font-weight: 500;
-  z-index: 1;
-}
-tbody tr:hover td {
-  background: var(--surface-muted);
-}
-.detail-pane .table-wrap tbody tr:hover td {
-  background: var(--brand-light);
-}
-.mono {
-  font-family: var(--mono);
-}
-.muted {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-.tiny {
-  font-size: 0.72rem;
-}
-.empty {
-  text-align: center;
-  color: var(--muted);
-  padding: 24px !important;
-}
-.empty-main {
-  padding: 24px 8px;
-  line-height: 1.6;
-  margin: 0;
-}
-.ops {
-  white-space: nowrap;
 }
 
 @media (max-width: 900px) {
