@@ -995,10 +995,13 @@ onMounted(async () => {
           </button>
           <p v-if="!schemes.length" class="muted">保存当前配置后可一键加载复跑</p>
         </div>
+      </section>
 
+      <section class="middle">
         <div class="cfg-card">
           <div class="history-head">
             <strong>运行历史</strong>
+            <span class="muted">{{ historyTotal ? `${historyTotal} 条` : '' }}</span>
             <button
               type="button"
               class="ghost tiny-btn"
@@ -1010,7 +1013,7 @@ onMounted(async () => {
           </div>
           <p v-if="historyErr" class="err">{{ historyErr }}</p>
           <p v-else-if="!historyBusy && !history.length" class="muted">
-            暂无运行记录，点上方「运行」生成
+            暂无运行记录，点左侧「运行」生成
           </p>
           <button
             v-for="h in history"
@@ -1245,12 +1248,24 @@ onMounted(async () => {
 <style scoped>
 .workspace {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 280px 280px minmax(0, 1fr);
+  grid-template-areas: 'left middle right';
   height: 100%;
   min-height: 0;
   background: var(--surface-muted);
 }
 .left {
+  grid-area: left;
+  border-right: 1px solid var(--line);
+  padding: 14px;
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  background: var(--surface-muted);
+}
+.middle {
+  grid-area: middle;
   border-right: 1px solid var(--line);
   padding: 14px;
   overflow: auto;
@@ -1293,6 +1308,7 @@ onMounted(async () => {
     0 -4px 12px rgba(0, 0, 0, 0.04);
 }
 .right {
+  grid-area: right;
   padding: 16px 24px 24px;
   overflow: auto;
   display: grid;
@@ -1757,9 +1773,21 @@ td.g-score {
   font-size: 0.78rem;
   color: var(--danger);
 }
+@media (max-width: 1200px) {
+  .workspace {
+    grid-template-columns: 280px 1fr;
+    grid-template-areas:
+      'left middle'
+      'right right';
+  }
+}
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      'left'
+      'middle'
+      'right';
   }
 }
 </style>
