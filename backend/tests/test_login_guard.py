@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from redis import RedisError
 
-from app.services import login_guard
+from app.domains.auth import login_guard
 
 
 def _mock_client(**overrides: object) -> MagicMock:

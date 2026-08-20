@@ -1,20 +1,4 @@
-from __future__ import annotations
+"""兼容壳：实现已迁至 app.domains.auth.schemas。"""
+from app.domains.auth.schemas import LoginRequest, TokenResponse, UserOut
 
-from pydantic import BaseModel, Field
-
-
-class LoginRequest(BaseModel):
-    username: str = Field(min_length=1)
-    password: str = Field(min_length=1)
-
-
-class UserOut(BaseModel):
-    id: str
-    username: str
-    display_name: str
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user: UserOut
+__all__ = ["LoginRequest", "TokenResponse", "UserOut"]
