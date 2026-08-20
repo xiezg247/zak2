@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-from app.api.v1.screener import _run_detail
+from app.domains.screener.service import _run_detail
 from app.repositories import screener as repo
 
 

@@ -349,7 +349,7 @@ def test_get_recipe_weights_api() -> None:
     user = _make_user()
     client = _api_client(user)
     merged = rw.DEFAULT_WEIGHTS["intraday_multi"]
-    with patch("app.api.v1.screener.recipe_weights_svc.load_recipe_weights", return_value=merged):
+    with patch("app.domains.screener.service.recipe_weights_svc.load_recipe_weights", return_value=merged):
         resp = client.get("/api/v1/screener/recipes/intraday_multi/weights")
     assert resp.status_code == 200
     body = resp.json()
@@ -362,7 +362,7 @@ def test_get_recipe_weights_api_ultra_short() -> None:
     user = _make_user()
     client = _api_client(user)
     merged = rw.DEFAULT_WEIGHTS["ultra_short_unified"]
-    with patch("app.api.v1.screener.recipe_weights_svc.load_recipe_weights", return_value=merged):
+    with patch("app.domains.screener.service.recipe_weights_svc.load_recipe_weights", return_value=merged):
         resp = client.get("/api/v1/screener/recipes/ultra_short_unified/weights")
     assert resp.status_code == 200
     body = resp.json()
@@ -386,7 +386,7 @@ def test_put_recipe_weights_api_ok() -> None:
         {"momentum": 4, "turnover": 2, "volume_ratio": 2, "surge": 2},
     )
     with patch(
-        "app.api.v1.screener.recipe_weights_svc.save_recipe_weights",
+        "app.domains.screener.service.recipe_weights_svc.save_recipe_weights",
         return_value=merged,
     ) as save:
         resp = client.put(
@@ -404,7 +404,7 @@ def test_put_recipe_weights_api_reset() -> None:
     client = _api_client(user)
     merged = rw.DEFAULT_WEIGHTS["post_close_multi"]
     with patch(
-        "app.api.v1.screener.recipe_weights_svc.save_recipe_weights",
+        "app.domains.screener.service.recipe_weights_svc.save_recipe_weights",
         return_value=merged,
     ) as save:
         resp = client.put(
@@ -419,7 +419,7 @@ def test_put_recipe_weights_api_reset() -> None:
 def test_put_recipe_weights_api_bad_request() -> None:
     client = _api_client()
     with patch(
-        "app.api.v1.screener.recipe_weights_svc.save_recipe_weights",
+        "app.domains.screener.service.recipe_weights_svc.save_recipe_weights",
         side_effect=ValueError("未知因子：nope"),
     ):
         resp = client.put(
