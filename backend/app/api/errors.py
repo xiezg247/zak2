@@ -19,6 +19,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.errors import AppError
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,6 +42,11 @@ def _first_validation_message(exc: RequestValidationError) -> str:
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(AppError)
+    async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+        _ = request
+        return _json(exc.status_code, exc.message, exc.detail)
+
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         _ = request
