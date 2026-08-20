@@ -4,7 +4,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.errors import register_exception_handlers
-from app.core.errors import NotFound, RateLimited, UpstreamFailed, ValidationFailed
+from app.core.errors import (
+    Conflict,
+    NotFound,
+    RateLimited,
+    Unavailable,
+    UpstreamFailed,
+    ValidationFailed,
+)
 
 
 def _client() -> TestClient:
@@ -26,6 +33,14 @@ def _client() -> TestClient:
     @app.get("/up")
     def up() -> None:
         raise UpstreamFailed("上游失败")
+
+    @app.get("/cf")
+    def cf() -> None:
+        raise Conflict("已在自选中")
+
+    @app.get("/ua")
+    def ua() -> None:
+        raise Unavailable("Redis 不可用")
 
     return TestClient(app, raise_server_exceptions=False)
 
@@ -56,3 +71,15 @@ def test_upstream_failed_maps_502() -> None:
     resp = _client().get("/up")
     assert resp.status_code == 502
     assert resp.json()["message"] == "上游失败"
+
+
+def test_conflict_maps_409() -> None:
+    resp = _client().get("/cf")
+    assert resp.status_code == 409
+    assert resp.json()["message"] == "已在自选中"
+
+
+def test_unavailable_maps_503() -> None:
+    resp = _client().get("/ua")
+    assert resp.status_code == 503
+    assert "Redis" in resp.json()["message"]

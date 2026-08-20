@@ -36,3 +36,11 @@ class RateLimited(AppError):
 
 class UpstreamFailed(AppError):
     status_code = 502
+
+
+class Conflict(AppError):
+    status_code = 409
+
+
+class Unavailable(AppError):
+    status_code = 503
