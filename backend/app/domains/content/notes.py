@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
-from app.core.errors import ValidationFailed
+from app.core.errors import NotFound, ValidationFailed
 from app.domains.content.schemas import NoteEntryOut, NoteMemoOut, NoteSymbolOut
 from app.models.content import StockNoteEntry, StockNoteMemo
 from app.repositories.pagination import Page, paginate
@@ -168,10 +168,9 @@ def add_entry(db: Session, user_id: str, raw: str, body: str) -> NoteEntryOut:
     )
 
 
-def delete_entry(db: Session, user_id: str, entry_id: int) -> bool:
+def delete_entry(db: Session, user_id: str, entry_id: int) -> None:
     row = db.scalar(select(StockNoteEntry).where(StockNoteEntry.id == entry_id, StockNoteEntry.user_id == user_id))
     if not row:
-        return False
+        raise NotFound("流水不存在")
     db.delete(row)
     db.commit()
-    return True

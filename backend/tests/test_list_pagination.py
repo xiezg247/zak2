@@ -7,9 +7,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.domains.content import feed as feed_svc
+from app.domains.content import notes as notes_svc
 from app.repositories.pagination import Page
-from app.services.content import feed as feed_svc
-from app.services.content import notes as notes_svc
 from app.services.team import team_reports
 
 
