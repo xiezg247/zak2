@@ -18,4 +18,4 @@
 
 - `auth` / `channels`（Phase 1）
 - `content`（notes / feed / playbook / notify_log，Phase 2）
-- `watchlist`（schemas / repos / enrich / services / 薄 router，Phase 3）
+- watchlist（自选/分组/持仓/信号面板/trading_risk，Phase 3）
