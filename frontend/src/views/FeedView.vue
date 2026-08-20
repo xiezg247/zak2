@@ -105,6 +105,11 @@ function selectItem(item: FeedItem) {
   window.open(item.url, '_blank', 'noopener,noreferrer')
 }
 
+function selectSubInManage(s: FeedSub) {
+  subId.value = s.id
+  manageOpen.value = false
+}
+
 async function toggleSub(s: FeedSub) {
   await contentApi.setFeedEnabled(s.id, !s.enabled)
   await load()
@@ -208,48 +213,29 @@ onMounted(() => {
             <h2 class="side-title">我的订阅</h2>
             <span class="count muted">{{ subs.length }}</span>
             <span class="spacer"></span>
-            <button type="button" class="ghost small" @click="manageOpen = true">+ 添加订阅</button>
+            <button type="button" class="ghost small" @click="manageOpen = true">管理</button>
           </div>
 
-          <input v-model="subFilter" class="sub-filter" placeholder="过滤订阅名 / mid" />
-          <label class="check-label">
-            <input v-model="enabledOnly" type="checkbox" />
-            <span>仅看启用</span>
-          </label>
-
-          <button type="button" class="sub all" :class="{ on: !subId }" @click="subId = ''">
-            全部动态
-          </button>
-
-          <p v-if="subs.length && !displayedSubs.length" class="muted tiny-text">无匹配订阅</p>
-          <p v-if="!subs.length && !loading" class="muted tiny-text sub-hint">
-            点击「+ 添加订阅」搜索关键词或填写 mid 添加订阅。
-          </p>
-
-          <div class="sub-list">
-            <div
-              v-for="s in displayedSubs"
+          <div class="chip-flow">
+            <button type="button" class="sub-chip" :class="{ on: !subId }" @click="subId = ''">
+              全部
+            </button>
+            <button
+              v-for="s in subs"
               :key="s.id"
-              class="sub-row"
+              type="button"
+              class="sub-chip"
               :class="{ on: subId === s.id, off: !s.enabled }"
+              :title="s.source_id"
+              @click="subId = s.id"
             >
-              <button type="button" class="sub-name" :title="s.source_id" @click="subId = s.id">
-                {{ s.display_name || s.source_id }}
-              </button>
-              <button
-                type="button"
-                class="icon-btn"
-                :class="{ on: s.enabled }"
-                :title="s.enabled ? '停用' : '启用'"
-                @click="toggleSub(s)"
-              >
-                {{ s.enabled ? '开' : '关' }}
-              </button>
-              <button type="button" class="icon-btn danger" title="删除" @click="removeSub(s)">
-                删
-              </button>
-            </div>
+              {{ s.display_name || s.source_id }}
+            </button>
           </div>
+
+          <p v-if="!subs.length && !loading" class="muted tiny-text sub-hint">
+            点击「管理」搜索关键词或填写 mid 添加订阅。
+          </p>
         </section>
 
         <section class="feed">
@@ -321,10 +307,56 @@ onMounted(() => {
         @click.self="manageOpen = false"
         @keydown.esc="manageOpen = false"
       >
-        <div class="manager" role="dialog" aria-modal="true" aria-label="添加订阅">
-          <h3 class="manager-title">添加订阅</h3>
+        <div class="manager" role="dialog" aria-modal="true" aria-label="订阅管理">
+          <h3 class="manager-title">订阅管理</h3>
           <p v-if="error" class="err">{{ error }}</p>
 
+          <div class="manager-block">
+            <div class="manager-sub-head">
+              <strong class="manager-label">订阅列表</strong>
+              <span class="count muted">{{ subs.length }}</span>
+            </div>
+            <input v-model="subFilter" class="sub-filter" placeholder="过滤订阅名 / mid" />
+            <label class="check-label">
+              <input v-model="enabledOnly" type="checkbox" />
+              <span>仅看启用</span>
+            </label>
+            <p v-if="subs.length && !displayedSubs.length" class="muted tiny-text">无匹配订阅</p>
+            <p v-if="!subs.length" class="muted tiny-text">暂无订阅，可从下方添加</p>
+            <div class="sub-list">
+              <div
+                v-for="s in displayedSubs"
+                :key="s.id"
+                class="sub-row"
+                :class="{ on: subId === s.id, off: !s.enabled }"
+              >
+                <button
+                  type="button"
+                  class="sub-name"
+                  :title="s.source_id"
+                  @click="selectSubInManage(s)"
+                >
+                  {{ s.display_name || s.source_id }}
+                </button>
+                <button
+                  type="button"
+                  class="icon-btn"
+                  :class="{ on: s.enabled }"
+                  :title="s.enabled ? '停用' : '启用'"
+                  @click="toggleSub(s)"
+                >
+                  {{ s.enabled ? '开' : '关' }}
+                </button>
+                <button type="button" class="icon-btn danger" title="删除" @click="removeSub(s)">
+                  删
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <strong class="manager-label">添加订阅</strong>
           <div class="row">
             <input v-model="newMid" placeholder="输入 UP 的 mid" @keyup.enter="addSub" />
             <button type="button" class="primary" :disabled="adding" @click="addSub">添加</button>
@@ -399,14 +431,14 @@ onMounted(() => {
 
 .workspace {
   display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   grid-template-areas: 'mid feed';
   gap: 14px;
   flex: 1;
   min-height: 0;
 }
 
-/* ---------- 中栏 · 订阅列表 ---------- */
+/* ---------- 中栏 · 订阅列表（紧凑胶囊流） ---------- */
 .mid,
 .feed {
   min-height: 0;
@@ -420,12 +452,44 @@ onMounted(() => {
   grid-area: mid;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px;
+  gap: 10px;
+  padding: 12px;
+  align-content: start;
 }
-.mid .sub-list {
-  flex: 1;
-  min-height: 0;
+.chip-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sub-chip {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.sub-chip:hover {
+  border-color: var(--brand-soft);
+  background: var(--brand-light);
+}
+.sub-chip.on {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--brand-foreground);
+}
+.sub-chip.off {
+  opacity: 0.55;
+  text-decoration: line-through;
 }
 .spacer {
   flex: 1;
@@ -558,17 +622,11 @@ onMounted(() => {
 .sub-hint {
   margin: 0;
 }
-.sub.all {
-  width: 100%;
-  text-align: left;
-  font-weight: 500;
-  color: var(--ink);
-}
 .sub-list {
   display: grid;
   gap: 2px;
-  margin-top: 2px;
   overflow: auto;
+  max-height: 180px;
 }
 .sub-row {
   display: grid;
@@ -826,6 +884,25 @@ onMounted(() => {
   font-weight: 600;
   color: var(--ink);
 }
+.manager-block {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 0.6rem;
+  background: var(--surface-muted);
+}
+.manager-sub-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.manager-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+}
 .divider {
   height: 1px;
   background: var(--line-soft);
@@ -855,9 +932,6 @@ onMounted(() => {
   .mid,
   .feed {
     overflow: visible;
-  }
-  .mid .sub-list {
-    max-height: 320px;
   }
 }
 </style>
