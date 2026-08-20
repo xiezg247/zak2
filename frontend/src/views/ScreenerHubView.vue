@@ -113,6 +113,14 @@ function clearSort() {
   sortKey.value = null
 }
 
+function toggleColSort(key: string) {
+  toggleSort(key as Exclude<ResultSortKey, null>)
+}
+
+function colSortMark(key: string): string {
+  return sortMark(key as Exclude<ResultSortKey, null>)
+}
+
 function sortMark(key: Exclude<ResultSortKey, null>): string {
   if (sortKey.value !== key) return ''
   return sortDir.value === 'asc' ? ' ▲' : ' ▼'
@@ -139,6 +147,64 @@ const displayedRows = computed(() => {
   const dir = sortDir.value
   return [...list].sort((a, b) => cmpNullable(sortValue(a, key), sortValue(b, key), dir))
 })
+
+type ColGroup = {
+  label: string
+  cls?: string
+  cols: { key: string; label: string; sortable?: boolean; hint?: boolean }[]
+}
+
+const COL_GROUPS: ColGroup[] = [
+  {
+    label: '标的',
+    cols: [
+      { key: 'symbol', label: '代码' },
+      { key: 'name', label: '名称' },
+      { key: 'industry', label: '行业' },
+    ],
+  },
+  {
+    label: '行情',
+    cls: 'g-quote',
+    cols: [
+      { key: 'last_price', label: '现价', sortable: true },
+      { key: 'change_pct', label: '涨幅%', sortable: true },
+      { key: 'turnover_rate', label: '换手%', sortable: true },
+      { key: 'volume_ratio', label: '量比', sortable: true },
+    ],
+  },
+  {
+    label: '盘口',
+    cls: 'g-tape',
+    cols: [
+      { key: 'limit_times', label: '连板' },
+      { key: 'leader_tier', label: '分层' },
+    ],
+  },
+  {
+    label: '基本面',
+    cls: 'g-fund',
+    cols: [
+      { key: 'pe_ttm', label: 'PE' },
+      { key: 'total_mv_yi', label: '市值亿' },
+    ],
+  },
+  {
+    label: '资金',
+    cls: 'g-flow',
+    cols: [{ key: 'net_mf_wan', label: '净流入万' }],
+  },
+  {
+    label: '评分',
+    cls: 'g-score',
+    cols: [
+      { key: 'score', label: '得分', sortable: true },
+      { key: 'pattern_hint', label: '形态说明', hint: true },
+    ],
+  },
+]
+
+const flatCols = COL_GROUPS.flatMap((g) => g.cols)
 
 const selectedVts = ref<Record<string, true>>({})
 const batchBusy = ref(false)
@@ -711,144 +777,161 @@ onMounted(async () => {
   <AppShell title="选股 Hub" :subtitle="dataStatus" active="screener">
     <div class="workspace">
       <section class="left">
-        <div class="tabs">
-          <button :class="{ on: tab === 'condition' }" type="button" @click="tab = 'condition'">
-            条件选股
-          </button>
-          <button :class="{ on: tab === 'recipe' }" type="button" @click="tab = 'recipe'">
-            多因子配方
-          </button>
-          <button :class="{ on: tab === 'pattern' }" type="button" @click="tab = 'pattern'">
-            形态
-          </button>
-          <button :class="{ on: tab === 'peer' }" type="button" @click="tab = 'peer'">对标</button>
-        </div>
-
-        <div v-if="tab === 'condition'" class="block">
-          <label>
-            Preset
-            <select v-model="selectedPreset">
-              <option v-for="p in presets" :key="p.name" :value="p.name" :disabled="!p.implemented">
-                {{ p.name }}{{ p.implemented ? '' : '（未实现）' }}
-              </option>
-            </select>
-          </label>
-          <div v-if="isCustom" class="custom-grid">
-            <label>
-              涨幅% ≥
-              <input v-model.number="minChange" type="number" step="0.1" placeholder="不限" />
-            </label>
-            <label>
-              涨幅% ≤
-              <input v-model.number="maxChange" type="number" step="0.1" placeholder="不限" />
-            </label>
-            <label>
-              换手% ≥
-              <input v-model.number="minTurnover" type="number" step="0.1" placeholder="不限" />
-            </label>
-            <label>
-              换手% ≤
-              <input v-model.number="maxTurnover" type="number" step="0.1" placeholder="不限" />
-            </label>
+        <div class="cfg-card">
+          <div class="tabs">
+            <button :class="{ on: tab === 'condition' }" type="button" @click="tab = 'condition'">
+              条件选股
+            </button>
+            <button :class="{ on: tab === 'recipe' }" type="button" @click="tab = 'recipe'">
+              多因子配方
+            </button>
+            <button :class="{ on: tab === 'pattern' }" type="button" @click="tab = 'pattern'">
+              形态
+            </button>
+            <button :class="{ on: tab === 'peer' }" type="button" @click="tab = 'peer'">
+              对标
+            </button>
           </div>
-        </div>
-        <div v-else-if="tab === 'recipe'" class="block">
-          <label>
-            内置配方
-            <select v-model="selectedRecipe">
-              <option
-                v-for="r in recipes"
-                :key="r.recipe_id"
-                :value="r.recipe_id"
-                :disabled="!r.implemented"
-              >
-                {{ r.name }}
-              </option>
-            </select>
-          </label>
-          <label v-if="isRadarLeader">
-            变体
-            <select v-model="leaderVariant">
-              <option value="mainline">主线龙头</option>
-              <option value="all_market">全市场龙头</option>
-            </select>
-          </label>
-          <div v-if="isWeightEditable" class="weight-block">
-            <div class="weight-head">
-              <strong>因子权重</strong>
-              <button class="ghost tiny-btn" type="button" @click="weightOpen = !weightOpen">
-                {{ weightOpen ? '收起' : '展开' }}
-              </button>
-            </div>
-            <div v-if="weightOpen" class="weight-panel">
-              <div v-for="item in weightItems" :key="item.key" class="weight-row">
-                <label :for="`rw-${item.key}`">{{ item.label }}</label>
-                <input
-                  :id="`rw-${item.key}`"
-                  v-model.number="weightDraft[item.key]"
-                  type="number"
-                  min="0"
-                  max="5"
-                  step="0.01"
-                  :disabled="weightBusy"
-                />
-              </div>
-              <p v-if="weightErr" class="weight-err">{{ weightErr }}</p>
-              <div class="weight-actions">
-                <button
-                  class="primary tiny-primary"
-                  type="button"
-                  :disabled="weightBusy || weightItems.length === 0"
-                  @click="saveRecipeWeights"
+
+          <div v-if="tab === 'condition'" class="block">
+            <label>
+              Preset
+              <select v-model="selectedPreset">
+                <option
+                  v-for="p in presets"
+                  :key="p.name"
+                  :value="p.name"
+                  :disabled="!p.implemented"
                 >
-                  保存
-                </button>
-                <button
-                  class="ghost"
-                  type="button"
-                  :disabled="weightBusy"
-                  @click="resetRecipeWeights"
-                >
-                  恢复默认
-                </button>
-              </div>
-              <p class="hint muted">保存后按比例归一化；空值不会清空已存权重</p>
+                  {{ p.name }}{{ p.implemented ? '' : '（未实现）' }}
+                </option>
+              </select>
+            </label>
+            <div v-if="isCustom" class="custom-grid">
+              <label>
+                涨幅% ≥
+                <input v-model.number="minChange" type="number" step="0.1" placeholder="不限" />
+              </label>
+              <label>
+                涨幅% ≤
+                <input v-model.number="maxChange" type="number" step="0.1" placeholder="不限" />
+              </label>
+              <label>
+                换手% ≥
+                <input v-model.number="minTurnover" type="number" step="0.1" placeholder="不限" />
+              </label>
+              <label>
+                换手% ≤
+                <input v-model.number="maxTurnover" type="number" step="0.1" placeholder="不限" />
+              </label>
             </div>
           </div>
-        </div>
-        <div v-else-if="tab === 'pattern'" class="block">
-          <label>
-            形态
-            <select v-model="selectedPattern">
-              <option v-for="p in patterns" :key="p.pattern_id" :value="p.pattern_id">
-                {{ p.name }}
-              </option>
-            </select>
-          </label>
-          <p class="hint muted">
-            {{
-              patterns.find((p) => p.pattern_id === selectedPattern)?.description ||
-              'Redis 行情池 ∩ 日 K'
-            }}
-          </p>
-          <label>
-            扫描上限
-            <input v-model.number="maxScan" type="number" min="50" max="1200" />
-          </label>
-        </div>
-        <div v-else-if="tab === 'peer'" class="block">
-          <label>
-            标杆代码
-            <input v-model="peerSymbol" placeholder="600519.SSE" @keyup.enter="runScreen" />
-          </label>
-          <p class="hint muted">
-            同业 30% + 估值 25% + 近5日动量 15% + 近20日动量 15% + 换手 15%（需 Tushare）
-          </p>
+          <div v-else-if="tab === 'recipe'" class="block">
+            <label>
+              内置配方
+              <select v-model="selectedRecipe">
+                <option
+                  v-for="r in recipes"
+                  :key="r.recipe_id"
+                  :value="r.recipe_id"
+                  :disabled="!r.implemented"
+                >
+                  {{ r.name }}
+                </option>
+              </select>
+            </label>
+            <label v-if="isRadarLeader">
+              变体
+              <select v-model="leaderVariant">
+                <option value="mainline">主线龙头</option>
+                <option value="all_market">全市场龙头</option>
+              </select>
+            </label>
+            <div v-if="isWeightEditable" class="weight-block">
+              <div class="weight-head">
+                <strong>因子权重</strong>
+                <button class="ghost tiny-btn" type="button" @click="weightOpen = !weightOpen">
+                  {{ weightOpen ? '收起' : '展开' }}
+                </button>
+              </div>
+              <div v-if="weightOpen" class="weight-panel">
+                <div v-for="item in weightItems" :key="item.key" class="weight-row">
+                  <label :for="`rw-${item.key}`">{{ item.label }}</label>
+                  <input
+                    :id="`rw-${item.key}`"
+                    v-model.number="weightDraft[item.key]"
+                    type="number"
+                    min="0"
+                    max="5"
+                    step="0.01"
+                    :disabled="weightBusy"
+                  />
+                </div>
+                <p v-if="weightErr" class="weight-err">{{ weightErr }}</p>
+                <div class="weight-actions">
+                  <button
+                    class="primary tiny-primary"
+                    type="button"
+                    :disabled="weightBusy || weightItems.length === 0"
+                    @click="saveRecipeWeights"
+                  >
+                    保存
+                  </button>
+                  <button
+                    class="ghost"
+                    type="button"
+                    :disabled="weightBusy"
+                    @click="resetRecipeWeights"
+                  >
+                    恢复默认
+                  </button>
+                </div>
+                <p class="hint muted">保存后按比例归一化；空值不会清空已存权重</p>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="tab === 'pattern'" class="block">
+            <label>
+              形态
+              <select v-model="selectedPattern">
+                <option v-for="p in patterns" :key="p.pattern_id" :value="p.pattern_id">
+                  {{ p.name }}
+                </option>
+              </select>
+            </label>
+            <p class="hint muted">
+              {{
+                patterns.find((p) => p.pattern_id === selectedPattern)?.description ||
+                'Redis 行情池 ∩ 日 K'
+              }}
+            </p>
+            <label>
+              扫描上限
+              <input v-model.number="maxScan" type="number" min="50" max="1200" />
+            </label>
+          </div>
+          <div v-else-if="tab === 'peer'" class="block">
+            <label>
+              标杆代码
+              <input v-model="peerSymbol" placeholder="600519.SSE" @keyup.enter="runScreen" />
+            </label>
+            <p class="hint muted">
+              同业 30% + 估值 25% + 近5日动量 15% + 近20日动量 15% + 换手 15%（需 Tushare）
+            </p>
+          </div>
+
+          <button class="primary run-btn" type="button" :disabled="running" @click="runScreen">
+            {{ running ? '运行中…' : '运行选股' }}
+          </button>
         </div>
 
-        <div class="block">
+        <div class="cfg-card">
+          <div class="card-title">
+            <strong>硬过滤</strong>
+            <span class="muted">{{ activeTemplate?.name || '—' }}</span>
+          </div>
           <label>
-            硬过滤模板
+            过滤模板
             <select v-model="hardTemplate">
               <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
             </select>
@@ -889,12 +972,11 @@ onMounted(async () => {
           </label>
         </div>
 
-        <button class="primary" type="button" :disabled="running" @click="runScreen">
-          {{ running ? '运行中…' : '运行' }}
-        </button>
-
-        <div class="block scheme">
-          <h3>方案</h3>
+        <div class="cfg-card">
+          <div class="card-title">
+            <strong>方案</strong>
+            <span class="muted">{{ schemes.length }} 个</span>
+          </div>
           <div class="row">
             <input v-model="schemeName" placeholder="方案名称" @keyup.enter="saveScheme" />
             <button type="button" class="ghost" @click="saveScheme">保存</button>
@@ -914,12 +996,9 @@ onMounted(async () => {
           <p v-if="!schemes.length" class="muted">保存当前配置后可一键加载复跑</p>
         </div>
 
-        <p v-if="statusText" class="status">{{ statusText }}</p>
-        <p v-if="error" class="err">{{ error }}</p>
-
-        <div class="block history">
+        <div class="cfg-card">
           <div class="history-head">
-            <h3>运行历史</h3>
+            <strong>运行历史</strong>
             <button
               type="button"
               class="ghost tiny-btn"
@@ -956,14 +1035,19 @@ onMounted(async () => {
       </section>
 
       <section class="right">
+        <div class="run-status">
+          <p v-if="statusText" class="status">{{ statusText }}</p>
+          <p v-if="error" class="err">{{ error }}</p>
+          <p v-if="!statusText && !error" class="hint muted">
+            配置左侧参数后运行；点击表格行「自选 / 找同类」快速操作
+          </p>
+        </div>
+
         <div v-if="current" class="toolbar">
           <strong>{{ current.condition }}</strong>
           <span class="muted">扫描 {{ current.total_scanned }} · 命中 {{ current.row_count }}</span>
-        </div>
-        <div v-if="current" class="row filter-row">
-          <input v-model="resultFilter" placeholder="过滤代码/名称/行业" />
-          <button v-if="sortKey" type="button" class="ghost" @click="clearSort">默认序</button>
-          <button class="ghost" type="button" @click="exportCsv">导出 CSV</button>
+          <span class="spacer"></span>
+          <button type="button" class="ghost" @click="exportCsv">导出 CSV</button>
           <button
             type="button"
             class="ghost"
@@ -973,12 +1057,16 @@ onMounted(async () => {
             {{ batchBusy ? '加入中…' : `加入自选 (${selectedCount})` }}
           </button>
         </div>
+        <div v-if="current" class="row filter-row">
+          <input v-model="resultFilter" placeholder="过滤代码/名称/行业" />
+          <button v-if="sortKey" type="button" class="ghost" @click="clearSort">默认序</button>
+        </div>
 
         <div v-if="diff" class="diff">
           <div class="diff-summary">
-            <span>新增 {{ diff.added.length }}</span>
-            <span>移除 {{ diff.removed.length }}</span>
-            <span>保留 {{ diff.kept.length }}</span>
+            <span class="chip">新增 {{ diff.added.length }}</span>
+            <span class="chip">移除 {{ diff.removed.length }}</span>
+            <span class="chip">保留 {{ diff.kept.length }}</span>
             <button type="button" class="link" @click="toggleDiffDetail">
               {{ showDiffDetail ? '收起' : '详情' }}
             </button>
@@ -1019,8 +1107,15 @@ onMounted(async () => {
         <div class="table-wrap">
           <table>
             <thead>
-              <tr>
-                <th>
+              <tr class="group-row">
+                <th class="sel-col" colspan="2"></th>
+                <th v-for="g in COL_GROUPS" :key="g.label" :class="g.cls" :colspan="g.cols.length">
+                  {{ g.label }}
+                </th>
+                <th class="ops-col"></th>
+              </tr>
+              <tr class="col-row">
+                <th class="sel-col">
                   <input
                     type="checkbox"
                     :checked="allDisplayedSelected"
@@ -1028,59 +1123,49 @@ onMounted(async () => {
                     @change="toggleSelectAllDisplayed"
                   />
                 </th>
-                <th>#</th>
-                <th>代码</th>
-                <th>名称</th>
-                <th>行业</th>
-                <th class="sortable" @click="toggleSort('last_price')">
-                  现价{{ sortMark('last_price') }}
-                </th>
-                <th class="sortable" @click="toggleSort('change_pct')">
-                  涨幅%{{ sortMark('change_pct') }}
-                </th>
-                <th class="sortable" @click="toggleSort('turnover_rate')">
-                  换手%{{ sortMark('turnover_rate') }}
-                </th>
-                <th>连板</th>
-                <th>分层</th>
-                <th>PE</th>
-                <th>市值亿</th>
-                <th>净流入万</th>
-                <th class="sortable" @click="toggleSort('volume_ratio')">
-                  量比{{ sortMark('volume_ratio') }}
-                </th>
-                <th class="sortable" @click="toggleSort('score')">得分{{ sortMark('score') }}</th>
-                <th>形态说明</th>
-                <th></th>
+                <th class="sel-col">#</th>
+                <template v-for="c in flatCols" :key="c.key">
+                  <th v-if="c.sortable" class="sortable" @click="toggleColSort(c.key)">
+                    {{ c.label }}{{ colSortMark(c.key) }}
+                  </th>
+                  <th v-else :class="{ 'hint-cell': c.hint }">{{ c.label }}</th>
+                </template>
+                <th class="ops-col"></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(row, i) in displayedRows" :key="String(row.symbol)">
-                <td @click.stop>
+                <td class="sel-col" @click.stop>
                   <input
                     type="checkbox"
                     :checked="isSelected(rowVt(row))"
                     @change="toggleVt(rowVt(row))"
                   />
                 </td>
-                <td>{{ i + 1 }}</td>
+                <td class="sel-col">{{ i + 1 }}</td>
                 <td class="mono">{{ row.vt_symbol || row.symbol }}</td>
                 <td>{{ row.name }}</td>
                 <td>{{ String(row.industry || '').trim() || '—' }}</td>
-                <td>{{ Number(row.last_price || 0).toFixed(2) }}</td>
-                <td :class="{ up: Number(row.change_pct) > 0, down: Number(row.change_pct) < 0 }">
+                <td class="g-quote">{{ Number(row.last_price || 0).toFixed(2) }}</td>
+                <td
+                  class="g-quote"
+                  :class="{ up: Number(row.change_pct) > 0, down: Number(row.change_pct) < 0 }"
+                >
                   {{ Number(row.change_pct || 0).toFixed(2) }}
                 </td>
-                <td>{{ Number(row.turnover_rate || 0).toFixed(2) }}</td>
-                <td>
+                <td class="g-quote">{{ Number(row.turnover_rate || 0).toFixed(2) }}</td>
+                <td class="g-quote">{{ Number(row.volume_ratio || 0).toFixed(2) }}</td>
+                <td class="g-tape">
                   {{ row.limit_times != null ? Number(row.limit_times).toFixed(0) : '—' }}
                   <span v-if="rowSealLabel(row)" class="muted seal-tag">
                     · {{ rowSealLabel(row) }}</span
                   >
                 </td>
-                <td>{{ row.leader_tier_label || row.leader_tier || '—' }}</td>
-                <td>{{ row.pe_ttm != null ? Number(row.pe_ttm).toFixed(2) : '—' }}</td>
-                <td>
+                <td class="g-tape">{{ row.leader_tier_label || row.leader_tier || '—' }}</td>
+                <td class="g-fund">
+                  {{ row.pe_ttm != null ? Number(row.pe_ttm).toFixed(2) : '—' }}
+                </td>
+                <td class="g-fund">
                   {{
                     row.total_mv_yi != null
                       ? Number(row.total_mv_yi).toFixed(1)
@@ -1089,7 +1174,7 @@ onMounted(async () => {
                         : '—'
                   }}
                 </td>
-                <td>
+                <td class="g-flow">
                   {{
                     row.net_mf_wan != null
                       ? Number(row.net_mf_wan).toFixed(0)
@@ -1098,8 +1183,7 @@ onMounted(async () => {
                         : '—'
                   }}
                 </td>
-                <td>{{ Number(row.volume_ratio || 0).toFixed(2) }}</td>
-                <td>
+                <td class="g-score">
                   {{
                     row.similarity_score != null
                       ? Number(row.similarity_score).toFixed(1)
@@ -1113,7 +1197,7 @@ onMounted(async () => {
                   }}
                 </td>
                 <td
-                  class="hint-cell"
+                  class="g-score hint-cell"
                   :title="
                     [
                       row.pattern_hint || row.hit_reason || '',
@@ -1131,13 +1215,13 @@ onMounted(async () => {
                   }}</template>
                   <template v-else>—</template>
                 </td>
-                <td class="row-actions">
+                <td class="ops-col row-actions">
                   <button type="button" class="link" @click="addToWatchlist(row)">自选</button>
                   <button type="button" class="link" @click="findPeers(row)">找同类</button>
                 </td>
               </tr>
               <tr v-if="!displayedRows.length">
-                <td colspan="17" class="empty">
+                <td :colspan="flatCols.length + 3" class="empty">
                   {{ rows.length === 0 ? '运行选股后在此显示结果' : '无匹配结果' }}
                 </td>
               </tr>
@@ -1168,19 +1252,67 @@ onMounted(async () => {
 }
 .left {
   border-right: 1px solid var(--line);
-  padding: 16px;
+  padding: 14px;
   overflow: auto;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   align-content: start;
+  background: var(--surface-muted);
+}
+.cfg-card {
   background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-card);
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.cfg-card > .primary.run-btn {
+  margin-top: 2px;
+}
+.card-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.card-title strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.run-btn {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    0 -4px 12px rgba(0, 0, 0, 0.04);
 }
 .right {
-  padding: 20px 24px;
+  padding: 16px 24px 24px;
   overflow: auto;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   align-content: start;
+}
+.run-status {
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.run-status p {
+  margin: 0;
 }
 .tabs {
   display: grid;
@@ -1227,7 +1359,7 @@ onMounted(async () => {
   gap: 8px;
 }
 .filter-row {
-  grid-template-columns: 1fr auto auto auto;
+  grid-template-columns: 1fr auto;
 }
 label {
   display: grid;
@@ -1298,12 +1430,9 @@ input {
   color: var(--danger);
   font-size: 0.85rem;
 }
-.scheme h3 {
+.history-head h3,
+.industry h3 {
   margin: 0 0 8px;
-  font-size: 0.9rem;
-}
-.history-head h3 {
-  margin: 0;
   font-size: 0.9rem;
 }
 .history-head {
@@ -1311,6 +1440,8 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft);
 }
 .hist {
   width: 100%;
@@ -1351,6 +1482,10 @@ input {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
+}
+.toolbar .spacer {
+  flex: 1;
 }
 .diff {
   color: var(--muted);
@@ -1420,6 +1555,87 @@ th.sortable {
 th.sortable:hover {
   color: var(--text);
 }
+.group-row th {
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--line);
+  letter-spacing: 0.02em;
+}
+.col-row th {
+  top: 24px;
+  padding: 7px 10px;
+}
+.sel-col {
+  text-align: center;
+  width: 34px;
+}
+.ops-col {
+  width: 96px;
+}
+.group-row th.g-quote,
+.g-quote {
+  background: rgba(230, 100, 50, 0.04);
+}
+.col-row th.g-quote {
+  background: rgba(230, 100, 50, 0.06);
+  color: var(--brand);
+}
+.group-row th.g-tape,
+.g-tape {
+  background: rgba(22, 163, 74, 0.03);
+}
+.col-row th.g-tape {
+  background: rgba(22, 163, 74, 0.06);
+  color: var(--ok);
+}
+.group-row th.g-fund,
+.g-fund {
+  background: rgba(115, 115, 115, 0.03);
+}
+.col-row th.g-fund {
+  color: var(--ink-muted);
+}
+.group-row th.g-flow,
+.g-flow {
+  background: rgba(59, 130, 246, 0.04);
+}
+.col-row th.g-flow {
+  background: rgba(59, 130, 246, 0.07);
+  color: #2563eb;
+}
+.group-row th.g-score,
+.g-score {
+  background: rgba(230, 100, 50, 0.05);
+}
+.col-row th.g-score {
+  background: rgba(230, 100, 50, 0.08);
+  color: var(--brand);
+}
+.group-row th.g-quote,
+.group-row th.g-tape,
+.group-row th.g-fund,
+.group-row th.g-flow,
+.group-row th.g-score,
+.col-row th.g-quote,
+.col-row th.g-tape,
+.col-row th.g-fund,
+.col-row th.g-flow,
+.col-row th.g-score,
+td.g-quote,
+td.g-tape,
+td.g-fund,
+td.g-flow,
+td.g-score {
+  border-left: 1px solid var(--line-soft);
+}
+td.g-flow {
+  font-variant-numeric: tabular-nums;
+}
+td.g-score {
+  font-weight: 500;
+}
 .mono {
   font-family: var(--mono);
 }
@@ -1445,10 +1661,6 @@ th.sortable:hover {
   border-radius: 999px;
   padding: 4px 10px;
   font-size: 0.8rem;
-}
-.industry h3 {
-  margin: 0 0 8px;
-  font-size: 0.9rem;
 }
 .weight-block {
   display: grid;
