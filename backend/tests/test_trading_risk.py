@@ -13,6 +13,7 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
+from app.core.errors import ValidationFailed
 from app.services.plan import trading_risk as tr
 
 
@@ -75,19 +76,19 @@ def test_normalize_prefs_keeps_valid() -> None:
 
 def test_save_rejects_bad_total_capital() -> None:
     db = MagicMock()
-    with pytest.raises(ValueError, match="总资金"):
+    with pytest.raises(ValidationFailed, match="总资金"):
         tr.save_trading_risk_prefs(db, "uid", {"total_capital": 0})
 
 
 def test_save_rejects_bad_stop_loss() -> None:
     db = MagicMock()
-    with pytest.raises(ValueError, match="止损"):
+    with pytest.raises(ValidationFailed, match="止损"):
         tr.save_trading_risk_prefs(db, "uid", {"stop_loss_pct": 0.6})
 
 
 def test_save_rejects_bad_caution() -> None:
     db = MagicMock()
-    with pytest.raises(ValueError, match="浮亏"):
+    with pytest.raises(ValidationFailed, match="浮亏"):
         tr.save_trading_risk_prefs(db, "uid", {"caution_float_pct": 0})
 
 

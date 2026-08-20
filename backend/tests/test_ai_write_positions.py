@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from fastapi import HTTPException
-
+from app.core.errors import NotFound, ValidationFailed
 from app.schemas.watchlist import PositionOut
 from app.services.ai.ai_tools import execute_write_tool, summarize_write_tool
 
@@ -28,7 +27,7 @@ def test_upsert_not_in_watchlist() -> None:
         patch("app.repositories.positions.PositionRepository.get_position", return_value=None),
         patch(
             "app.repositories.positions.PositionRepository.add_position",
-            side_effect=HTTPException(status_code=400, detail="须先加入自选再录入持仓"),
+            side_effect=ValidationFailed("须先加入自选再录入持仓"),
         ),
     ):
         out = execute_write_tool(
@@ -135,7 +134,7 @@ def test_add_remove_signal_panel() -> None:
 
     with patch(
         "app.repositories.signal_panel.SignalPanelRepository.remove_symbol",
-        side_effect=HTTPException(status_code=404, detail="不在信号名单中"),
+        side_effect=NotFound("不在信号名单中"),
     ):
         out2 = execute_write_tool(db, "u1", "remove_signal_panel", {"symbol": "600519.SSE"})
     assert "error" in out2

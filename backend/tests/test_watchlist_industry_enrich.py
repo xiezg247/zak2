@@ -8,9 +8,10 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from app.api.deps import get_current_user
-from app.api.v1 import watchlist as wl
 from app.core.db import get_db
 from app.core.security import hash_password
+from app.domains.watchlist import enrich as wl
+from app.domains.watchlist import market_views as mv
 from app.main import create_app
 from app.models.user import User
 from app.services.market.quotes import QuoteRow
@@ -33,7 +34,7 @@ def test_enrich_fills_empty_industry_from_db() -> None:
             wl, "enrich_rows_from_db", side_effect=lambda _db, rows: setattr(rows[0], "industry", "白酒") or 1
         ) as enrich_mock,
     ):
-        out = wl._enrich([_item()], with_quotes=True, db=db)
+        out = wl.enrich([_item()], with_quotes=True, db=db)
     assert out[0].industry == "白酒"
     enrich_mock.assert_called_once()
     assert enrich_mock.call_args.args[0] is db
@@ -54,13 +55,13 @@ def test_enrich_keeps_redis_industry() -> None:
         patch.object(wl, "get_quote_store", return_value=store),
         patch.object(wl, "enrich_rows_from_db", side_effect=fake_enrich),
     ):
-        out = wl._enrich([_item()], with_quotes=True, db=MagicMock())
+        out = wl.enrich([_item()], with_quotes=True, db=MagicMock())
     assert out[0].industry == "已有行业"
 
 
 def test_enrich_without_quotes_skips_industry() -> None:
     with patch.object(wl, "enrich_rows_from_db") as enrich_mock:
-        out = wl._enrich([_item()], with_quotes=False, db=MagicMock())
+        out = wl.enrich([_item()], with_quotes=False, db=MagicMock())
     enrich_mock.assert_not_called()
     assert out[0].industry == ""
     assert out[0].last_price is None
@@ -76,7 +77,7 @@ def test_enrich_omits_zero_volume_ratio() -> None:
         patch.object(wl, "get_quote_store", return_value=store),
         patch.object(wl, "enrich_rows_from_db", return_value=0),
     ):
-        out = wl._enrich([_item()], with_quotes=True, db=MagicMock())
+        out = wl.enrich([_item()], with_quotes=True, db=MagicMock())
     assert out[0].volume_ratio is None
 
 
@@ -90,7 +91,7 @@ def test_enrich_keeps_positive_volume_ratio() -> None:
         patch.object(wl, "get_quote_store", return_value=store),
         patch.object(wl, "enrich_rows_from_db", return_value=0),
     ):
-        out = wl._enrich([_item()], with_quotes=True, db=MagicMock())
+        out = wl.enrich([_item()], with_quotes=True, db=MagicMock())
     assert out[0].volume_ratio == 1.35
 
 
@@ -108,7 +109,7 @@ def test_enrich_no_redis_still_looks_up_db() -> None:
         patch.object(wl, "get_quote_store", return_value=store),
         patch.object(wl, "enrich_rows_from_db", side_effect=fill),
     ):
-        out = wl._enrich([_item()], with_quotes=True, db=MagicMock())
+        out = wl.enrich([_item()], with_quotes=True, db=MagicMock())
     assert out[0].industry == "白酒"
 
 
@@ -149,8 +150,8 @@ def test_quotes_endpoint_enriches_industry() -> None:
         return 1
 
     with (
-        patch.object(wl, "get_quote_store", return_value=store),
-        patch.object(wl, "enrich_rows_from_db", side_effect=fill),
+        patch.object(mv, "get_quote_store", return_value=store),
+        patch.object(mv, "enrich_rows_from_db", side_effect=fill),
     ):
         client = _api_client()
         resp = client.get("/api/v1/quotes", params={"symbols": "600519.SSE"})

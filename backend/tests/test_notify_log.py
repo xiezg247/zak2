@@ -111,7 +111,7 @@ def test_api_notify_log_ok() -> None:
         "count": 1,
     }
     client = _api_client(db=db, user=user)
-    with patch("app.api.v1.watchlist.notify_log.list_notify_log", return_value=mock_out) as mock_list:
+    with patch("app.domains.watchlist.router.notify_log.list_notify_log", return_value=mock_out) as mock_list:
         resp = client.get("/api/v1/watchlist/notify-log?limit=10")
     assert resp.status_code == 200
     body = resp.json()

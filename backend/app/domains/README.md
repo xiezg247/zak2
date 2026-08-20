@@ -18,3 +18,4 @@
 
 - `auth` / `channels`（Phase 1）
 - `content`（notes / feed / playbook / notify_log，Phase 2）
+- `watchlist`（schemas / repos / enrich / services / 薄 router，Phase 3）

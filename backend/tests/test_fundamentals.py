@@ -49,7 +49,7 @@ def test_api_fundamentals_ok() -> None:
         "sync": None,
         "disclosures": [],
     }
-    with patch("app.api.v1.watchlist.fundamentals_svc.get_fundamentals", return_value=fake) as g:
+    with patch("app.domains.watchlist.market_views.fundamentals_svc.get_fundamentals", return_value=fake) as g:
         r = client.get("/api/v1/watchlist/items/600519.SSE/fundamentals")
     assert r.status_code == 200
     assert r.json()["data"]["ts_code"] == "600519.SH"
@@ -59,7 +59,7 @@ def test_api_fundamentals_ok() -> None:
 def test_api_fundamentals_bad_symbol() -> None:
     client = _client()
     with patch(
-        "app.api.v1.watchlist.fundamentals_svc.get_fundamentals",
+        "app.domains.watchlist.market_views.fundamentals_svc.get_fundamentals",
         side_effect=HTTPException(status_code=400, detail="代码为空"),
     ):
         r = client.get("/api/v1/watchlist/items/%20/fundamentals")
