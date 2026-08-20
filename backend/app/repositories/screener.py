@@ -139,13 +139,26 @@ class ScreenerRunRepository(BaseRepository[ScreenerRun]):
             data = json.loads(row.result_json)
         except json.JSONDecodeError:
             return None
+        # 兼容早期版本把「rows 列表」直接存入 result_json 的历史数据
+        if isinstance(data, list):
+            return {str(item.get("symbol")) for item in data if isinstance(item, dict) and item.get("symbol")}
+        if not isinstance(data, dict):
+            return None
         rows = data.get("rows") or []
-        return {str(item.get("symbol")) for item in rows if item.get("symbol")}
+        return {str(item.get("symbol")) for item in rows if isinstance(item, dict) and item.get("symbol")}
 
 
-def runs_to_csv(result: dict[str, Any]) -> str:
-    """把选股结果导出为 CSV 文本（纯函数，供 API 层调用）。"""
-    rows = result.get("rows") or []
+def runs_to_csv(result: dict[str, Any] | list[dict[str, Any]]) -> str:
+    """把选股结果导出为 CSV 文本（纯函数，供 API 层调用）。
+
+    兼容早期版本直接存 rows 列表的历史数据。
+    """
+    if isinstance(result, list):
+        rows = result
+    elif isinstance(result, dict):
+        rows = result.get("rows") or []
+    else:
+        rows = []
     buf = io.StringIO()
     fieldnames = [
         "symbol",

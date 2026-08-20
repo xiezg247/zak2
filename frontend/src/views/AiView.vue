@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import MarkdownView from '../components/MarkdownView.vue'
 import PagerBar from '../components/PagerBar.vue'
-import { fmtDateTime } from '../lib/format'
 import {
   aiApi,
   type ChatMessage,
@@ -12,6 +11,9 @@ import {
   type LlmStatus,
   type Session,
 } from '../api/ai'
+import { watchlistApi, type WatchlistItem } from '../api/watchlist'
+
+const LAST_SYMBOL_KEY = 'zak2.ai.lastSymbol'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,7 +33,7 @@ const useTools = ref(true)
 const toolStatus = ref('')
 const proposals = ref<ConfirmProposal[]>([])
 const actingId = ref('')
-const teamSymbol = ref('600519.SSE')
+const teamSymbol = ref('')
 const teamMode = ref<'fast' | 'deep'>('fast')
 const teamBusy = ref(false)
 const teamStatus = ref('')
@@ -41,19 +43,102 @@ const teamBodies = ref<Record<string, string>>({})
 const teamWeighted = ref<number | null>(null)
 const teamSavedReport = ref<{ id: number; title: string; vt: string } | null>(null)
 const listEl = ref<HTMLElement | null>(null)
-const sessionFilter = ref('')
+const draftEl = ref<HTMLTextAreaElement | null>(null)
 /** proposal_id -> args 是否展开 */
 const argsOpen = ref<Record<string, boolean>>({})
+
+type QuickAction = {
+  id: string
+  label: string
+  icon: string
+  /** prompt：普通对话；team：发送时走投研团队 */
+  mode: 'prompt' | 'team'
+  needSymbol?: boolean
+  /** 填入输入框的模板；需标的时用 / 作为选票入口 */
+  template: string
+}
+
+const slashMenuOpen = ref(false)
+const slashQuery = ref('')
+const slashStart = ref(-1)
+const watchlistItems = ref<WatchlistItem[]>([])
+const watchlistLoading = ref(false)
+
+const quickActions: QuickAction[] = [
+  {
+    id: 'market',
+    label: '大势研判',
+    icon: '📈',
+    mode: 'prompt',
+    template:
+      '【大势研判】请基于当前市场情绪与主要指数概况，给出今日大势研判：1) 情绪与赚钱效应 2) 主线/风险 3) 操作上偏进攻还是防守。结论要可执行、避免空话。分析仅供研究参考。',
+  },
+  {
+    id: 'trend',
+    label: '走势预测',
+    icon: '📉',
+    mode: 'team',
+    needSymbol: true,
+    template:
+      '【走势预测】标的：/\n请基于投研团队研报，给出短期走势情景推演（偏多/偏空/震荡各自条件），明确关键价位与不确定性，不做荐股承诺。分析仅供研究参考。',
+  },
+  {
+    id: 'trade',
+    label: '买卖点研判',
+    icon: '⇄',
+    mode: 'team',
+    needSymbol: true,
+    template:
+      '【买卖点研判】标的：/\n请基于投研团队研报与我的风控偏好，评估当前位置的买卖参考：支撑/阻力、仓位建议区间、需要等待的条件。分析仅供研究参考。',
+  },
+  {
+    id: 'diagnosis',
+    label: '股票诊断',
+    icon: '💓',
+    mode: 'team',
+    needSymbol: true,
+    template:
+      '【股票诊断】标的：/\n启动投研团队分析（财务/风险/策略），输出完整体检与研报。可用 / 从自选插入代码。',
+  },
+  {
+    id: 'industry',
+    label: '行业分析',
+    icon: '🏛',
+    mode: 'team',
+    needSymbol: true,
+    template:
+      '【行业分析】标的：/\n请基于投研团队研报，延伸分析其所属行业/板块的近期强弱、资金流向与同业对比，并给出产业链位置与关注要点。分析仅供研究参考。',
+  },
+  {
+    id: 'screener',
+    label: '选股票',
+    icon: '🔍',
+    mode: 'prompt',
+    template:
+      '【选股票】请基于我最近的选股运行结果与雷达/自选概况，解读 Top 命中，说明逻辑与风险，并给出可跟进的标的短名单。分析仅供研究参考。',
+  },
+  {
+    id: 'chart',
+    label: '智能图说',
+    icon: '📊',
+    mode: 'team',
+    needSymbol: true,
+    template:
+      '【智能图说】标的：/\n请基于投研团队研报与近期行情，用文字解读 K 线形态与量价结构：趋势、关键价位、形态含义与注意点。分析仅供研究参考。',
+  },
+  {
+    id: 'review',
+    label: 'AI复盘',
+    icon: '📋',
+    mode: 'prompt',
+    template:
+      '【AI复盘】请基于我的持仓、自选与近期笔记，做一次复盘：做对了什么、做错了什么、下一步观察清单。分析仅供研究参考。',
+  },
+]
 
 function sessionTitle(s: { title: string }): string {
   return (s.title || '').trim() || '未命名'
 }
-
-const displayedSessions = computed(() => {
-  const q = sessionFilter.value.trim().toLowerCase()
-  if (!q) return sessions.value
-  return sessions.value.filter((s) => sessionTitle(s).toLowerCase().includes(q))
-})
 
 function toggleArgs(id: string) {
   argsOpen.value = { ...argsOpen.value, [id]: !argsOpen.value[id] }
@@ -164,13 +249,42 @@ async function onReject(p: ConfirmProposal) {
   }
 }
 
-async function send() {
-  const text = draft.value.trim()
-  if (!text || busy.value) return
+async function send(textOverride?: string) {
+  const text = (textOverride ?? draft.value).trim()
+  if (!text || busy.value || teamBusy.value) return
+
+  const teamReq = parseTeamQuickSend(text)
+  if (teamReq) {
+    if (!teamReq.symbol || teamReq.symbol === '/') {
+      error.value = '请先填写或用 / 选择股票代码'
+      focusDraftSlash()
+      return
+    }
+    rememberSymbol(teamReq.symbol)
+    draft.value = ''
+    slashMenuOpen.value = false
+    if (!sessionId.value) await newSession()
+    messages.value.push({
+      id: Date.now(),
+      session_id: sessionId.value,
+      role: 'user',
+      content: text,
+      created_at: new Date().toISOString(),
+    })
+    // 诊断只跑团队；其它 team 快捷：研报落库后再做聚焦追问
+    const focusPrompt = teamReq.action.id === 'diagnosis' ? '' : teamReq.focusPrompt
+    await runTeam(teamReq.symbol, { focusPrompt })
+    return
+  }
+
+  const mentioned = extractMentionedSymbol(text)
+  if (mentioned) rememberSymbol(mentioned)
+
   error.value = ''
   if (!sessionId.value) await newSession()
   const sid = sessionId.value
   draft.value = ''
+  slashMenuOpen.value = false
   messages.value.push({
     id: Date.now(),
     session_id: sid,
@@ -231,15 +345,195 @@ async function send() {
   }
 }
 
+function loadRememberedSymbol(): string {
+  try {
+    return localStorage.getItem(LAST_SYMBOL_KEY)?.trim() || ''
+  } catch {
+    return ''
+  }
+}
+
+function rememberSymbol(vt: string) {
+  const s = vt.trim()
+  if (!s || s === '/') return
+  teamSymbol.value = s
+  try {
+    localStorage.setItem(LAST_SYMBOL_KEY, s)
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 解析 team 模式快捷草稿：【标签】标的：xxx + 可选聚焦追问 */
+function parseTeamQuickSend(
+  text: string,
+): { action: QuickAction; symbol: string; focusPrompt: string } | null {
+  for (const action of quickActions) {
+    if (action.mode !== 'team') continue
+    const label = action.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const re = new RegExp(`^【${label}】标的：\\s*([^\\s\\n]*)\\s*\\n?([\\s\\S]*)$`)
+    const m = text.match(re)
+    if (!m) continue
+    return {
+      action,
+      symbol: (m[1] || '').trim(),
+      focusPrompt: (m[2] || '').trim(),
+    }
+  }
+  return null
+}
+
+function extractMentionedSymbol(text: string): string {
+  const m = text.match(/标的：\s*([A-Za-z0-9.\-]+)/)
+  const s = (m?.[1] || '').trim()
+  return s && s !== '/' ? s : ''
+}
+
+const filteredWatchlist = computed(() => {
+  const q = slashQuery.value.trim().toLowerCase()
+  const items = watchlistItems.value
+  if (!q) return items.slice(0, 40)
+  return items
+    .filter(
+      (i) =>
+        i.vt_symbol.toLowerCase().includes(q) ||
+        (i.name || '').toLowerCase().includes(q) ||
+        i.symbol.toLowerCase().includes(q),
+    )
+    .slice(0, 40)
+})
+
+async function ensureWatchlist() {
+  if (watchlistItems.value.length || watchlistLoading.value) return
+  watchlistLoading.value = true
+  try {
+    watchlistItems.value = await watchlistApi.list()
+  } catch {
+    /* ignore */
+  } finally {
+    watchlistLoading.value = false
+  }
+}
+
+function syncSlashMenuFromDraft() {
+  const el = draftEl.value
+  if (!el) return
+  const pos = el.selectionStart ?? draft.value.length
+  const before = draft.value.slice(0, pos)
+  const m = before.match(/\/([^\s/]*)$/)
+  if (!m) {
+    slashMenuOpen.value = false
+    slashStart.value = -1
+    slashQuery.value = ''
+    return
+  }
+  slashStart.value = pos - m[0].length
+  slashQuery.value = m[1] || ''
+  slashMenuOpen.value = true
+  void ensureWatchlist()
+}
+
+function onDraftInput() {
+  syncSlashMenuFromDraft()
+}
+
+function onDraftKeyup() {
+  syncSlashMenuFromDraft()
+}
+
+function onDraftClick() {
+  syncSlashMenuFromDraft()
+}
+
+function onDraftBlur() {
+  window.setTimeout(() => {
+    if (document.activeElement !== draftEl.value) slashMenuOpen.value = false
+  }, 120)
+}
+
+function insertSlashSymbol(item: WatchlistItem) {
+  const start = slashStart.value
+  const el = draftEl.value
+  if (start < 0 || !el) return
+  const pos = el.selectionStart ?? draft.value.length
+  const insert = item.vt_symbol
+  draft.value = draft.value.slice(0, start) + insert + draft.value.slice(pos)
+  rememberSymbol(item.vt_symbol)
+  slashMenuOpen.value = false
+  slashStart.value = -1
+  slashQuery.value = ''
+  nextTick(() => {
+    const next = start + insert.length
+    el.focus()
+    el.setSelectionRange(next, next)
+  })
+}
+
+function focusDraftSlash() {
+  nextTick(() => {
+    const el = draftEl.value
+    if (!el) return
+    el.focus()
+    const idx = draft.value.indexOf('/')
+    if (idx >= 0) {
+      el.setSelectionRange(idx, idx + 1)
+      syncSlashMenuFromDraft()
+    } else {
+      const end = draft.value.length
+      el.setSelectionRange(end, end)
+    }
+  })
+}
+
+function applyQuickAction(action: QuickAction) {
+  if (busy.value || teamBusy.value) return
+  error.value = ''
+  draft.value = action.template
+  slashMenuOpen.value = false
+  if (action.needSymbol) focusDraftSlash()
+  else {
+    nextTick(() => {
+      draftEl.value?.focus()
+      const end = draft.value.length
+      draftEl.value?.setSelectionRange(end, end)
+    })
+  }
+}
+
+async function requestTeam() {
+  if (busy.value || teamBusy.value) return
+  // 与「股票诊断」同一入口：始终先填入草稿，由用户确认标的后再发送
+  const diagnosis = quickActions.find((a) => a.id === 'diagnosis')
+  if (!diagnosis) return
+  const known = teamSymbol.value.trim()
+  if (known) {
+    draft.value = diagnosis.template.replace('标的：/', `标的：${known}`)
+    error.value = ''
+    nextTick(() => {
+      draftEl.value?.focus()
+      const end = draft.value.length
+      draftEl.value?.setSelectionRange(end, end)
+    })
+    return
+  }
+  applyQuickAction(diagnosis)
+}
+
 async function selectSession(id: string) {
   sessionId.value = id
   proposals.value = []
   await loadMessages()
 }
 
-async function runTeam() {
-  const vt = teamSymbol.value.trim()
-  if (!vt || teamBusy.value || busy.value) return
+async function runTeam(vtOverride?: string, opts?: { focusPrompt?: string }) {
+  const vt = (vtOverride ?? teamSymbol.value).trim()
+  if (!vt || vt === '/') {
+    await requestTeam()
+    return
+  }
+  if (teamBusy.value || busy.value) return
+  rememberSymbol(vt)
+  slashMenuOpen.value = false
   error.value = ''
   teamBusy.value = true
   teamStatus.value = teamMode.value === 'deep' ? '深度预取中…' : '预取中…'
@@ -249,6 +543,7 @@ async function runTeam() {
   teamWeighted.value = null
   teamSavedReport.value = null
   if (!sessionId.value) await newSession()
+  let focusAfter = ''
   try {
     await aiApi.streamTeam(
       vt,
@@ -295,7 +590,7 @@ async function runTeam() {
         },
         onDone: () => {
           if (!teamSavedReport.value) teamStatus.value = ''
-          void refreshSessions().then(loadMessages)
+          focusAfter = (opts?.focusPrompt || '').trim()
         },
         onError: (err) => {
           error.value = err
@@ -311,11 +606,16 @@ async function runTeam() {
     teamBusy.value = false
     if (!teamStatus.value) teamStatus.value = ''
   }
+  await refreshSessions().then(loadMessages)
+  // 团队结束后再做聚焦追问（session 里已有研报上下文）
+  if (focusAfter && !error.value) {
+    await send(focusAfter)
+  }
 }
 
 onMounted(async () => {
-  const s = String(route.query.symbol || '').trim()
-  if (s) teamSymbol.value = s
+  const fromQuery = String(route.query.symbol || '').trim()
+  teamSymbol.value = fromQuery || loadRememberedSymbol()
   try {
     status.value = await aiApi.status()
     await refreshSessions()
@@ -349,25 +649,34 @@ onMounted(async () => {
           </section>
 
           <section class="side-section grow">
-            <div class="side-title-row">
-              <h2 class="side-title">会话</h2>
-              <span class="count muted">{{ sessionsTotal }}</span>
-            </div>
-            <input v-model="sessionFilter" class="filter" placeholder="过滤会话" />
+            <h2 class="side-title">历史对话</h2>
             <p v-if="!sessions.length" class="hint muted">暂无会话，点上方新对话</p>
-            <p v-else-if="!displayedSessions.length" class="hint muted">无匹配会话</p>
             <div class="sess-list">
               <button
-                v-for="s in displayedSessions"
+                v-for="s in sessions"
                 :key="s.id"
                 type="button"
                 class="sess"
                 :class="{ on: sessionId === s.id }"
                 @click="selectSession(s.id)"
               >
+                <span class="sess-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="14" height="14">
+                    <path
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M7.5 18.5 5 21V8.5A2.5 2.5 0 0 1 7.5 6h9A2.5 2.5 0 0 1 19 8.5v7a2.5 2.5 0 0 1-2.5 2.5H7.5Z"
+                    />
+                    <circle cx="9.5" cy="12" r="0.9" fill="currentColor" stroke="none" />
+                    <circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none" />
+                    <circle cx="14.5" cy="12" r="0.9" fill="currentColor" stroke="none" />
+                  </svg>
+                </span>
                 <span class="sess-title">{{ sessionTitle(s) }}</span>
-                <span class="sess-time muted">{{ fmtDateTime(s.updated_at) }}</span>
-                <span class="del" title="删除会话" @click.stop="removeSession(s.id)">删</span>
+                <span class="del" title="删除会话" @click.stop="removeSession(s.id)">×</span>
               </button>
             </div>
             <PagerBar
@@ -403,10 +712,41 @@ onMounted(async () => {
             <p v-if="toolStatus" class="status-pill">
               <span class="spinner" aria-hidden="true"></span>{{ toolStatus }}
             </p>
+            <p v-if="teamStatus" class="status-pill">
+              <span class="spinner" aria-hidden="true"></span>{{ teamStatus }}
+            </p>
+            <div v-if="Object.keys(teamScores).length" class="team-scores">
+              <div v-for="(block, key) in teamScores" :key="key" class="score-card">
+                <div class="score-head">
+                  <strong>{{ agentName(key) }}</strong>
+                  <span class="score-num">{{ block.score ?? '—' }}</span>
+                </div>
+                <p v-if="block.summary" class="score-summary">{{ block.summary }}</p>
+                <div v-if="teamBodies[key]" class="agent-body">
+                  <MarkdownView :source="teamBodies[key]" />
+                </div>
+              </div>
+            </div>
             <div v-if="teamReport" class="bubble assistant">
               <div class="role">首席汇总</div>
               <MarkdownView :source="teamReport" />
             </div>
+
+            <p v-if="teamSavedReport" class="saved-tip">
+              研报已保存：{{ teamSavedReport.title }}
+              <button
+                type="button"
+                class="link"
+                @click="
+                  router.push({
+                    path: '/notes',
+                    query: { symbol: teamSavedReport.vt, report: String(teamSavedReport.id) },
+                  })
+                "
+              >
+                在笔记中打开
+              </button>
+            </p>
 
             <div v-for="p in proposals" :key="p.proposal_id" class="confirm-card" :class="p.status">
               <div class="confirm-head">
@@ -461,89 +801,97 @@ onMounted(async () => {
             </div>
           </div>
 
-          <form class="composer" @submit.prevent="send">
-            <textarea
-              v-model="draft"
-              rows="3"
-              placeholder="输入问题，Ctrl+Enter 发送"
-              @keydown.ctrl.enter.prevent="send"
-            />
-            <button class="primary" type="submit" :disabled="busy || teamBusy || !draft.trim()">
-              {{ busy ? '生成中…' : '发送' }}
-            </button>
-          </form>
-        </section>
-
-        <aside class="right">
-          <section class="side-section">
-            <div class="side-title-row">
-              <h2 class="side-title">投研团队</h2>
-              <span v-if="teamWeighted != null" class="weighted">{{ teamWeighted }}</span>
-            </div>
-            <input
-              v-model="teamSymbol"
-              class="filter"
-              placeholder="600519.SSE"
-              @keyup.enter="runTeam"
-            />
-            <div class="team-mode">
-              <label :class="{ on: teamMode === 'fast' }">
-                <input v-model="teamMode" type="radio" value="fast" :disabled="teamBusy" />
-                <span>快速</span>
-              </label>
-              <label :class="{ on: teamMode === 'deep' }">
-                <input v-model="teamMode" type="radio" value="deep" :disabled="teamBusy" />
-                <span>深度</span>
-              </label>
-            </div>
+          <div class="quick-bar" role="toolbar" aria-label="投研快捷操作">
             <button
+              v-for="action in quickActions"
+              :key="action.id"
               type="button"
-              class="primary block"
-              :disabled="teamBusy || busy || !teamSymbol.trim()"
-              @click="runTeam"
+              class="quick-chip"
+              :disabled="busy || teamBusy"
+              :title="
+                action.needSymbol
+                  ? `${action.label}（填入草稿，用 / 选股票）`
+                  : `${action.label}（填入草稿）`
+              "
+              @click="applyQuickAction(action)"
             >
-              {{ teamBusy ? '分析中…' : teamMode === 'deep' ? '深度团队分析' : '团队分析' }}
+              <span class="quick-icon" aria-hidden="true">{{ action.icon }}</span>
+              <span>{{ action.label }}</span>
             </button>
-            <p v-if="teamMode === 'deep'" class="hint muted">三分析师并行 LLM，更慢更耗 token</p>
-            <p v-if="teamStatus" class="team-status">
-              <span class="spinner" aria-hidden="true"></span>{{ teamStatus }}
-            </p>
-          </section>
+          </div>
 
-          <section v-if="Object.keys(teamScores).length" class="side-section team-live">
-            <div class="side-title-row">
-              <h2 class="side-title">分析师评分</h2>
-            </div>
-            <div class="team-scores">
-              <div v-for="(block, key) in teamScores" :key="key" class="score-card">
-                <div class="score-head">
-                  <strong>{{ agentName(key) }}</strong>
-                  <span class="score-num">{{ block.score ?? '—' }}</span>
-                </div>
-                <p v-if="block.summary" class="score-summary">{{ block.summary }}</p>
-                <div v-if="teamBodies[key]" class="agent-body">
-                  <MarkdownView :source="teamBodies[key]" />
-                </div>
+          <form class="composer" @submit.prevent="send()">
+            <div class="draft-wrap">
+              <textarea
+                ref="draftEl"
+                v-model="draft"
+                rows="2"
+                placeholder="有问题，尽管问…"
+                @input="onDraftInput"
+                @keyup="onDraftKeyup"
+                @click="onDraftClick"
+                @blur="onDraftBlur"
+                @keydown.ctrl.enter.prevent="send()"
+                @keydown.escape.prevent="slashMenuOpen = false"
+              />
+              <div v-if="slashMenuOpen" class="slash-menu" @mousedown.prevent>
+                <p class="slash-tip">从自选插入股票代码</p>
+                <p v-if="watchlistLoading" class="hint muted">加载自选中…</p>
+                <p v-else-if="!filteredWatchlist.length" class="hint muted">
+                  无匹配，可继续手输代码
+                </p>
+                <button
+                  v-for="item in filteredWatchlist"
+                  :key="item.vt_symbol"
+                  type="button"
+                  class="slash-option"
+                  @mousedown.prevent="insertSlashSymbol(item)"
+                >
+                  <span class="picker-name">{{ item.name || '未命名' }}</span>
+                  <span class="picker-code muted">{{ item.vt_symbol }}</span>
+                </button>
               </div>
             </div>
-          </section>
-
-          <p v-if="teamSavedReport" class="saved-tip">
-            研报已保存：{{ teamSavedReport.title }}
-            <button
-              type="button"
-              class="link"
-              @click="
-                router.push({
-                  path: '/notes',
-                  query: { symbol: teamSavedReport.vt, report: String(teamSavedReport.id) },
-                })
-              "
-            >
-              在笔记中打开
-            </button>
-          </p>
-        </aside>
+            <div class="composer-bar">
+              <div class="bar-left">
+                <button
+                  type="button"
+                  class="chip mode-chip"
+                  :class="{ deep: teamMode === 'deep' }"
+                  :disabled="teamBusy"
+                  :title="
+                    teamMode === 'deep'
+                      ? '深度模式（个股团队类快捷）：三分析师并行，更慢更耗 token'
+                      : '快速模式（个股团队类快捷）'
+                  "
+                  @click="teamMode = teamMode === 'fast' ? 'deep' : 'fast'"
+                >
+                  <span class="chip-icon" aria-hidden="true">{{
+                    teamMode === 'deep' ? '◈' : '⚡'
+                  }}</span>
+                  <span>{{ teamMode === 'deep' ? '深度' : '快速' }}</span>
+                  <span class="chip-caret" aria-hidden="true">▾</span>
+                </button>
+                <span v-if="teamWeighted != null" class="weighted">加权 {{ teamWeighted }}</span>
+                <span class="composer-hint muted">/ 选股 · Ctrl+Enter 发送</span>
+              </div>
+              <button
+                class="send-btn"
+                type="submit"
+                :disabled="busy || teamBusy || !draft.trim()"
+                :title="busy ? '生成中…' : '发送'"
+                aria-label="发送"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path
+                    fill="currentColor"
+                    d="M3.4 20.4 20.85 12.9a1 1 0 0 0 0-1.8L3.4 3.6a1 1 0 0 0-1.4 1.2l2.2 6.5a1 1 0 0 0 .7.65l8.3 1.05-8.3 1.05a1 1 0 0 0-.7.65l-2.2 6.5a1 1 0 0 0 1.4 1.2Z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </form>
+        </section>
       </div>
     </div>
   </AppShell>
@@ -576,7 +924,7 @@ onMounted(async () => {
 
 .workspace {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 300px;
+  grid-template-columns: 236px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   gap: 14px;
   flex: 1;
@@ -585,59 +933,57 @@ onMounted(async () => {
 
 /* ---------- 左栏 ---------- */
 .left,
-.chat,
-.right {
+.chat {
   min-height: 0;
   border: 1px solid var(--line);
   border-radius: 0.9rem;
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
-.left,
-.right {
+.left {
   display: flex;
   flex-direction: column;
-  padding: 14px;
+  padding: 12px;
   overflow: auto;
 }
 .side-section {
   display: grid;
   gap: 8px;
-  padding-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--line-soft);
 }
 .side-section + .side-section {
-  padding-top: 16px;
+  padding-top: 12px;
 }
 .side-section.grow {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   border-bottom: none;
   padding-bottom: 0;
+  padding-top: 12px;
+  align-content: start;
 }
 .side-title {
   margin: 0;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--ink-faint);
 }
-.side-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.count {
-  font-size: 0.75rem;
-}
 .weighted {
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: var(--brand);
   background: var(--brand-light);
   border: 1px solid var(--brand-soft);
   border-radius: 999px;
-  padding: 0 10px;
-  line-height: 1.6;
+  padding: 2px 8px;
+  line-height: 1.5;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .check-label {
   display: flex;
@@ -685,64 +1031,19 @@ onMounted(async () => {
   border-color: var(--brand-soft);
 }
 
-.filter {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.5rem;
-  color: var(--ink);
-  padding: 8px 10px;
-  width: 100%;
-}
-.team-mode {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.team-mode label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border: 1px solid var(--line);
-  border-radius: 0.5rem;
-  padding: 6px 0;
-  font-size: 0.8rem;
-  color: var(--ink-muted);
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease,
-    color 0.15s ease;
-}
-.team-mode label.on {
-  border-color: var(--brand-soft);
-  background: var(--brand-light);
-  color: var(--brand);
-}
-.team-mode input {
-  accent-color: var(--brand);
-}
 .hint {
   margin: 0;
   font-size: 0.72rem;
 }
-.team-status {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.78rem;
-  color: var(--brand-dark);
-  background: var(--brand-light);
-  border: 1px solid var(--brand-soft);
-  border-radius: 0.5rem;
-  padding: 6px 10px;
-}
 
 .sess-list {
-  display: grid;
-  gap: 3px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   overflow: auto;
+  align-content: start;
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
 }
@@ -757,53 +1058,83 @@ onMounted(async () => {
   position: relative;
   text-align: left;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 0.6rem;
+  border: none;
+  border-radius: 0.45rem;
   color: var(--ink);
-  padding: 8px 10px;
-  display: grid;
-  gap: 2px;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
+  padding: 5px 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 0 0 auto;
+  height: auto;
+  transition: background 0.15s ease;
 }
 .sess:hover {
   background: var(--surface-muted);
 }
 .sess.on {
-  background: var(--brand-light);
+  background: var(--surface-muted);
+}
+.sess-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-faint);
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.sess-icon svg {
+  width: 11px;
+  height: 11px;
+}
+.sess.on .sess-icon {
   border-color: var(--brand-soft);
+  color: var(--brand);
+  background: var(--brand-light);
 }
 .sess-title {
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding-right: 24px;
-}
-.sess-time {
-  font-size: 0.7rem;
+  flex: 1;
+  min-width: 0;
+  padding-right: 14px;
+  line-height: 1.3;
 }
 .del {
   position: absolute;
-  right: 8px;
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--ink-faint);
-  font-size: 0.72rem;
-  padding: 2px 4px;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 1px 4px;
   border-radius: 0.3rem;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.sess:hover .del {
+  opacity: 1;
 }
 .del:hover {
   color: var(--danger);
   background: rgba(225, 29, 72, 0.08);
 }
 
-/* ---------- 中栏对话 ---------- */
+/* ---------- 对话区 ---------- */
 .chat {
+  position: relative;
+  overflow: visible;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   gap: 10px;
   padding: 14px;
 }
@@ -915,7 +1246,7 @@ pre {
 
 .team-scores {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 .score-card {
@@ -1041,29 +1372,261 @@ pre {
   padding: 4px 10px;
 }
 
-.composer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+.quick-bar {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  align-items: end;
+  overflow-x: auto;
+  padding: 0 2px 2px;
+  scrollbar-width: none;
+  mask-image: linear-gradient(90deg, #000 85%, transparent);
+}
+.quick-bar::-webkit-scrollbar {
+  display: none;
+}
+.quick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  border-radius: 0.7rem;
+  padding: 7px 12px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+.quick-chip:hover:not(:disabled) {
+  background: var(--brand-light);
+  border-color: var(--brand-soft);
+  color: var(--brand-dark);
+  transform: translateY(-1px);
+}
+.quick-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.quick-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.draft-wrap {
+  position: relative;
+}
+.slash-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8px);
+  max-height: 220px;
+  overflow: auto;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 0.85rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+  scrollbar-width: thin;
+}
+.slash-tip {
+  margin: 0 0 4px;
+  padding: 5px 8px;
+  font-size: 0.72rem;
+  color: var(--brand-dark);
+  background: var(--brand-light);
+  border-radius: 0.45rem;
+}
+.slash-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  border-radius: 0.5rem;
+  padding: 8px 10px;
+  color: var(--ink);
+}
+.slash-option:hover {
+  background: var(--brand-light);
+}
+.picker-name {
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.picker-code {
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+.composer {
+  position: relative;
+  overflow: visible;
+  display: grid;
+  gap: 0;
+  padding: 16px 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: var(--surface);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 8px 28px rgba(0, 0, 0, 0.05);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.composer:focus-within {
+  border-color: var(--brand-soft);
+  box-shadow:
+    0 0 0 3px rgba(230, 100, 50, 0.1),
+    0 8px 28px rgba(0, 0, 0, 0.06);
 }
 .composer textarea {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.7rem;
+  width: 100%;
+  background: transparent;
+  border: none;
   color: var(--ink);
-  padding: 10px 12px;
+  padding: 2px 2px 12px;
   resize: none;
-  font-size: 0.88rem;
-  line-height: 1.5;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  box-shadow: none;
+  min-height: 56px;
+  max-height: 180px;
 }
 .composer textarea:focus {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(230, 100, 50, 0.15);
+  border: none;
+  box-shadow: none;
   outline: none;
 }
-.composer .primary {
-  padding: 12px 20px;
+.composer textarea::placeholder {
+  color: var(--ink-faint);
+}
+.composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+.bar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.bar-left::-webkit-scrollbar {
+  display: none;
+}
+.bar-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--line);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+.composer-hint {
+  margin-left: 4px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.chip:hover:not(:disabled) {
+  background: var(--surface-muted);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.mode-chip {
+  color: var(--brand);
+  background: var(--brand-light);
+  border-color: var(--brand-soft);
+  font-weight: 500;
+}
+.mode-chip:hover:not(:disabled) {
+  background: #fde6da;
+  color: var(--brand-dark);
+  border-color: var(--brand-soft);
+}
+.mode-chip.deep {
+  color: var(--brand-dark);
+}
+.chip-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.chip-caret {
+  font-size: 0.65rem;
+  opacity: 0.7;
+  margin-left: 1px;
+}
+.composer .send-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--brand);
+  color: var(--brand-foreground);
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(230, 100, 50, 0.28);
+  transition:
+    background 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
+}
+.composer .send-btn:hover:not(:disabled) {
+  background: var(--brand-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(230, 100, 50, 0.35);
+}
+.composer .send-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .muted {
@@ -1071,35 +1634,27 @@ pre {
   font-size: 0.75rem;
 }
 
-@media (max-width: 1200px) {
-  .workspace {
-    grid-template-columns: 250px minmax(0, 1fr) 280px;
-  }
-}
 @media (max-width: 1000px) {
   .workspace {
-    grid-template-columns: 260px minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
-  }
-  .right {
-    grid-column: 1 / -1;
-    max-height: 45vh;
-  }
-  .right .team-scores {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 220px minmax(0, 1fr);
   }
 }
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .workspace {
     grid-template-columns: 1fr;
     grid-template-rows: none;
   }
-  .left,
-  .right {
+  .left {
     overflow: visible;
+    max-height: 40vh;
   }
-  .right .team-scores {
+  .team-scores {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .composer-hint {
+    display: none;
   }
 }
 </style>

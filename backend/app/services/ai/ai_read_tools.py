@@ -79,8 +79,12 @@ def get_recent_screening(db: Session, user_id: str, args: dict[str, Any]) -> Any
         symbols: list[Any] = []
         try:
             result = json.loads(run.result_json or "{}")
-            rows = list(result.get("rows") or result.get("items") or [])
-            symbols = rows[:top_n]
+            if isinstance(result, list):
+                symbols = result[:top_n]
+            elif isinstance(result, dict):
+                symbols = list(result.get("rows") or result.get("items") or [])[:top_n]
+            else:
+                symbols = []
         except json.JSONDecodeError:
             symbols = []
         out.append(

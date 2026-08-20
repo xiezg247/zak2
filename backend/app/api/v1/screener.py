@@ -78,6 +78,9 @@ def _run_summary(row) -> RunSummary:  # type: ignore[no-untyped-def]
 
 def _run_detail(row) -> RunDetail:  # type: ignore[no-untyped-def]
     result = json.loads(row.result_json or "{}")
+    # 兼容早期版本直接存 rows 列表的历史数据，归一化为 dict 供前端读取
+    if isinstance(result, list):
+        result = {"rows": result, "row_count": len(result), "source": "legacy"}
     return RunDetail(
         id=row.id,
         condition=row.condition,
