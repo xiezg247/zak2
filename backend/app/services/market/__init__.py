@@ -1,1 +1,1 @@
-"""行情域：Redis 行情读取、市场数据与 Tushare 数据源。"""
+"""兼容壳：行情服务已迁至 app.domains.market。"""

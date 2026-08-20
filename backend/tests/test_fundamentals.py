@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
+from app.core.errors import ValidationFailed
 from fastapi.testclient import TestClient
 
 from app.api.deps import get_current_user
@@ -60,7 +60,7 @@ def test_api_fundamentals_bad_symbol() -> None:
     client = _client()
     with patch(
         "app.domains.watchlist.market_views.fundamentals_svc.get_fundamentals",
-        side_effect=HTTPException(status_code=400, detail="代码为空"),
+        side_effect=ValidationFailed("代码为空"),
     ):
         r = client.get("/api/v1/watchlist/items/%20/fundamentals")
     assert r.status_code == 400
@@ -68,7 +68,7 @@ def test_api_fundamentals_bad_symbol() -> None:
 
 def test_invalid_vt_400() -> None:
     db = MagicMock()
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(ValidationFailed) as ei:
         fund.get_fundamentals(db, "")
     assert ei.value.status_code == 400
 

@@ -6,10 +6,9 @@ import math
 from collections import Counter
 from typing import Any
 
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.errors import NotFound, Unavailable, ValidationFailed
+from app.core.errors import AppError, NotFound, Unavailable, ValidationFailed
 
 from app.domains.screener.schemas import ReferencePeerRequest
 from app.services.market import stock_industry
@@ -167,7 +166,7 @@ def _fetch_pct_maps(db: Session | None, *, days: int = _MOMENTUM_DAYS) -> list[d
                 {"trade_date": trade_date},
                 fields="ts_code,pct_chg",
             )
-        except HTTPException:
+        except AppError:
             continue
         if not raw:
             continue
