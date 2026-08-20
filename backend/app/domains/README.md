@@ -13,3 +13,8 @@
 迁移期间旧路径（`app.api.v1.*`、`app.repositories.*`、`app.services.notify`）仅允许 thin re-export。
 
 详见 `docs/superpowers/specs/2026-08-20-backend-architecture-refactor-design.md`。
+
+## 已迁入
+
+- `auth` / `channels`（Phase 1）
+- `content`（notes / feed / playbook / notify_log，Phase 2）
