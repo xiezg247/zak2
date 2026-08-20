@@ -5,6 +5,7 @@ import AppShell from '../components/AppShell.vue'
 import CandleChart from '../components/CandleChart.vue'
 import StockAnalysisModal from '../components/StockAnalysisModal.vue'
 import { confirmDialog, promptDialog } from '../lib/dialog'
+import { fmtDateTime } from '../lib/format'
 import {
   watchlistApi,
   type Bar,
@@ -1180,7 +1181,9 @@ onUnmounted(() => {
               <template v-if="fund.snapshot">
                 <p class="muted">
                   期末 {{ formatYmd(fund.snapshot.end_date) }}
-                  <span v-if="fund.sync?.last_sync_at"> · 同步 {{ fund.sync.last_sync_at }}</span>
+                  <span v-if="fund.sync?.last_sync_at">
+                    · 同步 {{ fmtDateTime(fund.sync.last_sync_at) }}</span
+                  >
                 </p>
                 <dl class="fund-grid">
                   <div>

@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import StockAnalysisModal from '../components/StockAnalysisModal.vue'
+import { fmtDateTime } from '../lib/format'
 import {
   marketApi,
   type RadarCard,
@@ -417,7 +418,7 @@ onMounted(() => {
         </button>
         <span v-if="active" class="muted source-hint"
           >来源 {{ sourceLabel(active.source) }} ·
-          {{ active.computed_at || active.subtitle || '—' }}</span
+          {{ fmtDateTime(active.computed_at) || active.subtitle || '—' }}</span
         >
       </div>
       <p v-if="error" class="err">{{ error }}</p>
@@ -433,7 +434,7 @@ onMounted(() => {
           <span class="summary-k">共振展望</span>
           <span class="summary-v muted">{{ horizonSummary }}</span>
           <span v-if="horizonHasCache && horizon?.computed_at" class="summary-t muted">
-            {{ horizon.computed_at }}
+            {{ fmtDateTime(horizon.computed_at) }}
           </span>
           <span class="chevron">{{ horizonOpen ? '▴' : '▾' }}</span>
         </button>
@@ -446,7 +447,7 @@ onMounted(() => {
           <span class="summary-k">规则预测</span>
           <span class="summary-v muted">{{ predictSummary }}</span>
           <span v-if="predictHasCache && predict?.computed_at" class="summary-t muted">
-            {{ predict.computed_at }}
+            {{ fmtDateTime(predict.computed_at) }}
           </span>
           <span class="chevron">{{ predictOpen ? '▴' : '▾' }}</span>
         </button>
@@ -456,7 +457,7 @@ onMounted(() => {
         <div class="summary-panel-head">
           <strong>{{ horizonHeadLabel }}</strong>
           <span v-if="horizonHasCache && horizon?.computed_at" class="muted tiny">
-            · {{ horizon.computed_at }}
+            · {{ fmtDateTime(horizon.computed_at) }}
           </span>
         </div>
         <p v-if="horizonErr" class="horizon-err">{{ horizonErr }}</p>
@@ -557,7 +558,7 @@ onMounted(() => {
         <div class="summary-panel-head">
           <strong>{{ predictHeadLabel }}</strong>
           <span v-if="predictHasCache && predict?.computed_at" class="muted tiny">
-            · {{ predict.computed_at }}
+            · {{ fmtDateTime(predict.computed_at) }}
           </span>
         </div>
         <p v-if="predictErr" class="horizon-err">{{ predictErr }}</p>

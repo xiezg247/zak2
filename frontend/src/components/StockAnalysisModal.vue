@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useStockAnalysis, type AnalysisTabKey } from '../composables/useStockAnalysis'
-import {
-  watchlistApi,
-  type QuoteOut,
-  type Fundamentals,
-} from '../api/watchlist'
+import { watchlistApi, type QuoteOut, type Fundamentals } from '../api/watchlist'
 import { marketApi } from '../api/market'
 import { aiApi } from '../api/ai'
 import { opsApi } from '../api/ops'
@@ -17,6 +13,7 @@ import {
   type NoteEntry,
 } from '../api/content'
 import MarkdownView from './MarkdownView.vue'
+import { fmtDateTime } from '../lib/format'
 
 const analysis = useStockAnalysis()
 
@@ -499,7 +496,7 @@ onUnmounted(() => {
                     <p class="muted block-meta">
                       期末 {{ fmtYmd(fund.snapshot.end_date)
                       }}<span v-if="fund.sync?.last_sync_at">
-                        · 同步 {{ fund.sync.last_sync_at }}</span
+                        · 同步 {{ fmtDateTime(fund.sync.last_sync_at) }}</span
                       >
                     </p>
                     <dl class="fund-grid">
@@ -633,7 +630,7 @@ onUnmounted(() => {
                     @click="openReport(r.id)"
                   >
                     <span class="report-title">{{ r.title }}</span>
-                    <span class="muted tiny">{{ r.mode }} · {{ r.created_at }}</span>
+                    <span class="muted tiny">{{ r.mode }} · {{ fmtDateTime(r.created_at) }}</span>
                   </button>
                 </div>
                 <p v-else class="hint">暂无历史研报，可点击上方生成。</p>
@@ -668,7 +665,7 @@ onUnmounted(() => {
                   <div v-for="e in entries" :key="e.id" class="entry">
                     <div class="entry-body">{{ e.body }}</div>
                     <div class="entry-foot">
-                      <span class="muted tiny">{{ e.created_at }}</span>
+                      <span class="muted tiny">{{ fmtDateTime(e.created_at) }}</span>
                       <button type="button" class="link" @click="removeEntry(e.id)">删</button>
                     </div>
                   </div>

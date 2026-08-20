@@ -5,6 +5,7 @@ import AppShell from '../components/AppShell.vue'
 import MarkdownView from '../components/MarkdownView.vue'
 import PagerBar from '../components/PagerBar.vue'
 import { confirmDialog } from '../lib/dialog'
+import { fmtDateTime } from '../lib/format'
 import {
   contentApi,
   type NoteEntry,
@@ -217,11 +218,7 @@ onMounted(async () => {
       <section class="topbar">
         <div class="topbar-head">
           <div class="open-group">
-            <input
-              v-model="newSymbol"
-              placeholder="600519.SSE"
-              @keyup.enter="openOrCreate"
-            />
+            <input v-model="newSymbol" placeholder="600519.SSE" @keyup.enter="openOrCreate" />
             <button class="primary" type="button" @click="openOrCreate">打开</button>
           </div>
           <input
@@ -283,7 +280,9 @@ onMounted(async () => {
 
             <section class="panel entries-panel">
               <div class="panel-head">
-                <h3>流水 <span class="count muted">{{ entriesTotal }}</span></h3>
+                <h3>
+                  流水 <span class="count muted">{{ entriesTotal }}</span>
+                </h3>
               </div>
               <div class="add-row">
                 <input v-model="draftEntry" placeholder="追加一条流水" @keyup.enter="addEntry" />
@@ -294,7 +293,7 @@ onMounted(async () => {
                 <div v-for="e in entries" :key="e.id" class="entry">
                   <div class="entry-body">{{ e.body }}</div>
                   <div class="entry-foot">
-                    <span class="muted mono">{{ e.created_at }}</span>
+                    <span class="muted mono">{{ fmtDateTime(e.created_at) }}</span>
                     <button class="link" type="button" @click="removeEntry(e.id)">删除</button>
                   </div>
                 </div>
@@ -313,7 +312,9 @@ onMounted(async () => {
           <div class="reports-grid">
             <section class="panel reports-panel">
               <div class="panel-head">
-                <h3>研报 <span class="count muted">{{ reportsTotal }}</span></h3>
+                <h3>
+                  研报 <span class="count muted">{{ reportsTotal }}</span>
+                </h3>
               </div>
               <p v-if="!reports.length" class="empty muted">
                 暂无研报。
@@ -334,7 +335,9 @@ onMounted(async () => {
                     @click="openReport(r.id)"
                   >
                     <div class="report-title">{{ r.title }}</div>
-                    <div class="report-meta muted">{{ r.created_at }} · {{ r.mode }}</div>
+                    <div class="report-meta muted">
+                      {{ fmtDateTime(r.created_at) }} · {{ r.mode }}
+                    </div>
                     <div class="report-summary muted">{{ r.summary }}</div>
                   </button>
                 </div>

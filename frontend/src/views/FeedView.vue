@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import AppShell from '../components/AppShell.vue'
 import PagerBar from '../components/PagerBar.vue'
 import { confirmDialog } from '../lib/dialog'
+import { fmtDateTime } from '../lib/format'
 import { contentApi, type BilibiliUserHit, type FeedItem, type FeedSub } from '../api/content'
 
 const subs = ref<FeedSub[]>([])
@@ -275,7 +276,7 @@ onMounted(() => {
                 <div class="item-head">
                   <div class="item-byline">
                     <span class="item-author">{{ item.author_name || '未知作者' }}</span>
-                    <span class="item-time">{{ item.published_at }}</span>
+                    <span class="item-time">{{ fmtDateTime(item.published_at) }}</span>
                   </div>
                   <span v-if="itemTypeLabel(item.item_type)" class="item-type">{{
                     itemTypeLabel(item.item_type)

@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import PagerBar from '../components/PagerBar.vue'
+import { fmtDateTime } from '../lib/format'
 import { jobsApi } from '../api/screener'
 import {
   backtestApi,
@@ -553,7 +554,7 @@ onMounted(async () => {
               <span>{{ r.vt_symbol }} · {{ r.strategy }}</span>
               <span class="muted">
                 收益 {{ r.total_return != null ? r.total_return.toFixed(2) + '%' : '—' }} ·
-                {{ r.created_at }}
+                {{ fmtDateTime(r.created_at) }}
               </span>
             </button>
             <PagerBar :page="runsPage" :pages="runsPages" :total="runsTotal" @change="goRunsPage" />
@@ -574,7 +575,7 @@ onMounted(async () => {
             @click="openBatch(b.batch_id)"
           >
             <span>{{ b.strategy }} · {{ b.count }} 只</span>
-            <span class="muted">{{ b.created_at }}</span>
+            <span class="muted">{{ fmtDateTime(b.created_at) }}</span>
           </button>
         </aside>
 

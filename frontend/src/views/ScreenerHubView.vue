@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import PagerBar from '../components/PagerBar.vue'
 import { getToken } from '../api/client'
+import { fmtDateTime } from '../lib/format'
 import {
   jobsApi,
   screenerApi,
@@ -490,7 +491,7 @@ async function loadMeta() {
   const redisOk = ds.redis?.available
   const count = ds.redis?.quote_count ?? 0
   dataStatus.value = redisOk
-    ? `Redis 行情 ${count} 只 · 更新 ${ds.redis.updated_at || '—'}`
+    ? `Redis 行情 ${count} 只 · 更新 ${fmtDateTime(ds.redis.updated_at) || '—'}`
     : 'Redis 不可用'
 }
 
@@ -990,7 +991,7 @@ onMounted(async () => {
             @click="applyScheme(s)"
           >
             <span>{{ s.name }}</span>
-            <span class="muted">{{ s.updated_at }}</span>
+            <span class="muted">{{ fmtDateTime(s.updated_at) }}</span>
             <span class="del" @click.stop="deleteScheme(s.id)">删</span>
           </button>
           <p v-if="!schemes.length" class="muted">保存当前配置后可一键加载复跑</p>
@@ -1025,7 +1026,7 @@ onMounted(async () => {
             @click="openRun(h.id)"
           >
             <span>{{ h.condition }}</span>
-            <span class="muted">{{ h.row_count }} 只 · {{ h.created_at }}</span>
+            <span class="muted">{{ h.row_count }} 只 · {{ fmtDateTime(h.created_at) }}</span>
           </button>
           <PagerBar
             :page="historyPage"

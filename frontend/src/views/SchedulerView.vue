@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import AppShell from '../components/AppShell.vue'
+import { fmtDateTime } from '../lib/format'
 import { opsApi, type OpsJob, type SchedulerJob } from '../api/ops'
 import { filterJobs, groupJobs, KIND_TITLE, type JobFilter } from './opsJobGroups'
 
@@ -274,7 +275,7 @@ onUnmounted(() => {
                             ? '成功'
                             : '—'
                       }}
-                      · {{ j.last_run.last_run_at }}
+                      · {{ fmtDateTime(j.last_run.last_run_at) }}
                     </div>
                     <div class="muted">{{ j.last_run.last_message }}</div>
                   </template>
@@ -383,11 +384,14 @@ onUnmounted(() => {
               </td>
               <td>
                 <div class="progress">
-                  <span class="progress-fill" :style="{ width: Math.round(job.progress * 100) + '%' }"></span>
+                  <span
+                    class="progress-fill"
+                    :style="{ width: Math.round(job.progress * 100) + '%' }"
+                  ></span>
                 </div>
                 <div class="muted">{{ Math.round(job.progress * 100) }}%</div>
               </td>
-              <td class="mono">{{ job.created_at }}</td>
+              <td class="mono">{{ fmtDateTime(job.created_at) }}</td>
               <td>
                 <div v-if="job.error" class="err">{{ job.error }}</div>
                 <div v-else class="muted">{{ job.result_ref || '—' }}</div>

@@ -4,6 +4,7 @@ import AppShell from '../components/AppShell.vue'
 import { autoScheduleApi, type AutoSchedule } from '../api/autoSchedule'
 import { screenerApi, type BuiltinRecipe } from '../api/screener'
 import { confirmDialog } from '../lib/dialog'
+import { fmtDateTime } from '../lib/format'
 
 const items = ref<AutoSchedule[]>([])
 const recipes = ref<BuiltinRecipe[]>([])
@@ -236,7 +237,7 @@ const empty = computed(
                 <span :class="t.last_success === false ? 'err' : t.last_success ? 'ok-text' : ''">
                   {{ t.last_success === false ? '失败' : t.last_success ? '成功' : '—' }}
                 </span>
-                <span class="muted">· {{ t.last_run_at }}</span>
+                <span class="muted">· {{ fmtDateTime(t.last_run_at) }}</span>
                 <div v-if="t.last_message" class="muted msg">{{ t.last_message }}</div>
               </template>
               <span v-else class="muted">尚未执行</span>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import AppShell from '../components/AppShell.vue'
+import { fmtDateTime } from '../lib/format'
 import { watchlistApi, type NotifyLogItem } from '../api/watchlist'
 
 const items = ref<NotifyLogItem[]>([])
@@ -77,7 +78,7 @@ onMounted(() => {
             <tbody>
               <template v-for="row in items" :key="row.id">
                 <tr :class="{ on: expandedId === row.id }" @click="toggleRow(row.id)">
-                  <td class="mono">{{ row.created_at || '—' }}</td>
+                  <td class="mono">{{ fmtDateTime(row.created_at) || '—' }}</td>
                   <td>{{ row.event_type || '—' }}</td>
                   <td>{{ row.channel || '—' }}</td>
                   <td :class="notifyStatusClass(row.status)">{{ row.status || '—' }}</td>

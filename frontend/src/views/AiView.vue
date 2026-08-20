@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import MarkdownView from '../components/MarkdownView.vue'
 import PagerBar from '../components/PagerBar.vue'
+import { fmtDateTime } from '../lib/format'
 import {
   aiApi,
   type ChatMessage,
@@ -328,7 +329,9 @@ onMounted(async () => {
 <template>
   <AppShell title="AI 助手" :subtitle="subtitle" active="ai">
     <div class="page">
-      <p v-if="status && !status.configured" class="warn-banner">未配置 LLM_API_KEY，对话与团队分析不可用。</p>
+      <p v-if="status && !status.configured" class="warn-banner">
+        未配置 LLM_API_KEY，对话与团队分析不可用。
+      </p>
       <p v-if="error" class="err">{{ error }}</p>
 
       <div class="workspace">
@@ -343,38 +346,6 @@ onMounted(async () => {
               <input v-model="useTools" type="checkbox" />
               <span>启用工具（Agent）</span>
             </label>
-          </section>
-
-          <section class="side-section team">
-            <div class="side-title-row">
-              <h2 class="side-title">投研团队</h2>
-              <span v-if="teamWeighted != null" class="weighted">{{ teamWeighted }}</span>
-            </div>
-            <input
-              v-model="teamSymbol"
-              class="filter"
-              placeholder="600519.SSE"
-              @keyup.enter="runTeam"
-            />
-            <div class="team-mode">
-              <label :class="{ on: teamMode === 'fast' }">
-                <input v-model="teamMode" type="radio" value="fast" :disabled="teamBusy" />
-                <span>快速</span>
-              </label>
-              <label :class="{ on: teamMode === 'deep' }">
-                <input v-model="teamMode" type="radio" value="deep" :disabled="teamBusy" />
-                <span>深度</span>
-              </label>
-            </div>
-            <button
-              type="button"
-              class="primary block"
-              :disabled="teamBusy || busy || !teamSymbol.trim()"
-              @click="runTeam"
-            >
-              {{ teamBusy ? '分析中…' : teamMode === 'deep' ? '深度团队分析' : '团队分析' }}
-            </button>
-            <p v-if="teamMode === 'deep'" class="hint muted">三分析师并行 LLM，更慢更耗 token</p>
           </section>
 
           <section class="side-section grow">
@@ -395,7 +366,7 @@ onMounted(async () => {
                 @click="selectSession(s.id)"
               >
                 <span class="sess-title">{{ sessionTitle(s) }}</span>
-                <span class="sess-time muted">{{ s.updated_at }}</span>
+                <span class="sess-time muted">{{ fmtDateTime(s.updated_at) }}</span>
                 <span class="del" title="删除会话" @click.stop="removeSession(s.id)">删</span>
               </button>
             </div>
@@ -408,7 +379,7 @@ onMounted(async () => {
           </section>
         </aside>
 
-        <section class="right">
+        <section class="chat">
           <div ref="listEl" class="msgs">
             <div
               v-if="
@@ -432,43 +403,10 @@ onMounted(async () => {
             <p v-if="toolStatus" class="status-pill">
               <span class="spinner" aria-hidden="true"></span>{{ toolStatus }}
             </p>
-            <p v-if="teamStatus" class="status-pill">
-              <span class="spinner" aria-hidden="true"></span>{{ teamStatus }}
-            </p>
-
-            <div v-if="Object.keys(teamScores).length" class="team-scores">
-              <div v-for="(block, key) in teamScores" :key="key" class="score-card">
-                <div class="score-head">
-                  <strong>{{ agentName(key) }}</strong>
-                  <span class="score-num">{{ block.score ?? '—' }}</span>
-                </div>
-                <p v-if="block.summary" class="score-summary">{{ block.summary }}</p>
-                <div v-if="teamBodies[key]" class="agent-body">
-                  <MarkdownView :source="teamBodies[key]" />
-                </div>
-              </div>
-            </div>
-
             <div v-if="teamReport" class="bubble assistant">
               <div class="role">首席汇总</div>
               <MarkdownView :source="teamReport" />
             </div>
-
-            <p v-if="teamSavedReport" class="saved-tip">
-              研报已保存：{{ teamSavedReport.title }}
-              <button
-                type="button"
-                class="link"
-                @click="
-                  router.push({
-                    path: '/notes',
-                    query: { symbol: teamSavedReport.vt, report: String(teamSavedReport.id) },
-                  })
-                "
-              >
-                在笔记中打开
-              </button>
-            </p>
 
             <div v-for="p in proposals" :key="p.proposal_id" class="confirm-card" :class="p.status">
               <div class="confirm-head">
@@ -535,6 +473,77 @@ onMounted(async () => {
             </button>
           </form>
         </section>
+
+        <aside class="right">
+          <section class="side-section">
+            <div class="side-title-row">
+              <h2 class="side-title">投研团队</h2>
+              <span v-if="teamWeighted != null" class="weighted">{{ teamWeighted }}</span>
+            </div>
+            <input
+              v-model="teamSymbol"
+              class="filter"
+              placeholder="600519.SSE"
+              @keyup.enter="runTeam"
+            />
+            <div class="team-mode">
+              <label :class="{ on: teamMode === 'fast' }">
+                <input v-model="teamMode" type="radio" value="fast" :disabled="teamBusy" />
+                <span>快速</span>
+              </label>
+              <label :class="{ on: teamMode === 'deep' }">
+                <input v-model="teamMode" type="radio" value="deep" :disabled="teamBusy" />
+                <span>深度</span>
+              </label>
+            </div>
+            <button
+              type="button"
+              class="primary block"
+              :disabled="teamBusy || busy || !teamSymbol.trim()"
+              @click="runTeam"
+            >
+              {{ teamBusy ? '分析中…' : teamMode === 'deep' ? '深度团队分析' : '团队分析' }}
+            </button>
+            <p v-if="teamMode === 'deep'" class="hint muted">三分析师并行 LLM，更慢更耗 token</p>
+            <p v-if="teamStatus" class="team-status">
+              <span class="spinner" aria-hidden="true"></span>{{ teamStatus }}
+            </p>
+          </section>
+
+          <section v-if="Object.keys(teamScores).length" class="side-section team-live">
+            <div class="side-title-row">
+              <h2 class="side-title">分析师评分</h2>
+            </div>
+            <div class="team-scores">
+              <div v-for="(block, key) in teamScores" :key="key" class="score-card">
+                <div class="score-head">
+                  <strong>{{ agentName(key) }}</strong>
+                  <span class="score-num">{{ block.score ?? '—' }}</span>
+                </div>
+                <p v-if="block.summary" class="score-summary">{{ block.summary }}</p>
+                <div v-if="teamBodies[key]" class="agent-body">
+                  <MarkdownView :source="teamBodies[key]" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <p v-if="teamSavedReport" class="saved-tip">
+            研报已保存：{{ teamSavedReport.title }}
+            <button
+              type="button"
+              class="link"
+              @click="
+                router.push({
+                  path: '/notes',
+                  query: { symbol: teamSavedReport.vt, report: String(teamSavedReport.id) },
+                })
+              "
+            >
+              在笔记中打开
+            </button>
+          </p>
+        </aside>
       </div>
     </div>
   </AppShell>
@@ -567,7 +576,8 @@ onMounted(async () => {
 
 .workspace {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr) 300px;
+  grid-template-rows: minmax(0, 1fr);
   gap: 14px;
   flex: 1;
   min-height: 0;
@@ -575,6 +585,7 @@ onMounted(async () => {
 
 /* ---------- 左栏 ---------- */
 .left,
+.chat,
 .right {
   min-height: 0;
   border: 1px solid var(--line);
@@ -582,7 +593,8 @@ onMounted(async () => {
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
-.left {
+.left,
+.right {
   display: flex;
   flex-direction: column;
   padding: 14px;
@@ -714,11 +726,32 @@ onMounted(async () => {
   margin: 0;
   font-size: 0.72rem;
 }
+.team-status {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--brand-dark);
+  background: var(--brand-light);
+  border: 1px solid var(--brand-soft);
+  border-radius: 0.5rem;
+  padding: 6px 10px;
+}
 
 .sess-list {
   display: grid;
   gap: 3px;
   overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.sess-list::-webkit-scrollbar {
+  width: 6px;
+}
+.sess-list::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
 }
 .sess {
   position: relative;
@@ -764,11 +797,11 @@ onMounted(async () => {
 }
 .del:hover {
   color: var(--danger);
-  background: #fff1f2;
+  background: rgba(225, 29, 72, 0.08);
 }
 
-/* ---------- 右栏 ---------- */
-.right {
+/* ---------- 中栏对话 ---------- */
+.chat {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 10px;
@@ -780,6 +813,15 @@ onMounted(async () => {
   flex-direction: column;
   gap: 10px;
   padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.msgs::-webkit-scrollbar {
+  width: 8px;
+}
+.msgs::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
 }
 
 .welcome {
@@ -873,7 +915,7 @@ pre {
 
 .team-scores {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 .score-card {
@@ -923,9 +965,9 @@ pre {
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-  padding: 6px 10px;
-  background: #ecfdf5;
-  border: 1px solid #86efac;
+  padding: 8px 10px;
+  background: rgba(22, 163, 74, 0.08);
+  border: 1px solid rgba(22, 163, 74, 0.28);
   border-radius: 0.5rem;
 }
 .saved-tip .link {
@@ -1029,15 +1071,34 @@ pre {
   font-size: 0.75rem;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
+  .workspace {
+    grid-template-columns: 250px minmax(0, 1fr) 280px;
+  }
+}
+@media (max-width: 1000px) {
+  .workspace {
+    grid-template-columns: 260px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .right {
+    grid-column: 1 / -1;
+    max-height: 45vh;
+  }
+  .right .team-scores {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
   .workspace {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
   }
   .left,
   .right {
     overflow: visible;
   }
-  .team-scores {
+  .right .team-scores {
     grid-template-columns: 1fr;
   }
 }

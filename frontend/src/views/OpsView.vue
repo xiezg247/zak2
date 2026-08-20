@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import AppShell from '../components/AppShell.vue'
+import { fmtDateTime } from '../lib/format'
 import { opsApi, type BarsOverview, type Health } from '../api/ops'
 
 const health = ref<Health | null>(null)
@@ -59,7 +60,7 @@ onMounted(async () => {
           <p>{{ health.redis.ok ? '正常' : '不可用' }}</p>
           <p class="muted">
             quotes {{ health.redis.quote_count ?? 0 }} ·
-            {{ health.redis.updated_at || '无更新时间' }}
+            {{ fmtDateTime(health.redis.updated_at) || '无更新时间' }}
           </p>
         </div>
         <div class="card" :class="{ bad: !health.quote_collector?.running }">

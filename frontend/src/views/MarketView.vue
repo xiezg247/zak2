@@ -7,6 +7,7 @@ import { marketApi, type EmotionThresholds, type MarketOverview, type RankRow } 
 import { watchlistApi, type Bar, type Fundamentals } from '../api/watchlist'
 import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
 import { useStockAnalysis } from '../composables/useStockAnalysis'
+import { fmtDateTime } from '../lib/format'
 
 const analysis = useStockAnalysis()
 
@@ -614,7 +615,7 @@ onUnmounted(() => {
               {{ overview.is_trading ? '交易中' : '休市' }}
             </span>
           </div>
-          <div class="s muted">{{ overview.updated_at || '—' }}</div>
+          <div class="s muted">{{ fmtDateTime(overview.updated_at) || '—' }}</div>
         </div>
         <div v-if="overview.emotion_cycle" class="card cycle-card">
           <div class="k">情绪周期</div>
@@ -806,17 +807,29 @@ onUnmounted(() => {
                 <th v-if="colVisible.change_pct" class="sortable" @click="toggleSort('change_pct')">
                   涨幅%{{ sortMark('change_pct') }}
                 </th>
-                <th v-if="colVisible.change_amount" class="sortable" @click="toggleSort('change_amount')">
+                <th
+                  v-if="colVisible.change_amount"
+                  class="sortable"
+                  @click="toggleSort('change_amount')"
+                >
                   涨跌额{{ sortMark('change_amount') }}
                 </th>
                 <th v-if="scoreSortKey" class="sortable" @click="toggleSort(scoreSortKey)">
                   {{ fieldMeta.col }}{{ sortMark(scoreSortKey) }}
                 </th>
                 <th v-else>{{ fieldMeta.col }}</th>
-                <th v-if="colVisible.turnover_rate" class="sortable" @click="toggleSort('turnover_rate')">
+                <th
+                  v-if="colVisible.turnover_rate"
+                  class="sortable"
+                  @click="toggleSort('turnover_rate')"
+                >
                   换手%{{ sortMark('turnover_rate') }}
                 </th>
-                <th v-if="colVisible.volume_ratio" class="sortable" @click="toggleSort('volume_ratio')">
+                <th
+                  v-if="colVisible.volume_ratio"
+                  class="sortable"
+                  @click="toggleSort('volume_ratio')"
+                >
                   量比{{ sortMark('volume_ratio') }}
                 </th>
                 <th v-if="colVisible.total_mv" class="sortable" @click="toggleSort('total_mv')">
@@ -827,7 +840,9 @@ onUnmounted(() => {
                 <th v-if="colVisible.amplitude" class="sortable" @click="toggleSort('amplitude')">
                   振幅%{{ sortMark('amplitude') }}
                 </th>
-                <th class="sortable" @click="toggleSort('amount')">成交额{{ sortMark('amount') }}</th>
+                <th class="sortable" @click="toggleSort('amount')">
+                  成交额{{ sortMark('amount') }}
+                </th>
                 <th class="ops">操作</th>
               </tr>
             </thead>
@@ -841,9 +856,11 @@ onUnmounted(() => {
               >
                 <tr>
                   <td>
-                    <span class="rank-badge" :class="'rank-' + ((useVirtual ? virtualWindow.offset + j : j) + 1)">{{
-                      (useVirtual ? virtualWindow.offset + j : j) + 1
-                    }}</span>
+                    <span
+                      class="rank-badge"
+                      :class="'rank-' + ((useVirtual ? virtualWindow.offset + j : j) + 1)"
+                      >{{ (useVirtual ? virtualWindow.offset + j : j) + 1 }}</span
+                    >
                   </td>
                   <td class="mono">{{ r.vt_symbol }}</td>
                   <td>{{ r.name || '—' }}</td>
@@ -869,7 +886,9 @@ onUnmounted(() => {
                   </td>
                   <td v-if="colVisible.total_mv" class="mono muted">{{ fmtMv(r.total_mv) }}</td>
                   <td v-if="colVisible.industry">{{ r.industry || '—' }}</td>
-                  <td v-if="colVisible.trade_time" class="mono muted">{{ fmtTime(r.trade_time) }}</td>
+                  <td v-if="colVisible.trade_time" class="mono muted">
+                    {{ fmtTime(r.trade_time) }}
+                  </td>
                   <td v-if="colVisible.amplitude">{{ fmtNum(r.amplitude, 2) }}</td>
                   <td>{{ fmtAmount(r.amount) }}</td>
                   <td class="ops">
@@ -923,9 +942,7 @@ onUnmounted(() => {
                           stroke-linecap="round"
                           stroke-linejoin="round"
                         >
-                          <path
-                            d="M3 3h18v18H3V3zM7 7h10M7 11h10M7 15h6"
-                          />
+                          <path d="M3 3h18v18H3V3zM7 7h10M7 11h10M7 15h6" />
                         </svg>
                       </button>
                       <button
@@ -952,7 +969,10 @@ onUnmounted(() => {
                 </tr>
               </template>
               <tr v-if="useVirtual && virtualWindow.padBottom" class="vpad">
-                <td :colspan="emptyColspan" :style="{ height: virtualWindow.padBottom + 'px' }"></td>
+                <td
+                  :colspan="emptyColspan"
+                  :style="{ height: virtualWindow.padBottom + 'px' }"
+                ></td>
               </tr>
               <tr v-if="!ranks.length">
                 <td :colspan="emptyColspan" class="empty">
@@ -1073,7 +1093,7 @@ onUnmounted(() => {
                 <p class="muted">
                   期末 {{ fmtYmd(fundData.snapshot.end_date) }}
                   <span v-if="fundData.sync?.last_sync_at">
-                    · 同步 {{ fundData.sync.last_sync_at }}</span
+                    · 同步 {{ fmtDateTime(fundData.sync.last_sync_at) }}</span
                   >
                 </p>
                 <dl class="fund-grid">
