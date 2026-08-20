@@ -19,3 +19,4 @@
 - `auth` / `channels`（Phase 1）
 - `content`（notes / feed / playbook / notify_log，Phase 2）
 - watchlist（自选/分组/持仓/信号面板/trading_risk，Phase 3）
+- screener（选股 schemas/repository/services，Phase 4 Task 1）

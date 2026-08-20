@@ -149,11 +149,11 @@ def test_radar_leader_enriches_empty_industry_before_filter() -> None:
             return_value={"SHSE.600519": "白酒"},
         ),
         patch(
-            "app.services.screener.leader_screen.resolve_emotion_stage",
+            "app.domains.screener.leader_screen.resolve_emotion_stage",
             return_value=("startup", {"stage": "startup", "stage_label": "启动"}),
         ),
-        patch("app.services.screener.leader_screen.market_svc.load_emotion", return_value=None),
-        patch("app.services.screener.leader_screen.load_first_time_map", return_value={}),
+        patch("app.domains.screener.leader_screen.market_svc.load_emotion", return_value=None),
+        patch("app.domains.screener.leader_screen.load_first_time_map", return_value={}),
     ):
         result = run_recipe_screen(
             RecipeRunRequest(

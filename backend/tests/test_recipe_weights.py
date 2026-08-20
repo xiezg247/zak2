@@ -258,7 +258,7 @@ def test_run_recipe_screen_loads_user_weights() -> None:
     custom = {"momentum": 0.05, "turnover": 0.8, "volume_ratio": 0.1, "surge": 0.05}
     db = MagicMock()
     with patch(
-        "app.services.screener.engine.recipe_weights_svc.load_recipe_weights",
+        "app.domains.screener.engine.recipe_weights_svc.load_recipe_weights",
         return_value=custom,
     ) as load:
         result = run_recipe_screen(
@@ -297,7 +297,7 @@ def test_run_recipe_screen_loads_ultra_short_user_weights() -> None:
     custom = {"board": 0.05, "momentum": 0.85, "turnover": 0.1}
     db = MagicMock()
     with patch(
-        "app.services.screener.engine.recipe_weights_svc.load_recipe_weights",
+        "app.domains.screener.engine.recipe_weights_svc.load_recipe_weights",
         return_value=custom,
     ) as load:
         result = run_recipe_screen(
