@@ -24,6 +24,7 @@ const listFilter = ref('')
 const unreadOnly = ref(false)
 const subFilter = ref('')
 const enabledOnly = ref(false)
+const manageOpen = ref(false)
 
 const subtitle = computed(() => `${subs.value.length} 订阅 · ${itemsTotal.value} 条`)
 
@@ -202,48 +203,12 @@ onMounted(() => {
       </div>
 
       <div class="workspace">
-        <aside class="left">
-          <section class="side-section">
-            <h2 class="side-title">添加订阅</h2>
-            <div class="row">
-              <input v-model="newMid" placeholder="输入 UP 的 mid" @keyup.enter="addSub" />
-              <button type="button" class="primary" :disabled="adding" @click="addSub">添加</button>
-            </div>
-            <label class="check-label">
-              <input v-model="syncOnAdd" type="checkbox" />
-              <span>添加后立即同步</span>
-            </label>
-
-            <div class="row">
-              <input
-                v-model="searchQ"
-                placeholder="搜索 UP 主（关键词）"
-                @keyup.enter="runSearch"
-              />
-              <button type="button" class="ghost" :disabled="searching" @click="runSearch">
-                {{ searching ? '搜索中' : '搜索' }}
-              </button>
-            </div>
-
-            <div v-if="searchHits.length" class="hits">
-              <div v-for="h in searchHits" :key="h.mid" class="hit-row">
-                <div class="hit-meta">
-                  <div class="hit-name">{{ h.name || h.mid }}</div>
-                  <div class="muted tiny-text">mid {{ h.mid }}</div>
-                </div>
-                <button type="button" class="tiny" :disabled="adding" @click="addFromHit(h)">
-                  添加
-                </button>
-              </div>
-            </div>
-            <p v-else-if="searchTried && !searching" class="muted tiny-text">无搜索结果</p>
-          </section>
-        </aside>
-
         <section class="mid">
           <div class="side-title-row">
             <h2 class="side-title">我的订阅</h2>
             <span class="count muted">{{ subs.length }}</span>
+            <span class="spacer"></span>
+            <button type="button" class="ghost small" @click="manageOpen = true">+ 添加订阅</button>
           </div>
 
           <input v-model="subFilter" class="sub-filter" placeholder="过滤订阅名 / mid" />
@@ -258,7 +223,7 @@ onMounted(() => {
 
           <p v-if="subs.length && !displayedSubs.length" class="muted tiny-text">无匹配订阅</p>
           <p v-if="!subs.length && !loading" class="muted tiny-text sub-hint">
-            先在左侧搜索关键词或填写 mid 添加订阅。
+            点击「+ 添加订阅」搜索关键词或填写 mid 添加订阅。
           </p>
 
           <div class="sub-list">
@@ -347,6 +312,57 @@ onMounted(() => {
       </div>
     </div>
   </AppShell>
+
+  <Teleport to="body">
+    <Transition name="fade">
+      <div
+        v-if="manageOpen"
+        class="overlay"
+        @click.self="manageOpen = false"
+        @keydown.esc="manageOpen = false"
+      >
+        <div class="manager" role="dialog" aria-modal="true" aria-label="添加订阅">
+          <h3 class="manager-title">添加订阅</h3>
+          <p v-if="error" class="err">{{ error }}</p>
+
+          <div class="row">
+            <input v-model="newMid" placeholder="输入 UP 的 mid" @keyup.enter="addSub" />
+            <button type="button" class="primary" :disabled="adding" @click="addSub">添加</button>
+          </div>
+          <label class="check-label">
+            <input v-model="syncOnAdd" type="checkbox" />
+            <span>添加后立即同步</span>
+          </label>
+
+          <div class="divider"></div>
+
+          <div class="row">
+            <input v-model="searchQ" placeholder="搜索 UP 主（关键词）" @keyup.enter="runSearch" />
+            <button type="button" class="ghost" :disabled="searching" @click="runSearch">
+              {{ searching ? '搜索中' : '搜索' }}
+            </button>
+          </div>
+
+          <div v-if="searchHits.length" class="hits">
+            <div v-for="h in searchHits" :key="h.mid" class="hit-row">
+              <div class="hit-meta">
+                <div class="hit-name">{{ h.name || h.mid }}</div>
+                <div class="muted tiny-text">mid {{ h.mid }}</div>
+              </div>
+              <button type="button" class="tiny" :disabled="adding" @click="addFromHit(h)">
+                添加
+              </button>
+            </div>
+          </div>
+          <p v-else-if="searchTried && !searching" class="muted tiny-text">无搜索结果</p>
+
+          <div class="manager-actions">
+            <button type="button" class="ghost" @click="manageOpen = false">关闭</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -383,15 +399,14 @@ onMounted(() => {
 
 .workspace {
   display: grid;
-  grid-template-columns: 264px 264px minmax(0, 1fr);
-  grid-template-areas: 'left mid feed';
+  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-areas: 'mid feed';
   gap: 14px;
   flex: 1;
   min-height: 0;
 }
 
-/* ---------- 左栏 · 订阅管理 ---------- */
-.left,
+/* ---------- 中栏 · 订阅列表 ---------- */
 .mid,
 .feed {
   min-height: 0;
@@ -401,17 +416,23 @@ onMounted(() => {
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
-.left {
-  grid-area: left;
+.mid {
+  grid-area: mid;
   display: flex;
   flex-direction: column;
+  gap: 8px;
   padding: 14px;
 }
-.side-section {
-  display: grid;
-  gap: 8px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--line-soft);
+.mid .sub-list {
+  flex: 1;
+  min-height: 0;
+}
+.spacer {
+  flex: 1;
+}
+.ghost.small {
+  padding: 4px 10px;
+  font-size: 0.78rem;
 }
 .side-title {
   margin: 0;
@@ -602,19 +623,6 @@ onMounted(() => {
   border-color: var(--danger);
 }
 
-/* ---------- 中栏 · 订阅列表 ---------- */
-.mid {
-  grid-area: mid;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-}
-.mid .sub-list {
-  flex: 1;
-  min-height: 0;
-}
-
 /* ---------- 右栏 · 动态列表 ---------- */
 .feed {
   grid-area: feed;
@@ -788,26 +796,62 @@ onMounted(() => {
   color: var(--brand);
 }
 
-@media (max-width: 1280px) {
-  .workspace {
-    grid-template-columns: 264px minmax(0, 1fr);
-    grid-template-areas:
-      'left mid'
-      'feed feed';
-  }
-  .feed {
-    min-height: 320px;
-  }
+/* ---------- 添加订阅弹窗 ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 24px;
 }
+.manager {
+  width: 100%;
+  max-width: 420px;
+  max-height: min(620px, calc(100vh - 48px));
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  box-shadow: var(--shadow-panel);
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.manager-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.divider {
+  height: 1px;
+  background: var(--line-soft);
+  margin: 2px 0;
+}
+.manager-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.18s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
     grid-template-areas:
-      'left'
       'mid'
       'feed';
   }
-  .left,
   .mid,
   .feed {
     overflow: visible;
