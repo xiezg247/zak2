@@ -186,7 +186,7 @@ def test_test_channel_ok() -> None:
     db = MagicMock()
     with (
         patch("app.repositories.channel.ChannelRepository.get", return_value=_channel_row()),
-        patch("app.api.v1.channels.notify_delivery.send_to_channel", return_value=(True, "")) as send,
+        patch("app.domains.channels.service.notify_delivery.send_to_channel", return_value=(True, "")) as send,
     ):
         client = _api_client(db=db)
         resp = client.post("/api/v1/channels/c1/test")
@@ -202,7 +202,7 @@ def test_test_channel_failed() -> None:
     db = MagicMock()
     with (
         patch("app.repositories.channel.ChannelRepository.get", return_value=_channel_row()),
-        patch("app.api.v1.channels.notify_delivery.send_to_channel", return_value=(False, "HTTP 500")) as send,
+        patch("app.domains.channels.service.notify_delivery.send_to_channel", return_value=(False, "HTTP 500")) as send,
     ):
         client = _api_client(db=db)
         resp = client.post("/api/v1/channels/c1/test")

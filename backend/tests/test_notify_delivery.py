@@ -22,7 +22,7 @@ def _channel(id_: str, name: str, webhook: str) -> SimpleNamespace:
 def test_send_to_channel_ok() -> None:
     db = MagicMock()
     ch = _channel("c1", "组群", "https://hook")
-    with patch("app.services.notify.delivery.send_feishu_webhook") as send:
+    with patch("app.domains.channels.notify.delivery.send_feishu_webhook") as send:
         ok, msg = send_to_channel(db, ch, event_type="ops.screen", title="t", text="x")
     assert ok is True and msg == ""
     send.assert_called_once_with("https://hook", "t", "x")
@@ -35,7 +35,7 @@ def test_send_to_channel_ok() -> None:
 def test_send_to_channel_error_logged() -> None:
     db = MagicMock()
     ch = _channel("c1", "组群", "https://hook")
-    with patch("app.services.notify.delivery.send_feishu_webhook", side_effect=FeishuSendError("HTTP 500")):
+    with patch("app.domains.channels.notify.delivery.send_feishu_webhook", side_effect=FeishuSendError("HTTP 500")):
         ok, msg = send_to_channel(db, ch, event_type="ops.screen", title="t", text="x")
     assert ok is False and msg == "HTTP 500"
     row = db.add.call_args.args[0]
@@ -46,7 +46,7 @@ def test_send_to_channel_error_logged() -> None:
 def test_send_to_channel_missing_webhook() -> None:
     db = MagicMock()
     ch = _channel("c1", "组群", "")
-    with patch("app.services.notify.delivery.send_feishu_webhook") as send:
+    with patch("app.domains.channels.notify.delivery.send_feishu_webhook") as send:
         ok, msg = send_to_channel(db, ch, event_type="ops.screen", title="t", text="x")
     assert ok is False
     assert "webhook" in msg
@@ -67,7 +67,7 @@ def test_deliver_text_counts_mixed() -> None:
         _channel("c2", "b", "https://b"),
     ]
     with patch(
-        "app.services.notify.delivery.send_to_channel",
+        "app.domains.channels.notify.delivery.send_to_channel",
         side_effect=[(True, ""), (False, "HTTP 500")],
     ):
         out = deliver_text(db, user_id="u1", event_type="e", title="t", text="x")
