@@ -24,6 +24,7 @@ const listFilter = ref('')
 const unreadOnly = ref(false)
 const subFilter = ref('')
 const enabledOnly = ref(false)
+const selectedItem = ref<FeedItem | null>(null)
 
 const subtitle = computed(() => `${subs.value.length} 订阅 · ${itemsTotal.value} 条`)
 
@@ -94,6 +95,14 @@ async function loadItems() {
 async function goItemsPage(p: number) {
   itemsPage.value = p
   await loadItems()
+}
+
+function selectItem(item: FeedItem) {
+  selectedItem.value = item
+  if (!item.is_read) {
+    item.is_read = true
+    void contentApi.markRead(item.id)
+  }
 }
 
 async function toggleSub(s: FeedSub) {
@@ -173,19 +182,12 @@ async function removeSub(s: FeedSub) {
   }
 }
 
-async function openItem(item: FeedItem) {
-  if (!item.is_read) {
-    try {
-      await contentApi.markRead(item.id)
-      item.is_read = true
-    } catch {
-      /* ignore */
-    }
-  }
+function openItem(item: FeedItem) {
   window.open(item.url, '_blank', 'noopener,noreferrer')
 }
 
 watch(subId, () => {
+  selectedItem.value = null
   void load()
 })
 
@@ -271,12 +273,7 @@ onMounted(() => {
                 class="sub-row"
                 :class="{ on: subId === s.id, off: !s.enabled }"
               >
-                <button
-                  type="button"
-                  class="sub-name"
-                  :title="s.source_id"
-                  @click="subId = s.id"
-                >
+                <button type="button" class="sub-name" :title="s.source_id" @click="subId = s.id">
                   {{ s.display_name || s.source_id }}
                 </button>
                 <button
@@ -288,12 +285,7 @@ onMounted(() => {
                 >
                   {{ s.enabled ? '开' : '关' }}
                 </button>
-                <button
-                  type="button"
-                  class="icon-btn danger"
-                  title="删除"
-                  @click="removeSub(s)"
-                >
+                <button type="button" class="icon-btn danger" title="删除" @click="removeSub(s)">
                   删
                 </button>
               </div>
@@ -301,7 +293,7 @@ onMounted(() => {
           </section>
         </aside>
 
-        <section class="right">
+        <section class="feed">
           <div class="right-head">
             <div class="right-title-row">
               <h2 class="right-title">动态</h2>
@@ -318,7 +310,7 @@ onMounted(() => {
             </label>
           </div>
 
-          <div class="feed">
+          <div class="feed-list">
             <p v-if="loading" class="empty muted">加载中…</p>
             <template v-else>
               <p v-if="!subs.length" class="empty muted">暂无订阅</p>
@@ -331,9 +323,9 @@ onMounted(() => {
                 v-for="(item, i) in displayedItems"
                 :key="item.id"
                 class="item"
-                :class="{ unread: !item.is_read }"
+                :class="{ unread: !item.is_read, on: selectedItem?.id === item.id }"
                 :style="{ '--i': i }"
-                @click="openItem(item)"
+                @click="selectItem(item)"
               >
                 <div class="item-head">
                   <div class="item-byline">
@@ -347,7 +339,7 @@ onMounted(() => {
                 </div>
                 <h3 class="item-title">{{ item.title || '(无标题)' }}</h3>
                 <p v-if="item.summary" class="item-summary">{{ item.summary }}</p>
-                <span class="item-open">打开 ↗</span>
+                <span class="item-open">查看详情 ›</span>
               </article>
               <PagerBar
                 :page="itemsPage"
@@ -358,6 +350,34 @@ onMounted(() => {
             </template>
           </div>
         </section>
+
+        <aside class="detail">
+          <template v-if="selectedItem">
+            <div class="detail-head">
+              <h2 class="detail-title">{{ selectedItem.title || '(无标题)' }}</h2>
+              <span v-if="itemTypeLabel(selectedItem.item_type)" class="item-type">{{
+                itemTypeLabel(selectedItem.item_type)
+              }}</span>
+            </div>
+            <div class="detail-meta">
+              <span class="detail-author">{{ selectedItem.author_name || '未知作者' }}</span>
+              <span class="detail-time">{{ selectedItem.published_at }}</span>
+            </div>
+            <p v-if="selectedItem.summary" class="detail-summary">{{ selectedItem.summary }}</p>
+            <p v-else class="detail-none muted">该动态没有摘要</p>
+            <div class="detail-actions">
+              <button type="button" class="primary" @click="openItem(selectedItem)">
+                打开原文 ↗
+              </button>
+              <button type="button" class="ghost" @click="selectItem(selectedItem)">
+                {{ selectedItem.is_read ? '已读' : '标为已读' }}
+              </button>
+            </div>
+          </template>
+          <div v-else class="detail-empty">
+            <p class="muted">从左侧动态中点选一条，在此查看详情</p>
+          </div>
+        </aside>
       </div>
     </div>
   </AppShell>
@@ -397,7 +417,8 @@ onMounted(() => {
 
 .workspace {
   display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-columns: 264px minmax(0, 1fr) 340px;
+  grid-template-areas: 'left feed detail';
   gap: 14px;
   flex: 1;
   min-height: 0;
@@ -405,7 +426,8 @@ onMounted(() => {
 
 /* ---------- 左栏 ---------- */
 .left,
-.right {
+.feed,
+.detail {
   min-height: 0;
   overflow: auto;
   border: 1px solid var(--line);
@@ -414,6 +436,7 @@ onMounted(() => {
   box-shadow: var(--shadow-card);
 }
 .left {
+  grid-area: left;
   display: flex;
   flex-direction: column;
   padding: 14px;
@@ -621,11 +644,13 @@ onMounted(() => {
   border-color: var(--danger);
 }
 
-/* ---------- 右栏 ---------- */
-.right {
+/* ---------- 中栏 · 动态列表 ---------- */
+.feed {
+  grid-area: feed;
   display: flex;
   flex-direction: column;
   padding: 14px 16px;
+  overflow: hidden;
 }
 .right-head {
   display: flex;
@@ -663,10 +688,14 @@ onMounted(() => {
   padding: 8px 10px;
 }
 
-.feed {
+.feed-list {
   display: grid;
   gap: 10px;
   padding-top: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
 }
 .empty {
   text-align: center;
@@ -714,6 +743,10 @@ onMounted(() => {
 .item.unread {
   border-color: var(--brand-soft);
   background: linear-gradient(90deg, var(--brand-light), var(--surface) 32%);
+}
+.item.on {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand) inset;
 }
 .item-head {
   display: flex;
@@ -788,12 +821,96 @@ onMounted(() => {
   color: var(--brand);
 }
 
+/* ---------- 右栏 · 详情面板 ---------- */
+.detail {
+  grid-area: detail;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 14px 16px;
+}
+.detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.detail-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+.detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+.detail-author {
+  font-weight: 500;
+  color: var(--ink);
+}
+.detail-time {
+  color: var(--ink-faint);
+}
+.detail-summary {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.detail-none {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+.detail-empty {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  text-align: center;
+  padding: 16px;
+}
+.detail-empty p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 1280px) {
+  .workspace {
+    grid-template-columns: 264px minmax(0, 1fr);
+    grid-template-areas:
+      'left feed'
+      'detail detail';
+  }
+  .detail {
+    min-height: 280px;
+  }
+}
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      'left'
+      'feed'
+      'detail';
   }
   .left,
-  .right {
+  .feed,
+  .detail {
     overflow: visible;
   }
 }
