@@ -560,7 +560,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.core.errors import NotFound, ValidationFailed
-from app.domains.channels.schemas import ChannelCreate, ChannelUpdate
+from app.domains.channels.schemas import ChannelUpdate
 from app.domains.channels.service import ChannelService
 
 
