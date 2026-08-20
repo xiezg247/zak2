@@ -32,3 +32,7 @@ class Forbidden(AppError):
 
 class RateLimited(AppError):
     status_code = 429
+
+
+class UpstreamFailed(AppError):
+    status_code = 502

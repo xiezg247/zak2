@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.errors import register_exception_handlers
-from app.core.errors import NotFound, RateLimited, ValidationFailed
+from app.core.errors import NotFound, RateLimited, UpstreamFailed, ValidationFailed
 
 
 def _client() -> TestClient:
@@ -22,6 +22,10 @@ def _client() -> TestClient:
     @app.get("/rl")
     def rl() -> None:
         raise RateLimited("尝试次数过多，请稍后再试")
+
+    @app.get("/up")
+    def up() -> None:
+        raise UpstreamFailed("上游失败")
 
     return TestClient(app, raise_server_exceptions=False)
 
@@ -46,3 +50,9 @@ def test_rate_limited_maps_429() -> None:
     resp = _client().get("/rl")
     assert resp.status_code == 429
     assert "尝试次数过多" in resp.json()["message"]
+
+
+def test_upstream_failed_maps_502() -> None:
+    resp = _client().get("/up")
+    assert resp.status_code == 502
+    assert resp.json()["message"] == "上游失败"
