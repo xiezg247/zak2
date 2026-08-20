@@ -50,6 +50,22 @@ from app.services.symbols import normalize_exchange, to_tf_symbol, to_vt_symbol
 router = APIRouter(tags=["watchlist"])
 
 
+def _opt_price(q: QuoteRow | None) -> float | None:
+    if q is None or q.last_price <= 0:
+        return None
+    return float(q.last_price)
+
+
+def _opt_field(q: QuoteRow | None, attr: str, *, positive: bool = False) -> float | None:
+    """无行情或缺省 0（稀疏字段）时返回 None，避免前端展示假 0。"""
+    if q is None:
+        return None
+    v = float(getattr(q, attr))
+    if positive and v <= 0:
+        return None
+    return v
+
+
 def _enrich(items: list[Any], *, with_quotes: bool, db: Session | None = None) -> list[WatchlistItemOut]:
     suspended = load_suspended_vt_symbols(db) if db is not None else set()
     quote_map: dict[str, QuoteRow] = {}
@@ -97,12 +113,12 @@ def _enrich(items: list[Any], *, with_quotes: bool, db: Session | None = None) -
                 sort_order=item.sort_order,
                 vt_symbol=vt,
                 tf_symbol=tf,
-                last_price=q.last_price if q else None,
-                change_pct=q.change_pct if q else None,
-                turnover_rate=q.turnover_rate if q else None,
-                volume=q.volume if q else None,
-                amount=q.amount if q else None,
-                volume_ratio=q.volume_ratio if q else None,
+                last_price=_opt_price(q),
+                change_pct=_opt_field(q, "change_pct") if q else None,
+                turnover_rate=_opt_field(q, "turnover_rate"),
+                volume=_opt_field(q, "volume"),
+                amount=_opt_field(q, "amount"),
+                volume_ratio=_opt_field(q, "volume_ratio", positive=True),
                 industry=industry_by_tf.get(tf, "") if with_quotes else "",
                 suspended=vt in suspended,
             )
@@ -453,6 +469,7 @@ def get_quotes(
     enrich_rows_from_db(db, rows)
     out: list[QuoteOut] = []
     for (symbol, exchange, tf), row in zip(meta, rows, strict=True):
+        q = quotes.get(tf)
         out.append(
             QuoteOut(
                 symbol=symbol,
@@ -460,13 +477,13 @@ def get_quotes(
                 vt_symbol=to_vt_symbol(symbol, exchange),
                 tf_symbol=tf,
                 name=row.name,
-                last_price=row.last_price,
-                change_pct=row.change_pct,
-                turnover_rate=row.turnover_rate,
-                volume=row.volume,
-                amount=row.amount,
-                amplitude=row.amplitude,
-                volume_ratio=row.volume_ratio,
+                last_price=_opt_price(q),
+                change_pct=_opt_field(q, "change_pct") if q else None,
+                turnover_rate=_opt_field(q, "turnover_rate"),
+                volume=_opt_field(q, "volume"),
+                amount=_opt_field(q, "amount"),
+                amplitude=_opt_field(q, "amplitude"),
+                volume_ratio=_opt_field(q, "volume_ratio", positive=True),
                 industry=row.industry or "",
             )
         )

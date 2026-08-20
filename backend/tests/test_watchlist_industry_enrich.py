@@ -66,6 +66,34 @@ def test_enrich_without_quotes_skips_industry() -> None:
     assert out[0].last_price is None
 
 
+def test_enrich_omits_zero_volume_ratio() -> None:
+    store = MagicMock()
+    store.available.return_value = True
+    store.get_quotes.return_value = [
+        QuoteRow(symbol="SHSE.600519", name="茅台", last_price=100.0, volume_ratio=0.0),
+    ]
+    with (
+        patch.object(wl, "get_quote_store", return_value=store),
+        patch.object(wl, "enrich_rows_from_db", return_value=0),
+    ):
+        out = wl._enrich([_item()], with_quotes=True, db=MagicMock())
+    assert out[0].volume_ratio is None
+
+
+def test_enrich_keeps_positive_volume_ratio() -> None:
+    store = MagicMock()
+    store.available.return_value = True
+    store.get_quotes.return_value = [
+        QuoteRow(symbol="SHSE.600519", name="茅台", last_price=100.0, volume_ratio=1.35),
+    ]
+    with (
+        patch.object(wl, "get_quote_store", return_value=store),
+        patch.object(wl, "enrich_rows_from_db", return_value=0),
+    ):
+        out = wl._enrich([_item()], with_quotes=True, db=MagicMock())
+    assert out[0].volume_ratio == 1.35
+
+
 def test_enrich_no_redis_still_looks_up_db() -> None:
     store = MagicMock()
     store.available.return_value = False

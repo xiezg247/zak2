@@ -366,11 +366,14 @@ function cardResonanceCount(c: RadarCard): number {
 }
 
 function goLeaderScreen() {
-  void router.push({ path: '/screener', query: { recipe: 'radar_leader', variant: 'mainline' } })
+  void router.push({
+    path: '/screener/recipe',
+    query: { recipe: 'radar_leader', variant: 'mainline' },
+  })
 }
 
 function goResonanceScreen() {
-  void router.push({ path: '/screener', query: { recipe: 'radar_resonance' } })
+  void router.push({ path: '/screener/recipe', query: { recipe: 'radar_resonance' } })
 }
 
 async function addWatchTo(vt: string, name: string | undefined, msg: { value: string }) {

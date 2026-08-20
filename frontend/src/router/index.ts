@@ -18,8 +18,9 @@ const router = createRouter({
       component: () => import('../views/WatchlistView.vue'),
     },
     {
-      path: '/board',
-      redirect: (to) => ({ path: '/watchlist', query: { ...to.query, tab: 'signals' } }),
+      path: '/watchlist/signals',
+      name: 'watchlist-signals',
+      component: () => import('../views/WatchlistSignalsView.vue'),
     },
     {
       path: '/strategies',
@@ -29,8 +30,9 @@ const router = createRouter({
     { path: '/market', name: 'market', component: () => import('../views/MarketView.vue') },
     { path: '/sectors', name: 'sectors', component: () => import('../views/SectorView.vue') },
     { path: '/radar', name: 'radar', component: () => import('../views/RadarView.vue') },
+    { path: '/screener', redirect: '/screener/condition' },
     {
-      path: '/screener',
+      path: '/screener/:mode(condition|recipe|pattern|peer)',
       name: 'screener',
       component: () => import('../views/ScreenerHubView.vue'),
     },

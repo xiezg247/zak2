@@ -86,13 +86,13 @@ class QuoteOut(BaseModel):
     vt_symbol: str
     tf_symbol: str
     name: str = ""
-    last_price: float = 0.0
-    change_pct: float = 0.0
-    turnover_rate: float = 0.0
-    volume: float = 0.0
-    amount: float = 0.0
-    amplitude: float = 0.0
-    volume_ratio: float = 0.0
+    last_price: float | None = None
+    change_pct: float | None = None
+    turnover_rate: float | None = None
+    volume: float | None = None
+    amount: float | None = None
+    amplitude: float | None = None
+    volume_ratio: float | None = None
     industry: str = ""
 
 

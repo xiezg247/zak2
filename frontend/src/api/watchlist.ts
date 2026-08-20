@@ -196,13 +196,13 @@ export type QuoteOut = {
   vt_symbol: string
   tf_symbol: string
   name: string
-  last_price: number
-  change_pct: number
-  turnover_rate: number
-  volume: number
-  amount: number
-  amplitude: number
-  volume_ratio: number
+  last_price: number | null
+  change_pct: number | null
+  turnover_rate: number | null
+  volume: number | null
+  amount: number | null
+  amplitude: number | null
+  volume_ratio: number | null
   industry: string
 }
 

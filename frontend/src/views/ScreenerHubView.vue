@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
+import type { NavActive } from '../components/AppShell.vue'
 import PagerBar from '../components/PagerBar.vue'
 import { getToken } from '../api/client'
 import { fmtDateTime } from '../lib/format'
@@ -22,8 +23,41 @@ import { watchlistApi } from '../api/watchlist'
 
 const WEIGHT_EDITABLE = new Set(['intraday_multi', 'post_close_multi', 'ultra_short_unified'])
 
+type ScreenerTab = 'condition' | 'recipe' | 'pattern' | 'peer'
+
+const MODE_TITLE: Record<ScreenerTab, string> = {
+  condition: '条件选股',
+  recipe: '多因子配方',
+  pattern: '形态选股',
+  peer: '对标相似',
+}
+
+function parseMode(raw: unknown): ScreenerTab {
+  if (raw === 'recipe' || raw === 'pattern' || raw === 'peer' || raw === 'condition') return raw
+  return 'condition'
+}
+
 const route = useRoute()
-const tab = ref<'condition' | 'recipe' | 'pattern' | 'peer'>('condition')
+const router = useRouter()
+const tab = ref<ScreenerTab>(parseMode(route.params.mode))
+
+watch(
+  () => route.params.mode,
+  (m) => {
+    const next = parseMode(m)
+    if (next !== tab.value) tab.value = next
+  },
+)
+
+function setTab(mode: ScreenerTab) {
+  tab.value = mode
+  if (parseMode(route.params.mode) !== mode) {
+    void router.push({ name: 'screener', params: { mode }, query: { ...route.query } })
+  }
+}
+
+const navActive = computed(() => `screener-${tab.value}` as NavActive)
+const pageTitle = computed(() => MODE_TITLE[tab.value])
 const presets = ref<Preset[]>([])
 const templates = ref<HardFilterTemplate[]>([])
 const recipes = ref<BuiltinRecipe[]>([])
@@ -603,14 +637,15 @@ function applyScheme(s: Scheme) {
   selectedSchemeId.value = s.id
   const cfg = s.config || {}
   const tabVal = String(cfg.tab || 'condition')
-  tab.value =
+  setTab(
     tabVal === 'recipe'
       ? 'recipe'
       : tabVal === 'pattern'
         ? 'pattern'
         : tabVal === 'peer'
           ? 'peer'
-          : 'condition'
+          : 'condition',
+  )
   if (tab.value === 'recipe') {
     selectedRecipe.value = String(cfg.recipe_id || 'intraday_multi')
     if (cfg.variant === 'all_market' || cfg.variant === 'mainline') {
@@ -712,7 +747,7 @@ function findPeers(row: ScreenerResultRow) {
   const vt = String(row.vt_symbol || '').trim() || String(row.symbol || '').trim()
   if (!vt) return
   peerSymbol.value = vt
-  tab.value = 'peer'
+  setTab('peer')
   void runScreen()
 }
 
@@ -760,8 +795,7 @@ onMounted(async () => {
   try {
     const qRecipe = typeof route.query.recipe === 'string' ? route.query.recipe : ''
     const qVariant = typeof route.query.variant === 'string' ? route.query.variant : ''
-    if (qRecipe) {
-      tab.value = 'recipe'
+    if (qRecipe && tab.value === 'recipe') {
       selectedRecipe.value = qRecipe
       if (qRecipe === 'radar_leader') topN.value = 12
       if (qRecipe === 'radar_resonance') topN.value = 20
@@ -775,25 +809,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AppShell title="选股 Hub" :subtitle="dataStatus" active="screener">
+  <AppShell :title="pageTitle" :subtitle="dataStatus" :active="navActive">
     <div class="workspace">
       <section class="left">
         <div class="cfg-card">
-          <div class="tabs">
-            <button :class="{ on: tab === 'condition' }" type="button" @click="tab = 'condition'">
-              条件选股
-            </button>
-            <button :class="{ on: tab === 'recipe' }" type="button" @click="tab = 'recipe'">
-              多因子配方
-            </button>
-            <button :class="{ on: tab === 'pattern' }" type="button" @click="tab = 'pattern'">
-              形态
-            </button>
-            <button :class="{ on: tab === 'peer' }" type="button" @click="tab = 'peer'">
-              对标
-            </button>
-          </div>
-
           <div v-if="tab === 'condition'" class="block">
             <label>
               Preset
@@ -1330,36 +1349,6 @@ onMounted(async () => {
 }
 .run-status p {
   margin: 0;
-}
-.tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 4px;
-  border-radius: 0.75rem;
-  background: var(--surface-muted);
-  border: 1px solid var(--line-soft);
-}
-.tabs button {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--ink-muted);
-  border-radius: 0.5rem;
-  padding: 8px;
-  font-size: 0.8125rem;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
-}
-.tabs button:hover {
-  color: var(--ink);
-}
-.tabs button.on {
-  background: var(--surface);
-  color: var(--brand);
-  border-color: var(--brand-soft);
-  font-weight: 500;
-  box-shadow: var(--shadow-card);
 }
 .block {
   display: grid;
