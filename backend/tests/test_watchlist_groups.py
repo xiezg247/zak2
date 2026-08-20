@@ -2,10 +2,10 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
 
+from app.core.errors import Conflict, NotFound, ValidationFailed
+from app.domains.watchlist import repository as repo
 from app.models.watchlist import WatchlistGroup
-from app.repositories import watchlist as repo
 
 
 def _group(*, gid: str | None = None, name: str = "A", user_id: str = "u1") -> WatchlistGroup:
@@ -27,7 +27,7 @@ def test_rename_success() -> None:
 
 def test_rename_empty() -> None:
     db = MagicMock()
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(ValidationFailed) as ei:
         repo.WatchlistGroupRepository(db, "u1").rename_group("g1", "  ")
     assert ei.value.status_code == 400
 
@@ -35,7 +35,7 @@ def test_rename_empty() -> None:
 def test_rename_not_found() -> None:
     db = MagicMock()
     db.scalar.return_value = None
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(NotFound) as ei:
         repo.WatchlistGroupRepository(db, "u1").rename_group("missing", "名")
     assert ei.value.status_code == 404
 
@@ -47,7 +47,7 @@ def test_rename_conflict() -> None:
     db.scalar.return_value = g
     with (
         patch.object(repo.WatchlistGroupRepository, "list_groups", return_value=[g, other]),
-        pytest.raises(HTTPException) as ei,
+        pytest.raises(Conflict) as ei,
     ):
         repo.WatchlistGroupRepository(db, "u1").rename_group(g.id, "已有")
     assert ei.value.status_code == 409
@@ -125,6 +125,6 @@ def test_batch_remove_skips_missing() -> None:
 def test_batch_group_missing_404() -> None:
     db = MagicMock()
     db.scalar.return_value = None
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(NotFound) as ei:
         repo.WatchlistGroupMemberRepository(db, "u1").batch_group_members("missing", ["600519.SSE"], "add")
     assert ei.value.status_code == 404
