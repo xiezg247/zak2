@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import AppShell from '../components/AppShell.vue'
-import StockAnalysisModal from '../components/StockAnalysisModal.vue'
-import { fmtDateTime } from '../lib/format'
+import AppShell from '../../../components/AppShell.vue'
+import StockAnalysisModal from '../../../components/StockAnalysisModal.vue'
+import RadarSummaryPanels from '../components/RadarSummaryPanels.vue'
+import RadarResonanceSide from '../components/RadarResonanceSide.vue'
+import { fmtDateTime } from '../../../lib/format'
 import {
   marketApi,
   type RadarCard,
@@ -11,27 +13,15 @@ import {
   type RadarPredict,
   type RadarResonanceEntry,
   type ResonanceWeightItem,
-} from '../api/market'
-import { watchlistApi } from '../api/watchlist'
-import { useStockAnalysis } from '../composables/useStockAnalysis'
+} from '../../../api/market'
+import { watchlistApi } from '../../../api/watchlist'
+import { useStockAnalysis } from '../../../composables/useStockAnalysis'
 
 const analysis = useStockAnalysis()
 
 const router = useRouter()
 const cards = ref<RadarCard[]>([])
 const resonance = ref<RadarResonanceEntry[]>([])
-const resonanceFilter = ref('')
-
-const displayedResonance = computed(() => {
-  const q = resonanceFilter.value.trim().toLowerCase()
-  if (!q) return resonance.value
-  return resonance.value.filter((e) => {
-    const vt = (e.vt_symbol || '').toLowerCase()
-    const name = (e.name || '').toLowerCase()
-    return vt.includes(q) || name.includes(q)
-  })
-})
-
 const activeId = ref('')
 const error = ref('')
 const loading = ref(false)
@@ -40,17 +30,14 @@ const sideMsg = ref('')
 const detailMsg = ref('')
 const rowActionMsg = ref('')
 const actingVt = ref('')
-const weightOpen = ref(false)
 const weightItems = ref<ResonanceWeightItem[]>([])
 const weightDraft = ref<Record<string, number>>({})
 const weightBusy = ref(false)
 const weightErr = ref('')
 const horizon = ref<RadarHorizon | null>(null)
 const horizonErr = ref('')
-const horizonOpen = ref(false)
 const predict = ref<RadarPredict | null>(null)
 const predictErr = ref('')
-const predictOpen = ref(false)
 
 const cardFilter = ref('')
 const sourceChip = ref('')
@@ -157,36 +144,6 @@ const subtitle = computed(() => {
   if (!cards.value.length) return ''
   const n = resonance.value.length
   return n ? `${cards.value.length} 张卡片 · 共振 ${n}` : `${cards.value.length} 张卡片`
-})
-
-const horizonHasCache = computed(() => Boolean(horizon.value?.computed_at))
-
-const horizonHeadLabel = computed(() => {
-  if (!horizonHasCache.value) return '暂无数据'
-  const h = horizon.value!
-  return (h.label || '').trim() || '启发式展望（基于共振）'
-})
-
-const horizonSummary = computed(() => {
-  if (!horizonHasCache.value) return '暂无数据'
-  const h = horizon.value!
-  if (h.empty) return `扫描 ${h.scanned_total} · 无入选`
-  return `入选 ${h.rows.length} · 扫描 ${h.scanned_total}`
-})
-
-const predictHasCache = computed(() => Boolean(predict.value?.computed_at))
-
-const predictHeadLabel = computed(() => {
-  if (!predictHasCache.value) return '暂无数据'
-  const p = predict.value!
-  return (p.label || '').trim() || '规则预测（共振+可解释加分）'
-})
-
-const predictSummary = computed(() => {
-  if (!predictHasCache.value) return '暂无数据'
-  const p = predict.value!
-  if (p.empty) return `扫描 ${p.scanned_total} · 无入选`
-  return `入选 ${p.rows.length} · 扫描 ${p.scanned_total}`
 })
 
 const cardCountByVt = computed(() => {
@@ -402,6 +359,10 @@ async function addWatchFromHorizonRow(vt: string, name?: string) {
   await addWatchTo(vt, name, rowActionMsg)
 }
 
+function openAnalysis(vt: string, name?: string) {
+  analysis.open(vt, name)
+}
+
 onMounted(() => {
   void load()
 })
@@ -427,303 +388,33 @@ onMounted(() => {
       <p v-if="error" class="err">{{ error }}</p>
       <p v-if="rowActionMsg" class="draft-msg">{{ rowActionMsg }}</p>
 
-      <div class="summary-bar">
-        <button
-          type="button"
-          class="summary-card"
-          :class="{ open: horizonOpen }"
-          @click="horizonOpen = !horizonOpen"
-        >
-          <span class="summary-k">共振展望</span>
-          <span class="summary-v muted">{{ horizonSummary }}</span>
-          <span v-if="horizonHasCache && horizon?.computed_at" class="summary-t muted">
-            {{ fmtDateTime(horizon.computed_at) }}
-          </span>
-          <span class="chevron">{{ horizonOpen ? '▴' : '▾' }}</span>
-        </button>
-        <button
-          type="button"
-          class="summary-card"
-          :class="{ open: predictOpen }"
-          @click="predictOpen = !predictOpen"
-        >
-          <span class="summary-k">规则预测</span>
-          <span class="summary-v muted">{{ predictSummary }}</span>
-          <span v-if="predictHasCache && predict?.computed_at" class="summary-t muted">
-            {{ fmtDateTime(predict.computed_at) }}
-          </span>
-          <span class="chevron">{{ predictOpen ? '▴' : '▾' }}</span>
-        </button>
-      </div>
-
-      <div v-if="horizonOpen" class="summary-panel">
-        <div class="summary-panel-head">
-          <strong>{{ horizonHeadLabel }}</strong>
-          <span v-if="horizonHasCache && horizon?.computed_at" class="muted tiny">
-            · {{ fmtDateTime(horizon.computed_at) }}
-          </span>
-        </div>
-        <p v-if="horizonErr" class="horizon-err">{{ horizonErr }}</p>
-        <template v-else-if="horizonHasCache">
-          <p v-if="horizon?.empty" class="muted">
-            上次扫描无达标共振标的（扫描 {{ horizon.scanned_total }} · 入选
-            {{ horizon.refined_total }}）。
-          </p>
-          <div v-else-if="horizon?.rows.length" class="table-wrap horizon-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>标的</th>
-                  <th>共振</th>
-                  <th>卡数</th>
-                  <th>细节</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(row, i) in horizon.rows" :key="row.vt_symbol">
-                  <td>{{ i + 1 }}</td>
-                  <td>
-                    <span v-if="row.card_count >= 2" class="star">★</span>
-                    {{ row.name || row.vt_symbol }}
-                    <div class="mono muted tiny">{{ row.vt_symbol }}</div>
-                  </td>
-                  <td class="mono">{{ row.resonance_score.toFixed(1) }}</td>
-                  <td>{{ row.card_count }}</td>
-                  <td class="mono muted">
-                    <template v-if="row.change_pct != null"
-                      >涨幅 {{ row.change_pct.toFixed(2) }}%</template
-                    >
-                    <template v-if="row.last_price != null">
-                      <template v-if="row.change_pct != null"> · </template>
-                      现价 {{ row.last_price.toFixed(2) }}
-                    </template>
-                    <template v-if="row.card_titles.length">
-                      <template v-if="row.change_pct != null || row.last_price != null">
-                        ·
-                      </template>
-                      {{ row.card_titles.join(' / ') }}
-                    </template>
-                    <template v-if="sealLabel(row)">
-                      <template
-                        v-if="
-                          row.change_pct != null || row.last_price != null || row.card_titles.length
-                        "
-                      >
-                        ·
-                      </template>
-                      {{ sealLabel(row) }}
-                    </template>
-                    <template
-                      v-if="
-                        row.change_pct == null &&
-                        row.last_price == null &&
-                        !row.card_titles.length &&
-                        !sealLabel(row)
-                      "
-                    >
-                      —
-                    </template>
-                  </td>
-                  <td class="ops">
-                    <button
-                      type="button"
-                      class="ghost tiny-btn"
-                      @click="analysis.open(row.vt_symbol, row.name)"
-                    >
-                      析
-                    </button>
-                    <button
-                      type="button"
-                      class="ghost tiny-btn"
-                      :disabled="!!actingVt"
-                      @click="addWatchFromHorizonRow(row.vt_symbol, row.name)"
-                    >
-                      自选
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </template>
-        <template v-else>
-          <p class="muted">
-            暂无启发式展望数据。请于 Ops 手动执行
-            <code class="mono">scan_horizon_outlook</code>（需先 warm_radar_card_snapshots）。
-          </p>
-          <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
-        </template>
-      </div>
-
-      <div v-if="predictOpen" class="summary-panel">
-        <div class="summary-panel-head">
-          <strong>{{ predictHeadLabel }}</strong>
-          <span v-if="predictHasCache && predict?.computed_at" class="muted tiny">
-            · {{ fmtDateTime(predict.computed_at) }}
-          </span>
-        </div>
-        <p v-if="predictErr" class="horizon-err">{{ predictErr }}</p>
-        <template v-else-if="predictHasCache">
-          <p v-if="predict?.empty" class="muted">
-            上次预测无入选行（候选 {{ predict.scanned_total }} · 缺日 K
-            {{ predict.kline_missing }}）。
-          </p>
-          <div v-else-if="predict?.rows.length" class="table-wrap horizon-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>标的</th>
-                  <th>预测分</th>
-                  <th>共振</th>
-                  <th>涨跌%</th>
-                  <th>封板</th>
-                  <th>理由</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(row, i) in predict.rows" :key="row.vt_symbol">
-                  <td>{{ i + 1 }}</td>
-                  <td>
-                    {{ row.name || row.vt_symbol }}
-                    <div class="mono muted tiny">{{ row.vt_symbol }}</div>
-                  </td>
-                  <td class="mono">{{ row.predict_score.toFixed(2) }}</td>
-                  <td class="mono">{{ row.resonance_score.toFixed(1) }}</td>
-                  <td class="mono">
-                    {{ row.change_pct != null ? row.change_pct.toFixed(2) : '—' }}
-                  </td>
-                  <td class="muted tiny">{{ row.seal_time_label || '—' }}</td>
-                  <td class="muted tiny">{{ (row.reasons || []).join(' · ') || '—' }}</td>
-                  <td class="ops">
-                    <button
-                      type="button"
-                      class="ghost tiny-btn"
-                      @click="analysis.open(row.vt_symbol, row.name)"
-                    >
-                      析
-                    </button>
-                    <button
-                      type="button"
-                      class="ghost tiny-btn"
-                      :disabled="!!actingVt"
-                      @click="addWatchFromHorizonRow(row.vt_symbol, row.name)"
-                    >
-                      自选
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </template>
-        <template v-else-if="horizonHasCache">
-          <p class="muted">
-            上次预测阶段失败或未写入，可于 Ops 重跑
-            <code class="mono">scan_horizon_outlook</code>。
-          </p>
-          <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
-        </template>
-        <template v-else>
-          <p class="muted">
-            暂无规则预测。请于 Ops 执行
-            <code class="mono">scan_horizon_outlook</code>（与共振展望同 job）。
-          </p>
-          <RouterLink to="/ops" class="draft-link">去 Ops</RouterLink>
-        </template>
-      </div>
+      <RadarSummaryPanels
+        :horizon="horizon"
+        :horizon-err="horizonErr"
+        :predict="predict"
+        :predict-err="predictErr"
+        :acting-vt="actingVt"
+        @analyze="openAnalysis"
+        @add-watch="addWatchFromHorizonRow"
+      />
 
       <div class="workbench" :class="{ withSide: sideOpen }">
-        <aside v-if="sideOpen" class="side">
-          <div class="side-head">
-            <strong>共振榜</strong>
-            <span class="muted">≥2 卡 · 可调权重</span>
-          </div>
-          <div class="weight-head">
-            <strong>权重</strong>
-            <button class="ghost tiny-btn" type="button" @click="weightOpen = !weightOpen">
-              {{ weightOpen ? '收起' : '展开' }}
-            </button>
-          </div>
-          <div v-if="weightOpen" class="weight-panel">
-            <div v-for="item in weightItems" :key="item.card_id" class="weight-row">
-              <label :for="`w-${item.card_id}`">{{ item.title }}</label>
-              <input
-                :id="`w-${item.card_id}`"
-                v-model.number="weightDraft[item.card_id]"
-                type="number"
-                min="0"
-                max="5"
-                step="0.1"
-                :disabled="weightBusy"
-              />
-            </div>
-            <p v-if="weightErr" class="weight-err">{{ weightErr }}</p>
-            <div class="weight-actions">
-              <button
-                class="primary"
-                type="button"
-                :disabled="weightBusy || weightItems.length === 0"
-                @click="saveWeights"
-              >
-                保存
-              </button>
-              <button class="ghost" type="button" :disabled="weightBusy" @click="resetWeights">
-                恢复默认
-              </button>
-            </div>
-          </div>
-          <p v-if="sideMsg" class="side-msg">{{ sideMsg }}</p>
-          <button class="primary full" type="button" @click="goLeaderScreen">龙头选股 → Hub</button>
-          <button class="ghost full" type="button" @click="goResonanceScreen">
-            共振选股 → Hub
-          </button>
-          <input
-            v-if="resonance.length"
-            v-model="resonanceFilter"
-            class="side-filter"
-            placeholder="过滤代码/名称"
-          />
-          <div class="side-list">
-            <div v-for="(e, i) in displayedResonance" :key="e.vt_symbol" class="side-row">
-              <div class="side-top">
-                <span class="rank" :class="'rank-' + (i + 1)">{{ i + 1 }}</span>
-                <div class="side-meta">
-                  <div class="side-name">
-                    <span v-if="e.card_count >= 2" class="star">★</span>
-                    {{ e.name || e.vt_symbol }}
-                  </div>
-                  <div class="mono muted tiny">{{ e.vt_symbol }}</div>
-                </div>
-                <div class="side-score">{{ e.resonance_score.toFixed(1) }}</div>
-              </div>
-              <div class="muted tiny">
-                {{ e.card_count }} 卡 · {{ e.card_titles.join(' / ') }}
-                <template v-if="sealLabel(e)"> · {{ sealLabel(e) }}</template>
-              </div>
-              <div class="side-actions">
-                <button type="button" class="link" @click="analysis.open(e.vt_symbol, e.name)">
-                  析
-                </button>
-                <button
-                  type="button"
-                  class="link"
-                  :disabled="actingVt === e.vt_symbol"
-                  @click="addWatch(e.vt_symbol, e.name)"
-                >
-                  加自选
-                </button>
-              </div>
-            </div>
-            <p v-if="!resonance.length" class="muted empty-side">
-              暂无共振标的（需至少 2 张卡片命中同一标的；可调权重后刷新）
-            </p>
-            <p v-else-if="!displayedResonance.length" class="muted empty-side">无匹配共振</p>
-          </div>
-        </aside>
+        <RadarResonanceSide
+          v-if="sideOpen"
+          :resonance="resonance"
+          :weight-items="weightItems"
+          v-model:weight-draft="weightDraft"
+          :weight-busy="weightBusy"
+          :weight-err="weightErr"
+          :side-msg="sideMsg"
+          :acting-vt="actingVt"
+          @save-weights="saveWeights"
+          @reset-weights="resetWeights"
+          @go-leader="goLeaderScreen"
+          @go-resonance="goResonanceScreen"
+          @analyze="openAnalysis"
+          @add-watch="addWatch"
+        />
 
         <main class="main">
           <template v-if="!loading && !error && !cards.length">
@@ -983,80 +674,6 @@ onMounted(() => {
   font-size: 0.85rem;
 }
 
-/* 摘要条 */
-.summary-bar {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 10px;
-}
-.summary-card {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-  padding: 8px 12px;
-  cursor: pointer;
-  text-align: left;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
-}
-.summary-card:hover {
-  border-color: var(--brand-soft);
-}
-.summary-card.open {
-  border-color: var(--brand-soft);
-  background: var(--brand-light);
-}
-.summary-k {
-  font-size: 0.85rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.summary-v {
-  font-size: 0.8rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.summary-t {
-  font-size: 0.72rem;
-  white-space: nowrap;
-}
-.chevron {
-  margin-left: auto;
-  color: var(--ink-faint);
-  font-size: 0.7rem;
-}
-.summary-panel {
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-  padding: 12px 16px;
-}
-.summary-panel-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.summary-panel-head strong {
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-.horizon-err {
-  margin: 0;
-  color: var(--danger);
-  font-size: 0.85rem;
-}
-.horizon-table {
-  margin-top: 8px;
-}
-
 /* 三栏工作台 */
 .workbench {
   display: grid;
@@ -1277,181 +894,6 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* 共振榜 */
-.side {
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-  padding: 14px;
-  display: grid;
-  gap: 10px;
-  align-content: start;
-}
-.side-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line-soft);
-}
-.side-head strong {
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-.weight-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.weight-head strong {
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-.tiny-btn {
-  padding: 4px 8px;
-  font-size: 0.75rem;
-}
-.weight-panel {
-  border: 1px solid var(--line);
-  border-radius: 0.5rem;
-  padding: 8px;
-  display: grid;
-  gap: 8px;
-  background: var(--surface-muted);
-}
-.weight-row {
-  display: grid;
-  grid-template-columns: 1fr 72px;
-  gap: 8px;
-  align-items: center;
-  font-size: 0.8rem;
-}
-.weight-row input {
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.375rem;
-  color: var(--ink);
-  padding: 4px 6px;
-  font-variant-numeric: tabular-nums;
-}
-.weight-actions {
-  display: flex;
-  gap: 8px;
-}
-.weight-actions .primary,
-.weight-actions .ghost {
-  flex: 1;
-}
-.weight-err {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--danger);
-}
-.side-msg {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--brand);
-}
-.side-filter {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.5rem;
-  color: var(--ink);
-  padding: 6px 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-.side-list {
-  display: grid;
-  gap: 8px;
-}
-.side-row {
-  border: 1px solid var(--line);
-  border-radius: 0.625rem;
-  padding: 10px;
-  display: grid;
-  gap: 6px;
-  background: var(--surface);
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
-}
-.side-row:hover {
-  border-color: var(--brand-soft);
-  background: var(--brand-light);
-}
-.side-top {
-  display: grid;
-  grid-template-columns: 24px 1fr auto;
-  gap: 6px;
-  align-items: start;
-}
-.rank {
-  display: inline-grid;
-  place-items: center;
-  min-width: 24px;
-  height: 20px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--ink-muted);
-  background: var(--surface-muted);
-  font-variant-numeric: tabular-nums;
-}
-.rank.rank-1 {
-  background: #fde8d7;
-  color: #b45309;
-}
-.rank.rank-2 {
-  background: #eef0f3;
-  color: #52525b;
-}
-.rank.rank-3 {
-  background: #fbe3dc;
-  color: #9a5b3f;
-}
-.side-meta {
-  min-width: 0;
-}
-.side-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.star {
-  color: var(--brand);
-  margin-right: 2px;
-}
-.side-score {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--brand-light);
-  color: var(--brand);
-  font-size: 0.8rem;
-}
-.link {
-  justify-self: start;
-  background: transparent;
-  border: none;
-  color: var(--brand);
-  padding: 0;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-.link:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* 表格与通用 */
 .table-wrap {
   border: 1px solid var(--line);
@@ -1500,11 +942,6 @@ tbody tr:hover td {
 .empty-main {
   padding: 24px 8px;
   line-height: 1.6;
-  margin: 0;
-}
-.empty-side {
-  text-align: center;
-  padding: 16px 8px;
   margin: 0;
 }
 .ops {

@@ -1,21 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import AppShell from '../components/AppShell.vue'
-import CandleChart from '../components/CandleChart.vue'
-import StockAnalysisModal from '../components/StockAnalysisModal.vue'
-import { confirmDialog, promptDialog } from '../lib/dialog'
-import { fmtDateTime } from '../lib/format'
+import AppShell from '../../../components/AppShell.vue'
+import BarsChartModal from '../../../components/BarsChartModal.vue'
+import FundamentalsModal from '../../../components/FundamentalsModal.vue'
+import StockAnalysisModal from '../../../components/StockAnalysisModal.vue'
+import { confirmDialog, promptDialog } from '../../../lib/dialog'
+import { formatAmountYi, formatNum2, formatPrice } from '../../../lib/format'
+import { cmpNullable } from '../../../lib/sort'
 import {
   watchlistApi,
-  type Bar,
-  type Fundamentals,
   type GroupMembersBatchResult,
   type WatchlistGroup,
   type WatchlistItem,
-} from '../api/watchlist'
-import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
-import { useStockAnalysis } from '../composables/useStockAnalysis'
+} from '../../../api/watchlist'
+import { usePolling } from '../../../composables/usePolling'
+import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../../../composables/useQuoteNotify'
+import { useStockAnalysis } from '../../../composables/useStockAnalysis'
 
 const analysis = useStockAnalysis()
 
@@ -30,36 +31,16 @@ const error = ref('')
 const loading = ref(false)
 const autoRefresh = ref(true)
 const lastRefresh = ref('')
-let timer: number | undefined
 
-// —— 弹窗状态（K线 / 基本面，参考市场页面交互）——
 const chartVt = ref('')
-const chartBars = ref<Bar[]>([])
-const chartBarsError = ref('')
-const chartBarsLoading = ref(false)
-const barInterval = ref<'d' | '1m'>('d')
-const barLimitDaily = ref(90)
-const barLimit1m = ref(480)
-
-const barLimit = computed({
-  get: () => (barInterval.value === '1m' ? barLimit1m.value : barLimitDaily.value),
-  set: (n: number) => {
-    if (barInterval.value === '1m') barLimit1m.value = n
-    else barLimitDaily.value = n
-  },
-})
-
-const barLimitChoices = computed(() =>
-  barInterval.value === '1m' ? [240, 480, 1200] : [60, 90, 120],
-)
-
 const fundVt = ref('')
-const fundLoading = ref(false)
-const fundError = ref('')
-const fund = ref<Fundamentals | null>(null)
 
-const chartRow = computed(() => items.value.find((i) => i.vt_symbol === chartVt.value) || null)
-const fundRow = computed(() => items.value.find((i) => i.vt_symbol === fundVt.value) || null)
+const chartName = computed(
+  () => items.value.find((i) => i.vt_symbol === chartVt.value)?.name || '',
+)
+const fundName = computed(
+  () => items.value.find((i) => i.vt_symbol === fundVt.value)?.name || '',
+)
 
 const { connected } = useQuoteNotify({
   onQuotesUpdated: () => {
@@ -68,13 +49,17 @@ const { connected } = useQuoteNotify({
   },
 })
 
-function restartPoll() {
-  if (timer) window.clearInterval(timer)
-  const ms = connected.value ? POLL_SLOW_MS : POLL_FAST_MS
-  timer = window.setInterval(tick, ms)
+function tick() {
+  if (!autoRefresh.value) return
+  if (document.hidden) return
+  void refresh(true)
 }
 
-watch(connected, () => restartPoll())
+usePolling(
+  tick,
+  () => (connected.value ? POLL_SLOW_MS : POLL_FAST_MS),
+  [connected],
+)
 
 const subtitle = computed(() => {
   const n = items.value.length
@@ -159,35 +144,6 @@ const allDisplayedChecked = computed(() => {
   return rows.every((r) => checked.value.has(r.vt_symbol))
 })
 
-function formatAmountYi(v: number | null | undefined): string {
-  if (v == null || Number.isNaN(v)) return '—'
-  return `${(v / 1e8).toFixed(2)}亿`
-}
-
-function formatNum2(v: number | null | undefined): string {
-  if (v == null || Number.isNaN(v)) return '—'
-  return v.toFixed(2)
-}
-
-function formatPrice(v: number | null | undefined): string {
-  if (v == null || Number.isNaN(v) || v <= 0) return '—'
-  return v.toFixed(2)
-}
-
-function cmpNullable(
-  a: number | null | undefined,
-  b: number | null | undefined,
-  dir: 'asc' | 'desc',
-): number {
-  const aMissing = a == null || Number.isNaN(a)
-  const bMissing = b == null || Number.isNaN(b)
-  if (aMissing && bMissing) return 0
-  if (aMissing) return 1 // 垫底
-  if (bMissing) return -1
-  const d = (a as number) - (b as number)
-  return dir === 'asc' ? d : -d
-}
-
 function toggleSort(key: Exclude<SortKey, null>) {
   if (sortKey.value === key) {
     sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
@@ -240,76 +196,12 @@ async function refresh(quiet = false) {
   }
 }
 
-async function loadChartBars(vt: string) {
-  chartBarsError.value = ''
-  chartBars.value = []
-  if (!vt) {
-    chartBarsLoading.value = false
-    return
-  }
-  chartBarsLoading.value = true
-  try {
-    const resp = await watchlistApi.bars(vt, barInterval.value, barLimit.value)
-    chartBars.value = resp.bars
-  } catch (e) {
-    chartBarsError.value = e instanceof Error ? e.message : '无 K 线'
-  } finally {
-    chartBarsLoading.value = false
-  }
-}
-
 function openChart(item: WatchlistItem) {
   chartVt.value = item.vt_symbol
-  chartBarsError.value = ''
-  chartBars.value = []
-  void loadChartBars(item.vt_symbol)
 }
 
-function closeChart() {
-  chartVt.value = ''
-  chartBars.value = []
-  chartBarsError.value = ''
-  chartBarsLoading.value = false
-}
-
-async function loadFundamentals(item: WatchlistItem) {
+function openFund(item: WatchlistItem) {
   fundVt.value = item.vt_symbol
-  fundError.value = ''
-  fund.value = null
-  fundLoading.value = true
-  try {
-    fund.value = await watchlistApi.fundamentals(item.vt_symbol)
-  } catch (e) {
-    fundError.value = e instanceof Error ? e.message : '基本面加载失败'
-  } finally {
-    fundLoading.value = false
-  }
-}
-
-function closeFund() {
-  fundVt.value = ''
-  fund.value = null
-  fundError.value = ''
-  fundLoading.value = false
-}
-
-function formatYmd(raw: string | null | undefined): string {
-  const s = (raw || '').trim()
-  if (!s) return '—'
-  if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
-  return s
-}
-
-function formatMoney(n: number | null | undefined): string {
-  if (n == null || Number.isNaN(n)) return '—'
-  if (Math.abs(n) >= 1e8) return `${(n / 1e8).toFixed(2)} 亿`
-  if (Math.abs(n) >= 1e4) return `${(n / 1e4).toFixed(2)} 万`
-  return n.toFixed(2)
-}
-
-function formatRatioPct(n: number | null | undefined): string {
-  if (n == null || Number.isNaN(n)) return '—'
-  return `${(n * 100).toFixed(1)}%`
 }
 
 async function onAdd() {
@@ -327,8 +219,8 @@ async function onRemove(item: WatchlistItem) {
   error.value = ''
   try {
     await watchlistApi.remove(item.vt_symbol)
-    if (chartVt.value === item.vt_symbol) closeChart()
-    if (fundVt.value === item.vt_symbol) closeFund()
+    if (chartVt.value === item.vt_symbol) chartVt.value = ''
+    if (fundVt.value === item.vt_symbol) fundVt.value = ''
     await refresh()
   } catch (e) {
     error.value = e instanceof Error ? e.message : '删除失败'
@@ -474,27 +366,10 @@ async function onBatchRemoveFromGroup() {
   }
 }
 
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') {
-    if (chartVt.value) closeChart()
-    else if (fundVt.value) closeFund()
-  }
-}
-
-function tick() {
-  if (!autoRefresh.value) return
-  if (document.hidden) return
-  void refresh(true)
-}
-
 watch(groupId, () => {
   checked.value = new Set()
   batchTargetGroupId.value = ''
   batchMsg.value = ''
-})
-
-watch([barLimit, barInterval], () => {
-  if (chartVt.value) void loadChartBars(chartVt.value)
 })
 
 onMounted(async () => {
@@ -515,13 +390,6 @@ onMounted(async () => {
       }
     }
   }
-  document.addEventListener('keydown', onKeydown)
-  timer = window.setInterval(tick, connected.value ? POLL_SLOW_MS : POLL_FAST_MS)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', onKeydown)
-  if (timer) window.clearInterval(timer)
 })
 </script>
 
@@ -769,7 +637,7 @@ onUnmounted(() => {
                       type="button"
                       class="icon-btn"
                       title="基本面"
-                      @click="loadFundamentals(item)"
+                      @click="openFund(item)"
                     >
                       <svg
                         viewBox="0 0 24 24"
@@ -833,180 +701,8 @@ onUnmounted(() => {
         </div>
     </div>
 
-    <Teleport to="body">
-      <div v-if="chartVt" class="chart-overlay" @click.self="closeChart">
-        <div class="chart-modal" role="dialog" aria-modal="true" aria-label="K线图">
-          <div class="chart-modal-head">
-            <strong>{{ chartRow?.name || chartVt }}</strong>
-            <span class="mono muted">{{ chartVt }}</span>
-            <div class="spacer"></div>
-            <button type="button" class="icon-btn" title="关闭" @click="closeChart">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div class="bar-controls">
-            <div class="limits">
-              <button
-                type="button"
-                class="chip"
-                :class="{ on: barInterval === 'd' }"
-                @click="barInterval = 'd'"
-              >
-                日K
-              </button>
-              <button
-                type="button"
-                class="chip"
-                :class="{ on: barInterval === '1m' }"
-                @click="barInterval = '1m'"
-              >
-                1分
-              </button>
-            </div>
-            <div class="limits">
-              <button
-                v-for="n in barLimitChoices"
-                :key="n"
-                type="button"
-                class="chip"
-                :class="{ on: barLimit === n }"
-                @click="barLimit = n"
-              >
-                {{ barInterval === '1m' ? `${n}根` : `${n}日` }}
-              </button>
-            </div>
-          </div>
-          <p v-if="chartBarsLoading" class="muted">
-            {{ barInterval === '1m' ? '加载 1 分 K…' : '加载日 K…' }}
-          </p>
-          <template v-else-if="chartBarsError">
-            <p class="err">
-              {{ chartBarsError }}
-              <RouterLink to="/ops" class="draft-link">{{
-                barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K'
-              }}</RouterLink>
-            </p>
-          </template>
-          <template v-else-if="!chartBars.length">
-            <p class="muted">
-              {{ barInterval === '1m' ? '暂无 1 分 K' : '暂无日 K' }}
-              <RouterLink to="/ops" class="draft-link">{{
-                barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K'
-              }}</RouterLink>
-            </p>
-          </template>
-          <div v-else class="chart">
-            <CandleChart :bars="chartBars" :height="400" :interval="barInterval" />
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <Teleport to="body">
-      <div v-if="fundVt" class="chart-overlay" @click.self="closeFund">
-        <div class="chart-modal fund-modal" role="dialog" aria-modal="true" aria-label="基本面">
-          <div class="chart-modal-head">
-            <strong>{{ fundRow?.name || fundVt }}</strong>
-            <span class="mono muted">{{ fundVt }}</span>
-            <div class="spacer"></div>
-            <button type="button" class="icon-btn" title="关闭" @click="closeFund">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <p v-if="fundLoading" class="muted">加载基本面…</p>
-          <p v-else-if="fundError" class="err">{{ fundError }}</p>
-          <template v-else-if="fund">
-            <div class="fund-block">
-              <h4>财报</h4>
-              <template v-if="fund.snapshot">
-                <p class="muted">
-                  期末 {{ formatYmd(fund.snapshot.end_date) }}
-                  <span v-if="fund.sync?.last_sync_at">
-                    · 同步 {{ fmtDateTime(fund.sync.last_sync_at) }}</span
-                  >
-                </p>
-                <dl class="fund-grid">
-                  <div>
-                    <dt>营收</dt>
-                    <dd class="mono">{{ formatMoney(fund.snapshot.revenue) }}</dd>
-                  </div>
-                  <div>
-                    <dt>净利</dt>
-                    <dd class="mono">{{ formatMoney(fund.snapshot.net_income) }}</dd>
-                  </div>
-                  <div>
-                    <dt>营收同比</dt>
-                    <dd>{{ formatRatioPct(fund.snapshot.revenue_yoy) }}</dd>
-                  </div>
-                  <div>
-                    <dt>净利同比</dt>
-                    <dd>{{ formatRatioPct(fund.snapshot.net_income_yoy) }}</dd>
-                  </div>
-                  <div>
-                    <dt>ROE</dt>
-                    <dd>{{ formatRatioPct(fund.snapshot.roe) }}</dd>
-                  </div>
-                  <div>
-                    <dt>资产负债率</dt>
-                    <dd>{{ formatRatioPct(fund.snapshot.debt_ratio) }}</dd>
-                  </div>
-                </dl>
-              </template>
-              <p v-else class="muted">
-                暂无财报
-                <RouterLink to="/ops" class="draft-link">去 Ops 同步自选财报</RouterLink>
-              </p>
-            </div>
-            <div class="fund-block">
-              <h4>披露</h4>
-              <template v-if="fund.disclosures.length">
-                <table class="fund-disc">
-                  <thead>
-                    <tr>
-                      <th>报告期</th>
-                      <th>预告</th>
-                      <th>公告</th>
-                      <th>实际</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="d in fund.disclosures" :key="d.end_date">
-                      <td class="mono">{{ formatYmd(d.end_date) }}</td>
-                      <td class="mono">{{ formatYmd(d.pre_date) }}</td>
-                      <td class="mono">{{ formatYmd(d.ann_date) }}</td>
-                      <td class="mono">{{ formatYmd(d.actual_date) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </template>
-              <p v-else class="muted">
-                暂无披露日历
-                <RouterLink to="/ops" class="draft-link">去 Ops 同步披露计划</RouterLink>
-              </p>
-            </div>
-          </template>
-          <p v-else class="muted">无基本面数据</p>
-        </div>
-      </div>
-    </Teleport>
+    <BarsChartModal v-model:vt="chartVt" :name="chartName" />
+    <FundamentalsModal v-model:vt="fundVt" :name="fundName" />
   </AppShell>
   <StockAnalysisModal />
 </template>
@@ -1346,117 +1042,5 @@ td.ops {
 .draft-link {
   color: var(--brand);
   margin-left: 4px;
-}
-.chip {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  border-radius: 0.5rem;
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-.chip.on {
-  background: var(--brand-light);
-  color: var(--brand);
-  border-color: var(--brand-soft);
-  font-weight: 500;
-}
-.limits {
-  display: flex;
-  gap: 4px;
-}
-.chart-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: grid;
-  place-items: center;
-  background: rgba(0, 0, 0, 0.45);
-  padding: 24px;
-}
-.chart-modal {
-  width: 100%;
-  max-width: 860px;
-  max-height: 88vh;
-  display: grid;
-  gap: 12px;
-  padding: 16px 18px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.875rem;
-  box-shadow: var(--shadow-panel);
-}
-.chart-modal-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.chart-modal-head strong {
-  font-size: 1rem;
-}
-.chart-modal-head .mono {
-  font-size: 0.78rem;
-}
-.chart-modal-head .spacer {
-  flex: 1;
-}
-.chart-modal :deep(.candle svg) {
-  height: 400px;
-}
-.bar-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.chart {
-  border-top: 1px solid var(--border);
-  padding-top: 8px;
-}
-.fund-modal {
-  max-width: 560px;
-}
-.fund-block {
-  display: grid;
-  gap: 6px;
-}
-.fund-block h4 {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--ink);
-}
-.fund-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 16px;
-  margin: 0;
-}
-.fund-grid dt {
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-.fund-grid dd {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--ink);
-}
-.fund-disc {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-.fund-disc th,
-.fund-disc td {
-  padding: 5px 8px;
-  border-bottom: 1px solid var(--line-soft);
-  text-align: left;
-}
-.fund-disc th {
-  color: var(--muted);
-  font-weight: 500;
-  background: var(--surface-muted);
 }
 </style>

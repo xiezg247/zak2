@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import AppShell from '../components/AppShell.vue'
-import StockAnalysisModal from '../components/StockAnalysisModal.vue'
-import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
-import { useStockAnalysis } from '../composables/useStockAnalysis'
-import { useStrategyBoard } from '../composables/useStrategyBoard'
+import AppShell from '../../../components/AppShell.vue'
+import StockAnalysisModal from '../../../components/StockAnalysisModal.vue'
+import { usePolling } from '../../../composables/usePolling'
+import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../../../composables/useQuoteNotify'
+import { useStockAnalysis } from '../../../composables/useStockAnalysis'
+import { useStrategyBoard } from '../../../composables/useStrategyBoard'
+import { formatPrice } from '../../../lib/format'
 
 const analysis = useStockAnalysis()
 const sb = reactive(useStrategyBoard())
 const route = useRoute()
 const autoRefresh = ref(true)
-let timer: number | undefined
 
 const { connected } = useQuoteNotify({
   onQuotesUpdated: () => {
@@ -20,13 +21,16 @@ const { connected } = useQuoteNotify({
   },
 })
 
-function restartPoll() {
-  if (timer) window.clearInterval(timer)
-  const ms = connected.value ? POLL_SLOW_MS : POLL_FAST_MS
-  timer = window.setInterval(tick, ms)
+function tick() {
+  if (!autoRefresh.value || document.hidden) return
+  void sb.refreshBoard(true)
 }
 
-watch(connected, () => restartPoll())
+usePolling(
+  tick,
+  () => (connected.value ? POLL_SLOW_MS : POLL_FAST_MS),
+  [connected],
+)
 
 const subtitle = computed(() => {
   const n = sb.board?.signals.length ?? 0
@@ -34,20 +38,10 @@ const subtitle = computed(() => {
   return `${n} 个信号 · 名单 ${p}/${sb.panelMax}`
 })
 
-function tick() {
-  if (!autoRefresh.value || document.hidden) return
-  void sb.refreshBoard(true)
-}
-
 onMounted(async () => {
   await sb.loadStrategies()
   sb.applyQueryMode(route.query)
   await sb.refreshBoard()
-  timer = window.setInterval(tick, connected.value ? POLL_SLOW_MS : POLL_FAST_MS)
-})
-
-onUnmounted(() => {
-  if (timer) window.clearInterval(timer)
 })
 </script>
 
@@ -187,7 +181,7 @@ onUnmounted(() => {
               >
                 <td class="mono">{{ row.vt_symbol }}</td>
                 <td>{{ row.name || '—' }}</td>
-                <td>{{ row.last_price != null && row.last_price > 0 ? row.last_price.toFixed(2) : '—' }}</td>
+                <td>{{ formatPrice(row.last_price) }}</td>
                 <td :class="sb.signalClass(row.signal)">{{ row.signal_label }}</td>
                 <td>
                   <template v-if="row.strength_tier_label">

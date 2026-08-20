@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import AppShell from '../components/AppShell.vue'
 import { marketApi, type SectorFlowRow } from '../api/market'
+import { cmpNullable } from '../lib/sort'
 
 const kind = ref<'industry' | 'concept'>('concept')
 const sort = ref<'net_flow_yi' | 'change_pct'>('net_flow_yi')
@@ -16,20 +17,6 @@ type SortKey = 'change_pct' | 'net_flow_yi' | null
 const listFilter = ref('')
 const sortKey = ref<SortKey>(null)
 const sortDir = ref<'asc' | 'desc'>('desc')
-
-function cmpNullable(
-  a: number | null | undefined,
-  b: number | null | undefined,
-  dir: 'asc' | 'desc',
-): number {
-  const aMissing = a == null || Number.isNaN(a)
-  const bMissing = b == null || Number.isNaN(b)
-  if (aMissing && bMissing) return 0
-  if (aMissing) return 1
-  if (bMissing) return -1
-  const d = (a as number) - (b as number)
-  return dir === 'asc' ? d : -d
-}
 
 function toggleSort(key: Exclude<SortKey, null>) {
   if (sortKey.value === key) {

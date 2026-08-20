@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import AppShell from '../components/AppShell.vue'
-import CandleChart from '../components/CandleChart.vue'
-import StockAnalysisModal from '../components/StockAnalysisModal.vue'
-import { marketApi, type EmotionThresholds, type MarketOverview, type RankRow } from '../api/market'
-import { watchlistApi, type Bar, type Fundamentals } from '../api/watchlist'
-import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../composables/useQuoteNotify'
-import { useStockAnalysis } from '../composables/useStockAnalysis'
-import { fmtDateTime } from '../lib/format'
+import AppShell from '../../../components/AppShell.vue'
+import BarsChartModal from '../../../components/BarsChartModal.vue'
+import FundamentalsModal from '../../../components/FundamentalsModal.vue'
+import StockAnalysisModal from '../../../components/StockAnalysisModal.vue'
+import { marketApi, type EmotionThresholds, type MarketOverview, type RankRow } from '../../../api/market'
+import { watchlistApi } from '../../../api/watchlist'
+import { usePolling } from '../../../composables/usePolling'
+import { POLL_FAST_MS, POLL_SLOW_MS, useQuoteNotify } from '../../../composables/useQuoteNotify'
+import { useStockAnalysis } from '../../../composables/useStockAnalysis'
+import { fmtDateTime, formatAmountYi, formatNum2, formatPrice } from '../../../lib/format'
+import { cmpNullable } from '../../../lib/sort'
 
 const analysis = useStockAnalysis()
 
@@ -21,24 +24,10 @@ const error = ref('')
 const loading = ref(false)
 const autoRefresh = ref(true)
 const chartVt = ref('')
-const chartBars = ref<Bar[]>([])
-const chartBarsError = ref('')
-const chartBarsLoading = ref(false)
-const barInterval = ref<'d' | '1m'>('d')
-const barLimitDaily = ref(90)
-const barLimit1m = ref(480)
+const fundVt = ref('')
 
-const barLimit = computed({
-  get: () => (barInterval.value === '1m' ? barLimit1m.value : barLimitDaily.value),
-  set: (n: number) => {
-    if (barInterval.value === '1m') barLimit1m.value = n
-    else barLimitDaily.value = n
-  },
-})
-
-const barLimitChoices = computed(() =>
-  barInterval.value === '1m' ? [240, 480, 1200] : [60, 90, 120],
-)
+const chartName = computed(() => ranks.value.find((r) => r.vt_symbol === chartVt.value)?.name || '')
+const fundName = computed(() => ranks.value.find((r) => r.vt_symbol === fundVt.value)?.name || '')
 
 // 0 表示全部：请求一个覆盖全市场的上限（后端 le=20000）
 const FULL_RANK_TOP = 20000
@@ -52,10 +41,6 @@ function rankLimitLabel(n: number): string {
   return n === 0 ? '全部' : String(n)
 }
 const watchSet = ref<Set<string>>(new Set())
-const fundVt = ref('')
-const fundData = ref<Fundamentals | null>(null)
-const fundLoading = ref(false)
-const fundError = ref('')
 // 休市时数据静止，无需高频拉取；慢轮询兜底以便开市后自动切回
 const CLOSED_POLL_MS = 5 * 60_000
 const thresholdsOpen = ref(false)
@@ -65,7 +50,6 @@ const thresholdsDraft = ref<EmotionThresholds | null>(null)
 const thresholdsBusy = ref(false)
 const thresholdsErr = ref('')
 const thresholdsMsg = ref('')
-let timer: number | undefined
 
 const thresholdFields: {
   key: keyof Omit<EmotionThresholds, 'is_default'>
@@ -103,16 +87,15 @@ function pollIntervalMs(): number {
   return connected.value ? POLL_SLOW_MS : POLL_FAST_MS
 }
 
-function restartPoll() {
-  if (timer) window.clearInterval(timer)
-  timer = window.setInterval(tick, pollIntervalMs())
+function tick() {
+  if (!autoRefresh.value || document.hidden) return
+  void load(true)
 }
 
-watch(connected, () => restartPoll())
-watch(
+const { restart: restartPoll } = usePolling(tick, pollIntervalMs, [
+  connected,
   () => overview.value?.is_trading,
-  () => restartPoll(),
-)
+])
 
 const fields = [
   { id: 'change_pct', label: '涨幅', col: '涨幅%' },
@@ -137,20 +120,6 @@ type SortKey =
 const listFilter = ref('')
 const sortKey = ref<SortKey>(null)
 const sortDir = ref<'asc' | 'desc'>('desc')
-
-function cmpNullable(
-  a: number | null | undefined,
-  b: number | null | undefined,
-  dir: 'asc' | 'desc',
-): number {
-  const aMissing = a == null || Number.isNaN(a)
-  const bMissing = b == null || Number.isNaN(b)
-  if (aMissing && bMissing) return 0
-  if (aMissing) return 1
-  if (bMissing) return -1
-  const d = (a as number) - (b as number)
-  return dir === 'asc' ? d : -d
-}
 
 function toggleSort(key: Exclude<SortKey, null>) {
   if (sortKey.value === key) {
@@ -332,10 +301,10 @@ function openThresholdsFromCard() {
 
 function scoreLabel(r: RankRow): string {
   const id = field.value
-  if (id === 'change_pct') return r.change_pct != null ? r.change_pct.toFixed(2) : '—'
-  if (id === 'turnover_rate') return r.turnover_rate != null ? r.turnover_rate.toFixed(2) : '—'
-  if (id === 'amount') return r.amount != null ? (r.amount / 1e8).toFixed(2) + '亿' : '—'
-  if (id === 'volume_ratio') return r.volume_ratio != null ? r.volume_ratio.toFixed(2) : '—'
+  if (id === 'change_pct') return formatNum2(r.change_pct)
+  if (id === 'turnover_rate') return formatNum2(r.turnover_rate)
+  if (id === 'amount') return formatAmountYi(r.amount)
+  if (id === 'volume_ratio') return formatNum2(r.volume_ratio)
   return r.score.toFixed(2)
 }
 
@@ -362,25 +331,6 @@ function fmtMv(v: number | null | undefined): string {
   if (v >= 1e8) return (v / 1e8).toFixed(2) + '万亿'
   if (v >= 1e4) return (v / 1e4).toFixed(2) + '亿'
   return v.toFixed(0) + '万'
-}
-
-function fmtYmd(raw: string | null | undefined): string {
-  const s = (raw || '').trim()
-  if (!s) return '—'
-  if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
-  return s
-}
-
-function fmtMoney(n: number | null | undefined): string {
-  if (n == null || Number.isNaN(n)) return '—'
-  if (Math.abs(n) >= 1e8) return `${(n / 1e8).toFixed(2)} 亿`
-  if (Math.abs(n) >= 1e4) return `${(n / 1e4).toFixed(2)} 万`
-  return n.toFixed(2)
-}
-
-function fmtRatioPct(n: number | null | undefined): string {
-  if (n == null || Number.isNaN(n)) return '—'
-  return `${(n * 100).toFixed(1)}%`
 }
 
 function fmtTime(raw: string | null | undefined): string {
@@ -462,32 +412,11 @@ async function load(quiet = false) {
 async function onField() {
   error.value = ''
   chartVt.value = ''
-  chartBars.value = []
-  chartBarsError.value = ''
-  chartBarsLoading.value = false
   try {
     ranks.value = await marketApi.ranks(field.value, rankTopN())
   } catch (e) {
     ranks.value = []
     error.value = e instanceof Error ? e.message : '排行加载失败'
-  }
-}
-
-async function loadChartBars(vt: string) {
-  chartBarsError.value = ''
-  chartBars.value = []
-  if (!vt) {
-    chartBarsLoading.value = false
-    return
-  }
-  chartBarsLoading.value = true
-  try {
-    const resp = await watchlistApi.bars(vt, barInterval.value, barLimit.value)
-    chartBars.value = resp.bars
-  } catch (e) {
-    chartBarsError.value = e instanceof Error ? e.message : '无 K 线'
-  } finally {
-    chartBarsLoading.value = false
   }
 }
 
@@ -511,55 +440,12 @@ async function toggleWatch(r: RankRow) {
   watchSet.value.add(vt)
 }
 
-async function openFund(r: RankRow) {
+function openFund(r: RankRow) {
   fundVt.value = r.vt_symbol
-  fundError.value = ''
-  fundData.value = null
-  fundLoading.value = true
-  try {
-    fundData.value = await watchlistApi.fundamentals(r.vt_symbol)
-  } catch (e) {
-    fundError.value = e instanceof Error ? e.message : '基本面加载失败'
-  } finally {
-    fundLoading.value = false
-  }
 }
-
-function closeFund() {
-  fundVt.value = ''
-  fundData.value = null
-  fundError.value = ''
-  fundLoading.value = false
-}
-
-const fundRow = computed(() => ranks.value.find((r) => r.vt_symbol === fundVt.value) || null)
 
 function openChart(r: RankRow) {
   chartVt.value = r.vt_symbol
-  chartBarsError.value = ''
-  chartBars.value = []
-  void loadChartBars(r.vt_symbol)
-}
-
-function closeChart() {
-  chartVt.value = ''
-  chartBars.value = []
-  chartBarsError.value = ''
-  chartBarsLoading.value = false
-}
-
-const chartRow = computed(() => ranks.value.find((r) => r.vt_symbol === chartVt.value) || null)
-
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') {
-    if (chartVt.value) closeChart()
-    else if (fundVt.value) closeFund()
-  }
-}
-
-function tick() {
-  if (!autoRefresh.value || document.hidden) return
-  void load(true)
 }
 
 watch(field, () => {
@@ -574,10 +460,6 @@ watch(thresholdsOpen, (open) => {
   if (open) void loadThresholds()
 })
 
-watch([barLimit, barInterval], () => {
-  if (chartVt.value) void loadChartBars(chartVt.value)
-})
-
 watch(rankLimit, () => {
   scrollTop.value = 0
   void load(true)
@@ -589,7 +471,6 @@ onMounted(() => {
   void load()
   void loadWatchSet()
   restartPoll()
-  document.addEventListener('keydown', onKeydown)
   void nextTick(() => measureTable())
   resizeObs = new ResizeObserver(() => measureTable())
   if (tableWrapEl.value) resizeObs.observe(tableWrapEl.value)
@@ -597,8 +478,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   resizeObs?.disconnect()
-  document.removeEventListener('keydown', onKeydown)
-  if (timer) window.clearInterval(timer)
 })
 </script>
 
@@ -864,12 +743,12 @@ onUnmounted(() => {
                   </td>
                   <td class="mono">{{ r.vt_symbol }}</td>
                   <td>{{ r.name || '—' }}</td>
-                  <td>{{ r.last_price != null ? r.last_price.toFixed(2) : '—' }}</td>
+                  <td>{{ formatPrice(r.last_price) }}</td>
                   <td
                     v-if="colVisible.change_pct"
                     :class="{ up: (r.change_pct || 0) > 0, down: (r.change_pct || 0) < 0 }"
                   >
-                    {{ r.change_pct != null ? r.change_pct.toFixed(2) : '—' }}
+                    {{ formatNum2(r.change_pct) }}
                   </td>
                   <td
                     v-if="colVisible.change_amount"
@@ -879,10 +758,10 @@ onUnmounted(() => {
                   </td>
                   <td>{{ scoreLabel(r) }}</td>
                   <td v-if="colVisible.turnover_rate">
-                    {{ r.turnover_rate != null ? r.turnover_rate.toFixed(2) : '—' }}
+                    {{ formatNum2(r.turnover_rate) }}
                   </td>
                   <td v-if="colVisible.volume_ratio">
-                    {{ r.volume_ratio != null ? r.volume_ratio.toFixed(2) : '—' }}
+                    {{ formatNum2(r.volume_ratio) }}
                   </td>
                   <td v-if="colVisible.total_mv" class="mono muted">{{ fmtMv(r.total_mv) }}</td>
                   <td v-if="colVisible.industry">{{ r.industry || '—' }}</td>
@@ -986,180 +865,8 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <Teleport to="body">
-      <div v-if="chartVt" class="chart-overlay" @click.self="closeChart">
-        <div class="chart-modal" role="dialog" aria-modal="true" aria-label="K线图">
-          <div class="chart-modal-head">
-            <strong>{{ chartRow?.name || chartVt }}</strong>
-            <span class="mono muted">{{ chartVt }}</span>
-            <div class="spacer"></div>
-            <button type="button" class="icon-btn" title="关闭" @click="closeChart">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div class="bar-controls">
-            <div class="limits">
-              <button
-                type="button"
-                class="chip"
-                :class="{ on: barInterval === 'd' }"
-                @click="barInterval = 'd'"
-              >
-                日K
-              </button>
-              <button
-                type="button"
-                class="chip"
-                :class="{ on: barInterval === '1m' }"
-                @click="barInterval = '1m'"
-              >
-                1分
-              </button>
-            </div>
-            <div class="limits">
-              <button
-                v-for="n in barLimitChoices"
-                :key="n"
-                type="button"
-                class="chip"
-                :class="{ on: barLimit === n }"
-                @click="barLimit = n"
-              >
-                {{ barInterval === '1m' ? `${n}根` : `${n}日` }}
-              </button>
-            </div>
-          </div>
-          <p v-if="chartBarsLoading" class="muted">
-            {{ barInterval === '1m' ? '加载 1 分 K…' : '加载日 K…' }}
-          </p>
-          <template v-else-if="chartBarsError">
-            <p class="err">
-              {{ chartBarsError }}
-              <RouterLink to="/ops" class="draft-link">{{
-                barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K'
-              }}</RouterLink>
-            </p>
-          </template>
-          <template v-else-if="!chartBars.length">
-            <p class="muted">
-              {{ barInterval === '1m' ? '暂无 1 分 K' : '暂无日 K' }}
-              <RouterLink to="/ops" class="draft-link">{{
-                barInterval === '1m' ? '去 Ops 补全 1 分 K' : '去 Ops 补全日 K'
-              }}</RouterLink>
-            </p>
-          </template>
-          <div v-else class="chart">
-            <CandleChart :bars="chartBars" :height="400" :interval="barInterval" />
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <Teleport to="body">
-      <div v-if="fundVt" class="chart-overlay" @click.self="closeFund">
-        <div class="chart-modal fund-modal" role="dialog" aria-modal="true" aria-label="基本面">
-          <div class="chart-modal-head">
-            <strong>{{ fundRow?.name || fundVt }}</strong>
-            <span class="mono muted">{{ fundVt }}</span>
-            <div class="spacer"></div>
-            <button type="button" class="icon-btn" title="关闭" @click="closeFund">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <p v-if="fundLoading" class="muted">加载基本面…</p>
-          <p v-else-if="fundError" class="err">{{ fundError }}</p>
-          <template v-else-if="fundData">
-            <div class="fund-block">
-              <h4>财报</h4>
-              <template v-if="fundData.snapshot">
-                <p class="muted">
-                  期末 {{ fmtYmd(fundData.snapshot.end_date) }}
-                  <span v-if="fundData.sync?.last_sync_at">
-                    · 同步 {{ fmtDateTime(fundData.sync.last_sync_at) }}</span
-                  >
-                </p>
-                <dl class="fund-grid">
-                  <div>
-                    <dt>营收</dt>
-                    <dd class="mono">{{ fmtMoney(fundData.snapshot.revenue) }}</dd>
-                  </div>
-                  <div>
-                    <dt>净利</dt>
-                    <dd class="mono">{{ fmtMoney(fundData.snapshot.net_income) }}</dd>
-                  </div>
-                  <div>
-                    <dt>营收同比</dt>
-                    <dd>{{ fmtRatioPct(fundData.snapshot.revenue_yoy) }}</dd>
-                  </div>
-                  <div>
-                    <dt>净利同比</dt>
-                    <dd>{{ fmtRatioPct(fundData.snapshot.net_income_yoy) }}</dd>
-                  </div>
-                  <div>
-                    <dt>ROE</dt>
-                    <dd>{{ fmtRatioPct(fundData.snapshot.roe) }}</dd>
-                  </div>
-                  <div>
-                    <dt>资产负债率</dt>
-                    <dd>{{ fmtRatioPct(fundData.snapshot.debt_ratio) }}</dd>
-                  </div>
-                </dl>
-              </template>
-              <p v-else class="muted">
-                暂无财报
-                <RouterLink to="/ops" class="draft-link">去 Ops 同步自选财报</RouterLink>
-              </p>
-            </div>
-            <div class="fund-block">
-              <h4>披露</h4>
-              <template v-if="fundData.disclosures.length">
-                <table class="fund-disc">
-                  <thead>
-                    <tr>
-                      <th>报告期</th>
-                      <th>预告</th>
-                      <th>公告</th>
-                      <th>实际</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="d in fundData.disclosures" :key="d.end_date">
-                      <td class="mono">{{ fmtYmd(d.end_date) }}</td>
-                      <td class="mono">{{ fmtYmd(d.pre_date) }}</td>
-                      <td class="mono">{{ fmtYmd(d.ann_date) }}</td>
-                      <td class="mono">{{ fmtYmd(d.actual_date) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </template>
-              <p v-else class="muted">
-                暂无披露日历
-                <RouterLink to="/ops" class="draft-link">去 Ops 同步披露计划</RouterLink>
-              </p>
-            </div>
-          </template>
-          <p v-else class="muted">无基本面数据</p>
-        </div>
-      </div>
-    </Teleport>
+    <BarsChartModal v-model:vt="chartVt" :name="chartName" />
+    <FundamentalsModal v-model:vt="fundVt" :name="fundName" />
   </AppShell>
   <StockAnalysisModal />
 </template>
@@ -1545,177 +1252,5 @@ td.ops {
   color: var(--muted);
   font-weight: 500;
   background: var(--surface-muted);
-}
-.chart-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: grid;
-  place-items: center;
-  background: rgba(0, 0, 0, 0.45);
-  padding: 24px;
-}
-.chart-modal {
-  width: 100%;
-  max-width: 860px;
-  max-height: 88vh;
-  display: grid;
-  gap: 12px;
-  padding: 16px 18px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.875rem;
-  box-shadow: var(--shadow-panel);
-}
-.chart-modal-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.chart-modal-head strong {
-  font-size: 1rem;
-}
-.chart-modal-head .mono {
-  font-size: 0.78rem;
-}
-.chart-modal-head .spacer {
-  flex: 1;
-}
-.chart-modal :deep(.candle svg) {
-  height: 400px;
-}
-.chart {
-  border-top: 1px solid var(--border);
-  padding-top: 8px;
-}
-th,
-td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.85rem;
-  text-align: left;
-  white-space: nowrap;
-}
-th {
-  color: var(--muted);
-  background: var(--surface-muted);
-  position: sticky;
-  top: 0;
-  font-weight: 500;
-}
-th.sortable {
-  cursor: pointer;
-  user-select: none;
-}
-tbody tr:hover td {
-  background: var(--surface-muted);
-}
-/* 虚拟滚动占位行：透明、无边框、不触发 hover */
-tbody tr.vpad td {
-  padding: 0;
-  border-bottom: 0;
-  background: transparent !important;
-}
-tbody tr.vpad {
-  pointer-events: none;
-}
-.rank-badge {
-  display: inline-grid;
-  place-items: center;
-  min-width: 24px;
-  height: 20px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--ink-muted);
-  font-variant-numeric: tabular-nums;
-}
-.rank-badge.rank-1 {
-  background: #fde8d7;
-  color: #b45309;
-}
-.rank-badge.rank-2 {
-  background: #eef0f3;
-  color: #52525b;
-}
-.rank-badge.rank-3 {
-  background: #fbe3dc;
-  color: #9a5b3f;
-}
-.mono {
-  font-family: var(--mono);
-}
-.up {
-  color: var(--danger);
-}
-.down {
-  color: var(--ok);
-}
-.empty {
-  text-align: center;
-  color: var(--muted);
-  padding: 28px !important;
-}
-.thresholds-section {
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--bg-elevated);
-  padding: 12px 14px;
-}
-.thresholds-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.thresholds-head strong {
-  margin-right: 8px;
-}
-.tag {
-  font-size: 0.78rem;
-}
-.tiny-btn {
-  padding: 4px 8px;
-  font-size: 0.8rem;
-}
-.thresholds-panel {
-  margin-top: 10px;
-  display: grid;
-  gap: 10px;
-}
-.thresholds-hint {
-  margin: 0;
-  font-size: 0.78rem;
-}
-.thresholds-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 8px 12px;
-}
-.threshold-row {
-  display: grid;
-  gap: 4px;
-}
-.threshold-row label {
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-.threshold-row input[type='number'] {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text);
-  padding: 6px 8px;
-  font-size: 0.85rem;
-}
-.thresholds-actions {
-  display: flex;
-  gap: 8px;
-}
-.ok {
-  margin: 0;
-  color: var(--ok);
-  font-size: 0.85rem;
 }
 </style>
