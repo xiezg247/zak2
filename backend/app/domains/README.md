@@ -1,0 +1,15 @@
+# domains 约定
+
+## 分层
+
+| 层 | 可以依赖 | 禁止 |
+|----|----------|------|
+| router | service、schemas、`app.api.deps`、`ApiResponse` | repository、SQL、外部 HTTP |
+| service | repository、`core`、`integrations`、其它域 service 公开 API | FastAPI `HTTPException` / `Request` |
+| repository | `models`、`Session` | 业务规则、外部 IO |
+
+## 兼容
+
+迁移期间旧路径（`app.api.v1.*`、`app.repositories.*`、`app.services.notify`）仅允许 thin re-export。
+
+详见 `docs/superpowers/specs/2026-08-20-backend-architecture-refactor-design.md`。
