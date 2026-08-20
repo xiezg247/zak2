@@ -132,7 +132,7 @@ def get_strategy_board(
     config_key: str | None = Query(default=None, description="缺省读用户偏好或默认短线突破 5/10"),
     signal_mode: str = Query(
         default="heuristic_v2",
-        description="heuristic_v2 | double_ma | trend_ma | medium_swing",
+        description="heuristic_v2 | double_ma | trend_ma | medium_swing | donchian | rsi_reversal | bollinger | ma_band | atr_breakout",
     ),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

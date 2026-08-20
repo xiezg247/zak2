@@ -24,7 +24,6 @@ def test_catalog_runnable_jobs() -> None:
     assert "prefetch_moneyflow" in RUNNABLE_JOB_IDS
     assert "sync_watchlist_financials" in RUNNABLE_JOB_IDS
     assert "warm_radar_card_snapshots" in RUNNABLE_JOB_IDS
-    assert "warm_watchlist_strategy_cache" in RUNNABLE_JOB_IDS
     assert "scan_horizon_outlook" in RUNNABLE_JOB_IDS
     assert "prefetch_concept_board" in RUNNABLE_JOB_IDS
     assert "fill_focus_pool_minute" in RUNNABLE_JOB_IDS
@@ -38,8 +37,3 @@ def test_runners_match_runnable() -> None:
 
 def test_bars_overview_callable() -> None:
     assert callable(bars_overview)
-
-
-def test_warm_strategy_catalog_mentions_v2() -> None:
-    spec = next(s for s in JOB_SPECS if s.job_id == "warm_watchlist_strategy_cache")
-    assert "确认 N=2" in spec.description or "v2" in spec.description

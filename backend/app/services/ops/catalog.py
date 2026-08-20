@@ -27,7 +27,6 @@ RUNNABLE_JOB_IDS = frozenset(
         "prefetch_moneyflow",
         "sync_watchlist_financials",
         "warm_radar_card_snapshots",
-        "warm_watchlist_strategy_cache",
         "scan_horizon_outlook",
         "prefetch_concept_board",
         "fill_focus_pool_minute",
@@ -96,12 +95,6 @@ JOB_SPECS: tuple[JobSpec, ...] = (
         "prefetch_concept_board",
     ),
     JobSpec("warm_market_summary", "市场摘要预热", "情绪周期预热写入短 TTL 缓存", "warm_market_summary"),
-    JobSpec(
-        "warm_watchlist_strategy_cache",
-        "策略信号磁盘预热",
-        "Redis 桥 + 日 K 启发式 v2 + double_ma + trend_ma + medium_swing 四轨 → watchlist_signal_cache（Web 可跑）",
-        "warm_watchlist_strategy_cache",
-    ),
     JobSpec(
         "sync_watchlist_financials",
         "同步自选财报",

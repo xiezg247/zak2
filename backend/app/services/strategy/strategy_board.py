@@ -1,4 +1,4 @@
-"""自选策略看盘：只读信号 / 持仓（复用桌面 Redis/PG cache，不跑策略）。"""
+"""自选策略看盘：看板请求时实时按日 K 计算信号（不再依赖预热缓存）。"""
 
 from __future__ import annotations
 
@@ -6,12 +6,11 @@ import json
 from datetime import datetime
 from typing import Any
 
-import redis
-from sqlalchemy import text
+from sqlalchemy import and_, or_, select, text
 from sqlalchemy.orm import Session
 
-from app.core.redis_keys import KEY_PREFIX
 from app.core.time import china_today
+from app.models.bars import DbBarData
 from app.repositories import positions as positions_repo
 from app.repositories import signal_panel as signal_panel_repo
 from app.repositories import watchlist as repo
@@ -21,15 +20,60 @@ from app.services.plan.trading_risk import (
     load_trading_risk_prefs,
 )
 from app.services.strategy.position_risk_tags import compute_position_risk_tags, primary_risk_tag
-from app.services.symbols import to_tf_symbol, to_vt_symbol
+from app.services.strategy.strategy_signal_extra import (
+    compute_atr_breakout_signal,
+    compute_bollinger_signal,
+    compute_donchian_signal,
+    compute_ma_band_signal,
+    compute_rsi_reversal_signal,
+)
+from app.services.strategy.strategy_signal_ma import (
+    compute_double_ma_signal,
+    compute_ma_signal,
+    compute_medium_swing_signal,
+    compute_trend_ma_signal,
+    parse_config_key,
+)
+from app.services.symbols import normalize_exchange, to_tf_symbol, to_vt_symbol
 
 DEFAULT_CONFIG_KEY = "AshareShortBreakoutStrategy:5:10"
 SIGNAL_MODE_HEURISTIC = "heuristic_v2"
 SIGNAL_MODE_DOUBLE_MA = "double_ma"
 SIGNAL_MODE_TREND_MA = "trend_ma"
 SIGNAL_MODE_MEDIUM_SWING = "medium_swing"
+SIGNAL_MODE_DONCHIAN = "donchian"
+SIGNAL_MODE_RSI_REVERSAL = "rsi_reversal"
+SIGNAL_MODE_BOLLINGER = "bollinger"
+SIGNAL_MODE_MA_BAND = "ma_band"
+SIGNAL_MODE_ATR_BREAKOUT = "atr_breakout"
+ALL_SIGNAL_MODES = frozenset(
+    {
+        SIGNAL_MODE_HEURISTIC,
+        SIGNAL_MODE_DOUBLE_MA,
+        SIGNAL_MODE_TREND_MA,
+        SIGNAL_MODE_MEDIUM_SWING,
+        SIGNAL_MODE_DONCHIAN,
+        SIGNAL_MODE_RSI_REVERSAL,
+        SIGNAL_MODE_BOLLINGER,
+        SIGNAL_MODE_MA_BAND,
+        SIGNAL_MODE_ATR_BREAKOUT,
+    }
+)
 DEFAULT_DOUBLE_MA_FAST = 5
 DEFAULT_DOUBLE_MA_SLOW = 20
+BAR_LIMIT = 120
+
+
+def bars_limit_for(mode: str, config_key: str) -> int:
+    """按模式决定日 K 取数上限。
+
+    heuristic/double_ma 的 slow 可被用户配到 120（见 _pref_fast_slow），
+    计算需要 slow + 确认棒；其余策略窗口 ≤62 根，120 根足够。
+    """
+    if mode in {SIGNAL_MODE_HEURISTIC, SIGNAL_MODE_DOUBLE_MA}:
+        fast, slow = parse_config_key(config_key) or (DEFAULT_DOUBLE_MA_FAST, DEFAULT_DOUBLE_MA_SLOW)
+        return max(BAR_LIMIT, slow + 2)
+    return BAR_LIMIT
 
 
 def _safe_float(value: Any) -> float | None:
@@ -110,6 +154,49 @@ def medium_swing_config_key() -> str:
     return f"medium_swing:{MEDIUM_SWING_FAST}:{MEDIUM_SWING_SLOW}"
 
 
+def donchian_config_key() -> str:
+    from app.services.strategy.strategy_signal_extra import DONCHIAN_ENTRY, DONCHIAN_EXIT
+
+    return f"donchian:{DONCHIAN_ENTRY}:{DONCHIAN_EXIT}"
+
+
+def rsi_reversal_config_key() -> str:
+    from app.services.strategy.strategy_signal_extra import (
+        RSI_OVERBOUGHT,
+        RSI_OVERSOLD,
+        RSI_PERIOD,
+    )
+
+    return f"rsi_reversal:{RSI_PERIOD}:{RSI_OVERSOLD}:{RSI_OVERBOUGHT}"
+
+
+def bollinger_config_key() -> str:
+    from app.services.strategy.strategy_signal_extra import BOLL_DEV, BOLL_PERIOD
+
+    return f"bollinger:{BOLL_PERIOD}:{BOLL_DEV}"
+
+
+def ma_band_config_key() -> str:
+    from app.services.strategy.strategy_signal_extra import (
+        MA_BAND_FAST,
+        MA_BAND_LONG,
+        MA_BAND_MID,
+        MA_BAND_SLOW,
+    )
+
+    return f"ma_band:{MA_BAND_FAST}:{MA_BAND_MID}:{MA_BAND_SLOW}:{MA_BAND_LONG}"
+
+
+def atr_breakout_config_key() -> str:
+    from app.services.strategy.strategy_signal_extra import (
+        ATR_CHANNEL_PERIOD,
+        ATR_MULT,
+        ATR_PERIOD,
+    )
+
+    return f"atr_breakout:{ATR_CHANNEL_PERIOD}:{ATR_PERIOD}:{ATR_MULT}"
+
+
 def _pref_fast_slow(db: Session, user_id: str) -> tuple[int, int]:
     row = db.execute(
         text(
@@ -152,124 +239,107 @@ def resolve_board_config_key(
         return trend_ma_config_key()
     if mode == SIGNAL_MODE_MEDIUM_SWING:
         return medium_swing_config_key()
+    if mode == SIGNAL_MODE_DONCHIAN:
+        return donchian_config_key()
+    if mode == SIGNAL_MODE_RSI_REVERSAL:
+        return rsi_reversal_config_key()
+    if mode == SIGNAL_MODE_BOLLINGER:
+        return bollinger_config_key()
+    if mode == SIGNAL_MODE_MA_BAND:
+        return ma_band_config_key()
+    if mode == SIGNAL_MODE_ATR_BREAKOUT:
+        return atr_breakout_config_key()
     return resolve_config_key(db, user_id, None)
 
 
-def _redis_client() -> redis.Redis | None:
-    store = get_quote_store()
-    if not store.available():
-        return None
-    return store._client
-
-
-def _load_signal_redis(config_key: str, vt_symbol: str) -> dict[str, Any] | None:
-    client = _redis_client()
-    if client is None:
-        return None
-    key = f"{KEY_PREFIX}:cache:signal:latest:{config_key}:{vt_symbol}"
-    try:
-        raw = client.get(key)
-    except Exception:
-        return None
-    if isinstance(raw, bytes):
-        raw = raw.decode("utf-8", errors="ignore")
-    return _parse_payload(raw if isinstance(raw, str) else None)
-
-
-def _scan_signal_redis(config_key: str, *, limit: int = 30) -> list[tuple[str, dict[str, Any]]]:
-    client = _redis_client()
-    if client is None:
-        return []
-    pattern = f"{KEY_PREFIX}:cache:signal:latest:{config_key}:*"
-    prefix = f"{KEY_PREFIX}:cache:signal:latest:{config_key}:"
-    out: list[tuple[str, dict[str, Any]]] = []
-    try:
-        for key in client.scan_iter(match=pattern, count=100):
-            text_key = key.decode("utf-8") if isinstance(key, bytes) else str(key)
-            vt = text_key[len(prefix) :] if text_key.startswith(prefix) else ""
-            if not vt:
-                continue
-            raw = client.get(key)
-            if isinstance(raw, bytes):
-                raw = raw.decode("utf-8", errors="ignore")
-            snap = _parse_payload(raw if isinstance(raw, str) else None)
-            if snap:
-                out.append((vt, snap))
-            if len(out) >= limit:
-                break
-    except Exception:
-        return out
-    return out
-
-
-def _load_signals_pg(db: Session, config_key: str, vt_symbols: list[str]) -> dict[str, dict[str, Any]]:
-    if not vt_symbols:
+def _load_daily_bars_map(
+    db: Session,
+    symbols: list[tuple[str, str]],
+    limit: int = BAR_LIMIT,
+) -> dict[str, dict[str, Any]]:
+    """批量加载日 K：返回 {vt_symbol: {highs, lows, closes, volumes, as_of}}。"""
+    if not symbols:
         return {}
-    rows = (
-        db.execute(
-            text(
-                """
-            SELECT DISTINCT ON (vt_symbol)
-              vt_symbol, bar_as_of, payload, updated_at
-            FROM cache.watchlist_signal_cache
-            WHERE config_key = :ck AND vt_symbol = ANY(:vts)
-            ORDER BY vt_symbol, updated_at DESC
-            """
-            ),
-            {"ck": config_key, "vts": vt_symbols},
+    conds = [
+        and_(
+            DbBarData.symbol == symbol,
+            DbBarData.exchange == normalize_exchange(exchange),
         )
-        .mappings()
-        .all()
-    )
-    out: dict[str, dict[str, Any]] = {}
+        for symbol, exchange in symbols
+    ]
+    rows = db.execute(
+        select(DbBarData)
+        .where(DbBarData.interval == "d", or_(*conds))
+        .order_by(DbBarData.symbol, DbBarData.exchange, DbBarData.datetime.desc())
+    ).scalars()
+    grouped: dict[tuple[str, str], list[DbBarData]] = {}
     for row in rows:
-        snap = _parse_payload(row["payload"])
-        if not snap:
-            continue
-        snap["_bar_as_of"] = str(row["bar_as_of"] or "")
-        snap["_updated_at"] = str(row["updated_at"] or "")
-        out[str(row["vt_symbol"])] = snap
+        grouped.setdefault((row.symbol, row.exchange), []).append(row)
+
+    out: dict[str, dict[str, Any]] = {}
+    for (symbol, exchange), bars in grouped.items():
+        bars = bars[:limit]
+        bars.reverse()
+        vt = to_vt_symbol(symbol, exchange)
+        out[vt] = {
+            "highs": [float(b.high_price or 0) for b in bars],
+            "lows": [float(b.low_price or 0) for b in bars],
+            "closes": [float(b.close_price or 0) for b in bars],
+            "volumes": [float(b.volume or 0) for b in bars],
+            "as_of": bars[-1].datetime.date().isoformat(),
+        }
     return out
 
 
-def _load_position_signal_redis(config_key: str, vt_symbol: str, position_key: str) -> dict[str, Any] | None:
-    client = _redis_client()
-    if client is None:
-        return None
-    key = f"{KEY_PREFIX}:cache:position:latest:{config_key}:{vt_symbol}:{position_key}"
-    try:
-        raw = client.get(key)
-    except Exception:
-        return None
-    if isinstance(raw, bytes):
-        raw = raw.decode("utf-8", errors="ignore")
-    return _parse_payload(raw if isinstance(raw, str) else None)
-
-
-def _load_position_signal_pg(db: Session, config_key: str, vt_symbol: str, position_key: str) -> dict[str, Any] | None:
-    row = (
-        db.execute(
-            text(
-                """
-            SELECT payload, bar_as_of, updated_at
-            FROM cache.watchlist_position_cache
-            WHERE config_key = :ck AND vt_symbol = :vt AND position_key = :pk
-            ORDER BY updated_at DESC
-            LIMIT 1
-            """
-            ),
-            {"ck": config_key, "vt": vt_symbol, "pk": position_key},
+def _compute_snapshot(
+    mode: str,
+    *,
+    highs: list[float],
+    lows: list[float],
+    closes: list[float],
+    volumes: list[float],
+    vt_symbol: str,
+    as_of: str,
+    config_key: str,
+) -> dict[str, Any] | None:
+    """按 mode 分派信号计算，返回与策略回测对齐的 snapshot。"""
+    if mode == SIGNAL_MODE_DOUBLE_MA:
+        fast, slow = parse_config_key(config_key) or (DEFAULT_DOUBLE_MA_FAST, DEFAULT_DOUBLE_MA_SLOW)
+        return compute_double_ma_signal(
+            closes, volumes=volumes, fast=fast, slow=slow, vt_symbol=vt_symbol, as_of=as_of
         )
-        .mappings()
-        .first()
+    if mode == SIGNAL_MODE_TREND_MA:
+        return compute_trend_ma_signal(
+            highs, lows, closes, volumes=volumes, vt_symbol=vt_symbol, as_of=as_of
+        )
+    if mode == SIGNAL_MODE_MEDIUM_SWING:
+        return compute_medium_swing_signal(
+            closes, volumes=volumes, vt_symbol=vt_symbol, as_of=as_of
+        )
+    if mode == SIGNAL_MODE_DONCHIAN:
+        return compute_donchian_signal(
+            highs, lows, closes, volumes=volumes, vt_symbol=vt_symbol, as_of=as_of
+        )
+    if mode == SIGNAL_MODE_RSI_REVERSAL:
+        return compute_rsi_reversal_signal(
+            closes, volumes=volumes, vt_symbol=vt_symbol, as_of=as_of
+        )
+    if mode == SIGNAL_MODE_BOLLINGER:
+        return compute_bollinger_signal(
+            closes, volumes=volumes, vt_symbol=vt_symbol, as_of=as_of
+        )
+    if mode == SIGNAL_MODE_MA_BAND:
+        return compute_ma_band_signal(
+            closes, volumes=volumes, vt_symbol=vt_symbol, as_of=as_of
+        )
+    if mode == SIGNAL_MODE_ATR_BREAKOUT:
+        return compute_atr_breakout_signal(
+            highs, lows, closes, volumes=volumes, vt_symbol=vt_symbol, as_of=as_of
+        )
+    fast, slow = parse_config_key(config_key) or (DEFAULT_DOUBLE_MA_FAST, DEFAULT_DOUBLE_MA_SLOW)
+    return compute_ma_signal(
+        closes, volumes=volumes, fast=fast, slow=slow, vt_symbol=vt_symbol, as_of=as_of
     )
-    if not row:
-        return None
-    snap = _parse_payload(row["payload"])
-    if snap:
-        snap["_bar_as_of"] = str(row["bar_as_of"] or "")
-        snap["_updated_at"] = str(row["updated_at"] or "")
-    return snap
 
 
 def _t1_locked(buy_date: str) -> bool:
@@ -343,12 +413,7 @@ def load_strategy_board(
     signal_mode: str = SIGNAL_MODE_HEURISTIC,
 ) -> dict[str, Any]:
     mode = (signal_mode or SIGNAL_MODE_HEURISTIC).strip() or SIGNAL_MODE_HEURISTIC
-    if mode not in {
-        SIGNAL_MODE_HEURISTIC,
-        SIGNAL_MODE_DOUBLE_MA,
-        SIGNAL_MODE_TREND_MA,
-        SIGNAL_MODE_MEDIUM_SWING,
-    }:
+    if mode not in ALL_SIGNAL_MODES:
         mode = SIGNAL_MODE_HEURISTIC
     ck = resolve_board_config_key(db, user_id, signal_mode=mode, override=config_key)
     items = repo.WatchlistItemRepository(db, user_id).list_items()
@@ -379,58 +444,47 @@ def load_strategy_board(
                 if not name_by_vt.get(mapped_vt) and quote.name:
                     name_by_vt[mapped_vt] = quote.name
 
-    source = "none"
-    signals: list[dict[str, Any]] = []
-    seen: set[str] = set()
-
-    # 1) 宇宙 ∩ Redis（保持 universe 顺序）
+    # 实时计算：批量加载日 K → 按 mode 计算信号
+    symbols: list[tuple[str, str]] = []
     for vt in universe:
-        snap = _load_signal_redis(ck, vt)
+        if "." not in vt:
+            continue
+        code, exch = vt.rsplit(".", 1)
+        symbols.append((code, exch))
+    bars = _load_daily_bars_map(db, symbols, limit=bars_limit_for(mode, ck))
+    snap_by_vt: dict[str, dict[str, Any]] = {}
+    for vt in universe:
+        data = bars.get(vt)
+        if not data:
+            continue
+        snap = _compute_snapshot(
+            mode,
+            highs=data["highs"],
+            lows=data["lows"],
+            closes=data["closes"],
+            volumes=data["volumes"],
+            vt_symbol=vt,
+            as_of=data["as_of"],
+            config_key=ck,
+        )
         if snap:
-            source = "redis"
-            q = quote_by_vt.get(vt)
-            signals.append(
-                _pack_signal_row(
-                    vt,
-                    snap,
-                    name=name_by_vt.get(vt, ""),
-                    last_price=getattr(q, "last_price", None) if q else None,
-                    change_pct=getattr(q, "change_pct", None) if q else None,
-                )
-            )
-            seen.add(vt)
+            snap_by_vt[vt] = snap
 
-    # 2) 宇宙 ∩ PG 补缺
-    missing = [vt for vt in universe if vt not in seen]
-    if missing:
-        pg_hits = _load_signals_pg(db, ck, missing)
-        if pg_hits and source == "none":
-            source = "pg"
-        elif pg_hits and source == "redis":
-            source = "redis+pg"
-        for vt in missing:
-            snap = pg_hits.get(vt)
-            if not snap:
-                continue
-            q = quote_by_vt.get(vt)
-            signals.append(
-                _pack_signal_row(
-                    vt,
-                    snap,
-                    name=name_by_vt.get(vt, ""),
-                    last_price=getattr(q, "last_price", None) if q else None,
-                    change_pct=getattr(q, "change_pct", None) if q else None,
-                )
+    signals: list[dict[str, Any]] = []
+    for vt in universe:
+        snap = snap_by_vt.get(vt)
+        if not snap:
+            continue
+        q = quote_by_vt.get(vt)
+        signals.append(
+            _pack_signal_row(
+                vt,
+                snap,
+                name=name_by_vt.get(vt, ""),
+                last_price=getattr(q, "last_price", None) if q else None,
+                change_pct=getattr(q, "change_pct", None) if q else None,
             )
-            seen.add(vt)
-
-    # 3) 无名单且仍空：扫 Redis 该 config 的 latest（桌面本地名单不在 PG）
-    if not signals and not panel_symbols:
-        scanned = _scan_signal_redis(ck, limit=30)
-        if scanned:
-            source = "redis"
-            for vt, snap in scanned:
-                signals.append(_pack_signal_row(vt, snap, name=name_by_vt.get(vt, "")))
+        )
 
     # 有名单时：按名单顺序；否则按强度
     if panel_symbols:
@@ -458,7 +512,6 @@ def load_strategy_board(
         cost = float(row.cost_price or 0)
         volume = int(row.volume or 0)
         buy_date = str(row.buy_date or "")[:10]
-        position_key = f"{cost}:{volume}:{buy_date}"
         q = quote_by_vt.get(vt)
         last = getattr(q, "last_price", None) if q else None
         if last is None or last <= 0:
@@ -469,11 +522,7 @@ def load_strategy_board(
             pnl = round(market_value - cost * volume, 2)
             pnl_pct = round((last - cost) / cost * 100, 2)
 
-        exit_snap = _load_position_signal_redis(ck, vt, position_key) or _load_position_signal_pg(
-            db, ck, vt, position_key
-        )
-        if exit_snap is None:
-            exit_snap = _load_signal_redis(ck, vt)
+        exit_snap = snap_by_vt.get(vt)
         exit_kind = str((exit_snap or {}).get("signal") or "na")
         pos_change_pct: float | None = None
         pos_volume_ratio: float | None = None
@@ -511,38 +560,50 @@ def load_strategy_board(
         "actual_position_pct": compute_actual_position_pct(total_mv, prefs.total_capital),
     }
 
+    mode_note = _mode_note(mode)
     note = ""
     if panel_symbols and not signals:
         note = (
-            f"信号名单 {len(panel_symbols)} 只，暂无策略 cache"
-            "（可编辑名单，或 Ops 跑 warm_watchlist_strategy_cache / 确认 cache）。"
+            f"信号名单 {len(panel_symbols)} 只，暂无信号"
+            "（日 K 不足或数据未补齐，可 Ops 跑补全日 K）。"
         )
     elif not signals and not positions:
         note = (
-            "暂无策略缓存。可 Ops 跑 warm_watchlist_strategy_cache"
-            "（启发式 + double_ma + trend_ma + medium_swing 四轨），"
-            "或确认 Redis/PG 已有信号缓存；亦可先维护信号名单与持仓记账。"
+            "暂无信号。看板实时按日 K 计算；请先维护信号名单与持仓记账，"
+            "并确认日 K 已补全（Ops 补全日 K）。"
         )
     elif not signals:
-        note = "持仓来自记账表；信号 cache 为空（可 Ops 跑 warm_watchlist_strategy_cache，或确认 cache 已写入）。"
-    if mode == SIGNAL_MODE_DOUBLE_MA:
-        mode_note = "模式：回测双均线（当日交叉，规则对齐 /backtest double_ma，非 vnpy 进程）。"
-    elif mode == SIGNAL_MODE_TREND_MA:
-        mode_note = "模式：趋势均线（入场对齐 CTA trend_ma；卖点不含追踪止损；非 vnpy 进程）。"
-    elif mode == SIGNAL_MODE_MEDIUM_SWING:
-        mode_note = "模式：中线波段（MACD 金叉/死叉+站上/跌破 60 日线，对齐 /backtest medium_swing；非 vnpy 进程）。"
-    else:
-        mode_note = "模式：启发式确认（交叉次日确认 N=2）。"
+        note = "持仓来自记账表；当前标的日 K 不足，无法计算信号（可 Ops 跑补全日 K）。"
     note = f"{mode_note} {note}".strip() if note else mode_note
 
     return {
         "config_key": ck,
         "signal_mode": mode,
         "as_of": as_of or None,
-        "source": source,
+        "source": "live",
         "note": note,
         "panel_symbols": panel_symbols,
         "signals": signals,
         "positions": positions,
         "risk_summary": risk_summary,
     }
+
+
+def _mode_note(mode: str) -> str:
+    if mode == SIGNAL_MODE_DOUBLE_MA:
+        return "模式：回测双均线（当日交叉，规则对齐 /backtest double_ma）。"
+    if mode == SIGNAL_MODE_TREND_MA:
+        return "模式：趋势均线（入场对齐 CTA trend_ma；卖点不含追踪止损）。"
+    if mode == SIGNAL_MODE_MEDIUM_SWING:
+        return "模式：中线波段（MACD 金叉/死叉+站上/跌破 60 日线，对齐 /backtest medium_swing）。"
+    if mode == SIGNAL_MODE_DONCHIAN:
+        return "模式：唐奇安通道突破（突破 N 日新高买 / 跌破 M 日新低卖，对齐 CTA donchian）。"
+    if mode == SIGNAL_MODE_RSI_REVERSAL:
+        return "模式：RSI 超卖反转（自超卖回升买 / 自超买回落卖，对齐 CTA rsi_reversal）。"
+    if mode == SIGNAL_MODE_BOLLINGER:
+        return "模式：布林带回归（触及下轨买 / 触及上轨卖，对齐 CTA bollinger）。"
+    if mode == SIGNAL_MODE_MA_BAND:
+        return "模式：均线多头排列（多头形成买 / 破坏或破 20 日线卖，对齐 CTA ma_band）。"
+    if mode == SIGNAL_MODE_ATR_BREAKOUT:
+        return "模式：ATR 波幅突破（穿越 ATR 通道买 / 跌破卖，对齐 CTA atr_breakout）。"
+    return "模式：启发式确认（交叉次日确认 N=2）。"

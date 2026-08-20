@@ -17,7 +17,10 @@ const router = createRouter({
       name: 'watchlist',
       component: () => import('../views/WatchlistView.vue'),
     },
-    { path: '/board', name: 'board', component: () => import('../views/BoardView.vue') },
+    {
+      path: '/board',
+      redirect: (to) => ({ path: '/watchlist', query: { ...to.query, tab: 'signals' } }),
+    },
     {
       path: '/strategies',
       name: 'strategies',

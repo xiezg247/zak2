@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useStockAnalysis, type AnalysisTabKey } from '../composables/useStockAnalysis'
-import CandleChart from './CandleChart.vue'
 import {
   watchlistApi,
   type QuoteOut,
   type Fundamentals,
-  type StrategySignalRow,
 } from '../api/watchlist'
 import { marketApi } from '../api/market'
 import { aiApi } from '../api/ai'
@@ -19,14 +17,12 @@ import {
   type NoteEntry,
 } from '../api/content'
 import MarkdownView from './MarkdownView.vue'
-import type { BoardSignalMode } from '../lib/boardBacktestParams'
 
 const analysis = useStockAnalysis()
 
 const TABS: { key: AnalysisTabKey; label: string }[] = [
   { key: 'quote', label: '行情' },
   { key: 'fundamental', label: '基本面' },
-  { key: 'signal', label: '策略信号' },
   { key: 'radar', label: '雷达' },
   { key: 'ai', label: 'AI研报' },
   { key: 'notes', label: '笔记' },
@@ -45,17 +41,6 @@ function switchTab(tab: AnalysisTabKey) {
 const quote = ref<QuoteOut | null>(null)
 const quoteErr = ref('')
 const quoteLoading = ref(false)
-const barInterval = ref<'d' | '1m'>('d')
-const barLimit = ref(90)
-const bars = ref<
-  { datetime: string; open: number; high: number; low: number; close: number; volume: number }[]
->([])
-const barsErr = ref('')
-const barsLoading = ref(false)
-
-const barLimitChoices = computed(() =>
-  barInterval.value === '1m' ? [240, 480, 1200] : [60, 90, 120],
-)
 
 async function loadQuote() {
   if (!analysis.vtSymbol.value || analysis.isLoaded('quote')) return
@@ -72,28 +57,12 @@ async function loadQuote() {
   }
 }
 
-async function loadBars() {
-  if (!analysis.vtSymbol.value) return
-  barsLoading.value = true
-  barsErr.value = ''
-  try {
-    const resp = await watchlistApi.bars(analysis.vtSymbol.value, barInterval.value, barLimit.value)
-    bars.value = resp.bars
-  } catch (e) {
-    barsErr.value = e instanceof Error ? e.message : '无 K 线'
-  } finally {
-    barsLoading.value = false
-  }
-}
-
 watch(
   () => analysis.activeTab.value,
   (tab) => {
     if (tab === 'quote' && analysis.vtSymbol.value && !analysis.isLoaded('quote')) void loadQuote()
     if (tab === 'fundamental' && analysis.vtSymbol.value && !analysis.isLoaded('fundamental'))
       void loadFund()
-    if (tab === 'signal' && analysis.vtSymbol.value && !analysis.isLoaded('signal'))
-      void loadSignals()
     if (tab === 'radar' && analysis.vtSymbol.value && !analysis.isLoaded('radar')) void loadRadar()
     if (tab === 'ai' && analysis.vtSymbol.value && !analysis.isLoaded('ai')) {
       analysis.markLoaded('ai')
@@ -114,18 +83,6 @@ watch(
     syncBusy.value = ''
   },
 )
-
-function switchInterval(iv: 'd' | '1m') {
-  if (barInterval.value === iv) return
-  barInterval.value = iv
-  barLimit.value = iv === '1m' ? 480 : 90
-  void loadBars()
-}
-
-function switchBarLimit(n: number) {
-  barLimit.value = n
-  void loadBars()
-}
 
 const fund = ref<Fundamentals | null>(null)
 const fundErr = ref('')
@@ -162,47 +119,6 @@ function fmtMoney(n: number | null | undefined): string {
 function fmtRatioPct(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—'
   return `${(n * 100).toFixed(1)}%`
-}
-
-const SIGNAL_MODES: { id: BoardSignalMode; label: string }[] = [
-  { id: 'heuristic_v2', label: '启发式确认' },
-  { id: 'double_ma', label: '回测双均线' },
-  { id: 'trend_ma', label: '趋势均线' },
-  { id: 'medium_swing', label: '中线波段' },
-]
-const signalRows = ref<{ mode: string; row: StrategySignalRow }[]>([])
-const signalErr = ref('')
-const signalLoading = ref(false)
-
-async function loadSignals() {
-  if (!analysis.vtSymbol.value || analysis.isLoaded('signal')) return
-  signalLoading.value = true
-  signalErr.value = ''
-  try {
-    const vt = analysis.vtSymbol.value
-    const results = await Promise.all(
-      SIGNAL_MODES.map(async (m) => {
-        const board = await watchlistApi.strategyBoard({ signalMode: m.id })
-        return { m, row: board.signals.find((s) => s.vt_symbol === vt) }
-      }),
-    )
-    signalRows.value = results
-      .filter(
-        (r): r is { m: { id: BoardSignalMode; label: string }; row: StrategySignalRow } => !!r.row,
-      )
-      .map((r) => ({ mode: r.m.label, row: r.row }))
-    analysis.markLoaded('signal')
-  } catch (e) {
-    signalErr.value = e instanceof Error ? e.message : '策略信号加载失败'
-  } finally {
-    signalLoading.value = false
-  }
-}
-
-function signalClass(sig: string) {
-  if (sig === 'buy') return 'up'
-  if (sig === 'sell') return 'down'
-  return ''
 }
 
 const radarEntry = ref<{
@@ -387,7 +303,6 @@ const SYNC_JOBS = [
   { id: 'sync_watchlist_financials', label: '同步财报', tab: 'fundamental' },
   { id: 'sync_disclosure_calendar', label: '同步披露计划', tab: 'fundamental' },
   { id: 'fill_watchlist_bars', label: '补全日 K', tab: 'quote' },
-  { id: 'warm_watchlist_strategy_cache', label: '预热策略信号', tab: 'signal' },
 ] as const
 
 const syncMenuOpen = ref(false)
@@ -565,44 +480,6 @@ onUnmounted(() => {
                     ><span class="q-value">{{ quote.industry || '—' }}</span>
                   </div>
                 </div>
-                <div class="bar-controls">
-                  <div class="limits">
-                    <button
-                      type="button"
-                      class="chip"
-                      :class="{ on: barInterval === 'd' }"
-                      @click="switchInterval('d')"
-                    >
-                      日K
-                    </button>
-                    <button
-                      type="button"
-                      class="chip"
-                      :class="{ on: barInterval === '1m' }"
-                      @click="switchInterval('1m')"
-                    >
-                      1分
-                    </button>
-                  </div>
-                  <div class="limits">
-                    <button
-                      v-for="n in barLimitChoices"
-                      :key="n"
-                      type="button"
-                      class="chip"
-                      :class="{ on: barLimit === n }"
-                      @click="switchBarLimit(n)"
-                    >
-                      {{ barInterval === '1m' ? `${n}根` : `${n}日` }}
-                    </button>
-                  </div>
-                </div>
-                <p v-if="barsLoading" class="hint">加载 K 线…</p>
-                <p v-else-if="barsErr" class="err">{{ barsErr }}</p>
-                <div v-else-if="bars.length" class="chart">
-                  <CandleChart :bars="bars" :height="340" :interval="barInterval" />
-                </div>
-                <p v-else class="hint">暂无 K 线</p>
               </template>
               <p v-else class="hint">无行情数据</p>
             </div>
@@ -683,56 +560,6 @@ onUnmounted(() => {
                 </section>
               </template>
               <p v-else class="hint">无基本面数据</p>
-            </div>
-
-            <div v-if="analysis.activeTab.value === 'signal'" class="signal-tab">
-              <p v-if="signalLoading" class="hint">加载策略信号…</p>
-              <p v-else-if="signalErr" class="err">{{ signalErr }}</p>
-              <template v-else-if="signalRows.length">
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>模式</th>
-                        <th>信号</th>
-                        <th>强度</th>
-                        <th>参考买</th>
-                        <th>参考卖</th>
-                        <th>摘要</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="s in signalRows" :key="s.mode">
-                        <td>{{ s.mode }}</td>
-                        <td>
-                          <span class="signal-badge" :class="signalClass(s.row.signal)">{{
-                            s.row.signal_label
-                          }}</span>
-                        </td>
-                        <td>
-                          <template v-if="s.row.strength_tier_label">
-                            {{ s.row.strength_tier_label
-                            }}<span v-if="s.row.strength != null">
-                              · {{ s.row.strength.toFixed(1) }}</span
-                            >
-                          </template>
-                          <template v-else>{{
-                            s.row.strength != null ? s.row.strength.toFixed(0) : '—'
-                          }}</template>
-                        </td>
-                        <td>
-                          {{ s.row.ref_buy_price != null ? s.row.ref_buy_price.toFixed(2) : '—' }}
-                        </td>
-                        <td>
-                          {{ s.row.ref_sell_price != null ? s.row.ref_sell_price.toFixed(2) : '—' }}
-                        </td>
-                        <td class="clip">{{ s.row.reason_summary || '—' }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </template>
-              <p v-else class="hint">无信号，可点右上角同步按钮预热策略信号。</p>
             </div>
 
             <div v-if="analysis.activeTab.value === 'radar'" class="radar-tab">
@@ -1201,44 +1028,6 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
-.bar-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  padding: 8px 2px;
-}
-.limits {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-.chip {
-  background: transparent;
-  border: 1px solid var(--line);
-  color: var(--muted);
-  border-radius: 999px;
-  padding: 4px 12px;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition:
-    background 0.12s ease,
-    color 0.12s ease,
-    border-color 0.12s ease;
-}
-.chip:hover {
-  border-color: var(--brand-soft);
-  color: var(--ink);
-}
-.chip.on {
-  background: var(--brand-light);
-  color: var(--brand);
-  border-color: var(--brand-soft);
-  font-weight: 500;
-}
-.chart :deep(.candle svg) {
-  height: 340px;
-}
 
 /* ---------- 基本面页 ---------- */
 .fund-tab {
@@ -1299,54 +1088,6 @@ onUnmounted(() => {
   color: var(--muted);
   font-weight: 500;
   background: var(--surface-muted);
-}
-
-/* ---------- 策略信号页 ---------- */
-.table-wrap {
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  overflow: auto;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-}
-.table-wrap th,
-.table-wrap td {
-  padding: 9px 10px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.85rem;
-  text-align: left;
-  white-space: nowrap;
-}
-.table-wrap tbody tr:last-child td {
-  border-bottom: none;
-}
-.table-wrap th {
-  color: var(--muted);
-  font-weight: 500;
-  background: var(--surface-muted);
-  position: sticky;
-  top: 0;
-}
-.table-wrap .clip {
-  max-width: 280px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.signal-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.signal-badge.up {
-  background: rgba(225, 29, 72, 0.1);
-  color: var(--danger);
-}
-.signal-badge.down {
-  background: rgba(22, 163, 74, 0.1);
-  color: var(--ok);
 }
 
 /* ---------- 雷达页 ---------- */

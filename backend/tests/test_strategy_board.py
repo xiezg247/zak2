@@ -117,6 +117,34 @@ def test_resolve_board_config_key_medium_swing_fixed() -> None:
     assert resolve_board_config_key(db, "u1", signal_mode="medium_swing") == "medium_swing:12:26"
 
 
+def test_resolve_board_config_key_extended_modes() -> None:
+    from app.services.strategy.strategy_board import resolve_board_config_key
+
+    db = MagicMock()
+    assert resolve_board_config_key(db, "u1", signal_mode="donchian") == "donchian:20:10"
+    assert resolve_board_config_key(db, "u1", signal_mode="rsi_reversal") == "rsi_reversal:14:30:70"
+    assert resolve_board_config_key(db, "u1", signal_mode="bollinger") == "bollinger:20:2.0"
+    assert resolve_board_config_key(db, "u1", signal_mode="ma_band") == "ma_band:5:10:20:60"
+    assert resolve_board_config_key(db, "u1", signal_mode="atr_breakout") == "atr_breakout:20:14:2.0"
+
+
+def test_bars_limit_default_120() -> None:
+    from app.services.strategy.strategy_board import BAR_LIMIT, bars_limit_for
+
+    assert BAR_LIMIT == 120
+    assert bars_limit_for("heuristic_v2", "AshareShortBreakoutStrategy:5:10") == 120
+    assert bars_limit_for("donchian", "donchian:20:10") == 120
+    assert bars_limit_for("trend_ma", "trend_ma:20:60") == 120
+
+
+def test_bars_limit_grows_with_slow() -> None:
+    from app.services.strategy.strategy_board import bars_limit_for
+
+    assert bars_limit_for("heuristic_v2", "AshareShortBreakoutStrategy:5:120") == 122
+    assert bars_limit_for("double_ma", "double_ma:60:120") == 122
+    assert bars_limit_for("double_ma", "double_ma:8:21") == 120
+
+
 def test_enrich_position_risk_float_loss() -> None:
     out = enrich_position_risk(
         {"exit_signal": "hold", "unrealized_pnl_pct": -6.0},
@@ -148,9 +176,7 @@ def test_enrich_position_risk_no_quote_skips_intraday() -> None:
     assert "大涨" not in out["risk_tags"]
 
 
-def test_load_strategy_board_empty() -> None:
-    from app.services.strategy import strategy_board
-
+def _mock_db() -> MagicMock:
     db = MagicMock()
 
     def _execute(stmt, params=None):
@@ -165,19 +191,30 @@ def test_load_strategy_board_empty() -> None:
         return result
 
     db.execute.side_effect = _execute
+    return db
+
+
+def _risk_prefs():
+    return SimpleNamespace(
+        total_capital=None,
+        stop_loss_pct=0.05,
+        caution_float_pct=-5.0,
+        realized_pnl_today=None,
+    )
+
+
+def test_load_strategy_board_empty() -> None:
+    from app.services.strategy import strategy_board
+
+    db = _mock_db()
     with (
         patch.object(strategy_board.repo.WatchlistItemRepository, "list_items", return_value=[]),
         patch.object(strategy_board.signal_panel_repo.SignalPanelRepository, "load_symbols", return_value=[]),
-        patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
+        patch.object(strategy_board, "_load_daily_bars_map", return_value={}),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
             "app.services.strategy.strategy_board.load_trading_risk_prefs",
-            return_value=SimpleNamespace(
-                total_capital=None,
-                stop_loss_pct=0.05,
-                caution_float_pct=-5.0,
-                realized_pnl_today=None,
-            ),
+            return_value=_risk_prefs(),
         ),
     ):
         gs.return_value.available.return_value = False
@@ -186,32 +223,80 @@ def test_load_strategy_board_empty() -> None:
     assert out["signals"] == []
     assert out["positions"] == []
     assert out["panel_symbols"] == []
+    assert out["source"] == "live"
     assert out["note"]
-    assert "桌面" not in out["note"]
-    assert "warm_watchlist_strategy_cache" in out["note"] or "双均线" in out["note"]
-    assert "尚未接入策略引擎预热" not in out["note"]
+    assert "warm_watchlist_strategy_cache" not in out["note"]
+    assert "实时按日 K 计算" in out["note"]
     rs = out["risk_summary"]
     assert rs["total_capital"] is None
     assert rs["actual_position_pct"] is None
 
 
+def test_load_strategy_board_live_signal() -> None:
+    from app.services.strategy import strategy_board
+
+    db = _mock_db()
+    with (
+        patch.object(
+            strategy_board.repo.WatchlistItemRepository,
+            "list_items",
+            return_value=[SimpleNamespace(symbol="600519", exchange="SSE", name="茅台")],
+        ),
+        patch.object(
+            strategy_board.signal_panel_repo.SignalPanelRepository,
+            "load_symbols",
+            return_value=["600519.SSE"],
+        ),
+        patch.object(
+            strategy_board,
+            "_load_daily_bars_map",
+            return_value={
+                "600519.SSE": {
+                    "highs": [10.0],
+                    "lows": [9.0],
+                    "closes": [10.0],
+                    "volumes": [100.0],
+                    "as_of": "2026-08-05",
+                }
+            },
+        ),
+        patch.object(
+            strategy_board,
+            "_compute_snapshot",
+            return_value={
+                "signal": "buy",
+                "signal_label": "买入",
+                "strength": 1.2,
+                "strength_tier": "mid",
+                "strength_tier_label": "中",
+                "reason_summary": "测试信号",
+                "as_of": "2026-08-05",
+                "last_close": 1800.0,
+            },
+        ),
+        patch.object(strategy_board, "get_quote_store") as gs,
+        patch(
+            "app.services.strategy.strategy_board.load_trading_risk_prefs",
+            return_value=_risk_prefs(),
+        ),
+    ):
+        gs.return_value.available.return_value = False
+        out = strategy_board.load_strategy_board(db, "u1")
+
+    assert out["source"] == "live"
+    assert out["as_of"] == "2026-08-05"
+    assert len(out["signals"]) == 1
+    row = out["signals"][0]
+    assert row["vt_symbol"] == "600519.SSE"
+    assert row["signal"] == "buy"
+    assert row["name"] == "茅台"
+    assert out["panel_symbols"] == ["600519.SSE"]
+
+
 def test_load_strategy_board_risk_summary_with_positions() -> None:
     from app.services.strategy import strategy_board
 
-    db = MagicMock()
-
-    def _execute(stmt, params=None):
-        _ = params
-        result = MagicMock()
-        sql = str(stmt)
-        if "user_preferences" in sql:
-            result.scalar.return_value = None
-        else:
-            result.mappings.return_value.all.return_value = []
-            result.mappings.return_value.first.return_value = None
-        return result
-
-    db.execute.side_effect = _execute
+    db = _mock_db()
     with (
         patch.object(
             strategy_board.repo.WatchlistItemRepository,
@@ -245,16 +330,11 @@ def test_load_strategy_board_risk_summary_with_positions() -> None:
             ],
         ),
         patch.object(strategy_board.signal_panel_repo.SignalPanelRepository, "load_symbols", return_value=[]),
-        patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
+        patch.object(strategy_board, "_load_daily_bars_map", return_value={}),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
             "app.services.strategy.strategy_board.load_trading_risk_prefs",
-            return_value=SimpleNamespace(
-                total_capital=100_000.0,
-                stop_loss_pct=0.05,
-                caution_float_pct=-5.0,
-                realized_pnl_today=None,
-            ),
+            return_value=_risk_prefs(),
         ),
     ):
         gs.return_value.available.return_value = False
@@ -265,27 +345,14 @@ def test_load_strategy_board_risk_summary_with_positions() -> None:
     assert by_vt["600519.SSE"]["risk_tags"] == []
 
     rs = out["risk_summary"]
-    assert rs["total_capital"] == 100_000.0
-    assert rs["actual_position_pct"] == 0.0  # 无行情 → market_value 计 0
+    assert rs["total_capital"] is None
+    assert rs["actual_position_pct"] is None
 
 
 def test_load_strategy_board_note_panel_no_signals() -> None:
     from app.services.strategy import strategy_board
 
-    db = MagicMock()
-
-    def _execute(stmt, params=None):
-        _ = params
-        result = MagicMock()
-        sql = str(stmt)
-        if "user_preferences" in sql:
-            result.scalar.return_value = None
-        else:
-            result.mappings.return_value.all.return_value = []
-            result.mappings.return_value.first.return_value = None
-        return result
-
-    db.execute.side_effect = _execute
+    db = _mock_db()
     with (
         patch.object(strategy_board.repo.WatchlistItemRepository, "list_items", return_value=[]),
         patch.object(
@@ -293,45 +360,26 @@ def test_load_strategy_board_note_panel_no_signals() -> None:
             "load_symbols",
             return_value=["600519.SSE"],
         ),
-        patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
+        patch.object(strategy_board, "_load_daily_bars_map", return_value={}),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
             "app.services.strategy.strategy_board.load_trading_risk_prefs",
-            return_value=SimpleNamespace(
-                total_capital=None,
-                stop_loss_pct=0.05,
-                caution_float_pct=-5.0,
-                realized_pnl_today=None,
-            ),
+            return_value=_risk_prefs(),
         ),
     ):
         gs.return_value.available.return_value = False
         out = strategy_board.load_strategy_board(db, "u1")
     assert out["panel_symbols"] == ["600519.SSE"]
     assert out["signals"] == []
-    assert "桌面" not in out["note"]
+    assert "warm_watchlist_strategy_cache" not in out["note"]
     assert "信号名单 1 只" in out["note"]
-    assert "warm_watchlist_strategy_cache" in out["note"]
-    assert "尚未接入策略引擎预热" not in out["note"]
+    assert "暂无信号" in out["note"]
 
 
 def test_load_strategy_board_note_positions_no_signals() -> None:
     from app.services.strategy import strategy_board
 
-    db = MagicMock()
-
-    def _execute(stmt, params=None):
-        _ = params
-        result = MagicMock()
-        sql = str(stmt)
-        if "user_preferences" in sql:
-            result.scalar.return_value = None
-        else:
-            result.mappings.return_value.all.return_value = []
-            result.mappings.return_value.first.return_value = None
-        return result
-
-    db.execute.side_effect = _execute
+    db = _mock_db()
     with (
         patch.object(strategy_board.repo.WatchlistItemRepository, "list_items", return_value=[]),
         patch.object(
@@ -350,63 +398,38 @@ def test_load_strategy_board_note_positions_no_signals() -> None:
             ],
         ),
         patch.object(strategy_board.signal_panel_repo.SignalPanelRepository, "load_symbols", return_value=[]),
-        patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
+        patch.object(strategy_board, "_load_daily_bars_map", return_value={}),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
             "app.services.strategy.strategy_board.load_trading_risk_prefs",
-            return_value=SimpleNamespace(
-                total_capital=None,
-                stop_loss_pct=0.05,
-                caution_float_pct=-5.0,
-                realized_pnl_today=None,
-            ),
+            return_value=_risk_prefs(),
         ),
     ):
         gs.return_value.available.return_value = False
         out = strategy_board.load_strategy_board(db, "u1")
     assert out["positions"]
     assert out["signals"] == []
-    assert "桌面" not in out["note"]
+    assert "warm_watchlist_strategy_cache" not in out["note"]
     assert "持仓来自记账表" in out["note"]
-    assert "warm_watchlist_strategy_cache" in out["note"]
-    assert "尚未接入策略引擎预热" not in out["note"]
 
 
-def test_note_empty_mentions_heuristic_job() -> None:
+def test_note_empty_live_compute() -> None:
     from app.services.strategy import strategy_board
 
-    db = MagicMock()
-
-    def _execute(stmt, params=None):
-        _ = params
-        result = MagicMock()
-        sql = str(stmt)
-        if "user_preferences" in sql:
-            result.scalar.return_value = None
-        else:
-            result.mappings.return_value.all.return_value = []
-            result.mappings.return_value.first.return_value = None
-        return result
-
-    db.execute.side_effect = _execute
+    db = _mock_db()
     with (
         patch.object(strategy_board.repo.WatchlistItemRepository, "list_items", return_value=[]),
         patch.object(strategy_board.signal_panel_repo.SignalPanelRepository, "load_symbols", return_value=[]),
-        patch.object(strategy_board, "_scan_signal_redis", return_value=[]),
+        patch.object(strategy_board, "_load_daily_bars_map", return_value={}),
         patch.object(strategy_board, "get_quote_store") as gs,
         patch(
             "app.services.strategy.strategy_board.load_trading_risk_prefs",
-            return_value=SimpleNamespace(
-                total_capital=None,
-                stop_loss_pct=0.05,
-                caution_float_pct=-5.0,
-                realized_pnl_today=None,
-            ),
+            return_value=_risk_prefs(),
         ),
     ):
         gs.return_value.available.return_value = False
         out = strategy_board.load_strategy_board(db, "u1")
     note = out["note"]
-    assert "warm_watchlist_strategy_cache" in note or "双均线" in note
-    assert "尚未接入策略引擎预热" not in note
-    assert "桌面" not in note
+    assert "warm_watchlist_strategy_cache" not in note
+    assert "实时按日 K 计算" in note
+    assert out["source"] == "live"

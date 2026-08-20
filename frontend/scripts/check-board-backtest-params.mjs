@@ -31,4 +31,30 @@ assert.equal(q2.strategy, 'double_ma')
 assert.equal(q2.fast_window, '8')
 assert.equal(q2.slow_window, '21')
 
+const qDon = buildAlignedBacktestQuery('donchian', '1.SSE', 'donchian:20:10')
+assert.equal(qDon.strategy, 'donchian')
+assert.equal(qDon.entry_window, '20')
+assert.equal(qDon.exit_window, '10')
+
+const bodyRsi = buildEnqueueRunBody('rsi_reversal', '1.SSE', 'rsi_reversal:14:30:70')
+assert.equal(bodyRsi.strategy, 'rsi_reversal')
+assert.equal(bodyRsi.rsi_period, 14)
+assert.equal(bodyRsi.oversold, 30)
+assert.equal(bodyRsi.overbought, 70)
+
+const qBoll = buildAlignedBacktestQuery('bollinger', '1.SSE', 'bollinger:20:2')
+assert.equal(qBoll.strategy, 'bollinger')
+assert.equal(qBoll.boll_period, '20')
+assert.equal(qBoll.boll_dev, '2')
+
+const bodyMa = buildEnqueueRunBody('ma_band', '1.SSE', 'ma_band:5:10:20:60')
+assert.equal(bodyMa.strategy, 'ma_band')
+assert.equal(bodyMa.ma_fast, 5)
+assert.equal(bodyMa.ma_long, 60)
+
+const qAtr = buildAlignedBacktestQuery('atr_breakout', '1.SSE', 'atr_breakout:20:14:2')
+assert.equal(qAtr.strategy, 'atr_breakout')
+assert.equal(qAtr.channel_period, '20')
+assert.equal(qAtr.atr_mult, '2')
+
 console.log('boardBacktestParams ok')

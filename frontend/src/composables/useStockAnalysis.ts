@@ -3,7 +3,6 @@ import { ref } from 'vue'
 export type AnalysisTabKey =
   | 'quote'
   | 'fundamental'
-  | 'signal'
   | 'radar'
   | 'ai'
   | 'notes'

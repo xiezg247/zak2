@@ -68,9 +68,6 @@ from app.services.ops import (
 from app.services.ops import (
     warm_radar as ops_warm_radar,
 )
-from app.services.ops import (
-    warm_watchlist_strategy as ops_warm_watchlist_strategy,
-)
 
 SCREEN_JOB_IDS = frozenset({"screen_intraday", "screen_post_close"})
 
@@ -102,7 +99,6 @@ RUNNERS: dict[str, Callable[..., Any]] = {
     "prefetch_moneyflow": ops_prefetch_moneyflow.prefetch_moneyflow,
     "sync_watchlist_financials": ops_sync_watchlist_financials.sync_watchlist_financials,
     "warm_radar_card_snapshots": ops_warm_radar.warm_radar_card_snapshots,
-    "warm_watchlist_strategy_cache": ops_warm_watchlist_strategy.warm_watchlist_strategy_cache,
     "scan_horizon_outlook": ops_scan_horizon_outlook.scan_horizon_outlook,
     "prefetch_concept_board": ops_prefetch_concept_board.prefetch_concept_board,
     "fill_focus_pool_minute": ops_fill_focus_pool_minute.fill_focus_pool_minute,
