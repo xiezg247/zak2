@@ -24,7 +24,6 @@ const listFilter = ref('')
 const unreadOnly = ref(false)
 const subFilter = ref('')
 const enabledOnly = ref(false)
-const selectedItem = ref<FeedItem | null>(null)
 
 const subtitle = computed(() => `${subs.value.length} 订阅 · ${itemsTotal.value} 条`)
 
@@ -98,11 +97,11 @@ async function goItemsPage(p: number) {
 }
 
 function selectItem(item: FeedItem) {
-  selectedItem.value = item
   if (!item.is_read) {
     item.is_read = true
     void contentApi.markRead(item.id)
   }
+  window.open(item.url, '_blank', 'noopener,noreferrer')
 }
 
 async function toggleSub(s: FeedSub) {
@@ -182,12 +181,7 @@ async function removeSub(s: FeedSub) {
   }
 }
 
-function openItem(item: FeedItem) {
-  window.open(item.url, '_blank', 'noopener,noreferrer')
-}
-
 watch(subId, () => {
-  selectedItem.value = null
   void load()
 })
 
@@ -244,54 +238,54 @@ onMounted(() => {
             </div>
             <p v-else-if="searchTried && !searching" class="muted tiny-text">无搜索结果</p>
           </section>
-
-          <section class="side-section grow">
-            <div class="side-title-row">
-              <h2 class="side-title">我的订阅</h2>
-              <span class="count muted">{{ subs.length }}</span>
-            </div>
-
-            <input v-model="subFilter" class="sub-filter" placeholder="过滤订阅名 / mid" />
-            <label class="check-label">
-              <input v-model="enabledOnly" type="checkbox" />
-              <span>仅看启用</span>
-            </label>
-
-            <button type="button" class="sub all" :class="{ on: !subId }" @click="subId = ''">
-              全部动态
-            </button>
-
-            <p v-if="subs.length && !displayedSubs.length" class="muted tiny-text">无匹配订阅</p>
-            <p v-if="!subs.length && !loading" class="muted tiny-text sub-hint">
-              先搜索关键词或填写 mid 添加订阅。
-            </p>
-
-            <div class="sub-list">
-              <div
-                v-for="s in displayedSubs"
-                :key="s.id"
-                class="sub-row"
-                :class="{ on: subId === s.id, off: !s.enabled }"
-              >
-                <button type="button" class="sub-name" :title="s.source_id" @click="subId = s.id">
-                  {{ s.display_name || s.source_id }}
-                </button>
-                <button
-                  type="button"
-                  class="icon-btn"
-                  :class="{ on: s.enabled }"
-                  :title="s.enabled ? '停用' : '启用'"
-                  @click="toggleSub(s)"
-                >
-                  {{ s.enabled ? '开' : '关' }}
-                </button>
-                <button type="button" class="icon-btn danger" title="删除" @click="removeSub(s)">
-                  删
-                </button>
-              </div>
-            </div>
-          </section>
         </aside>
+
+        <section class="mid">
+          <div class="side-title-row">
+            <h2 class="side-title">我的订阅</h2>
+            <span class="count muted">{{ subs.length }}</span>
+          </div>
+
+          <input v-model="subFilter" class="sub-filter" placeholder="过滤订阅名 / mid" />
+          <label class="check-label">
+            <input v-model="enabledOnly" type="checkbox" />
+            <span>仅看启用</span>
+          </label>
+
+          <button type="button" class="sub all" :class="{ on: !subId }" @click="subId = ''">
+            全部动态
+          </button>
+
+          <p v-if="subs.length && !displayedSubs.length" class="muted tiny-text">无匹配订阅</p>
+          <p v-if="!subs.length && !loading" class="muted tiny-text sub-hint">
+            先在左侧搜索关键词或填写 mid 添加订阅。
+          </p>
+
+          <div class="sub-list">
+            <div
+              v-for="s in displayedSubs"
+              :key="s.id"
+              class="sub-row"
+              :class="{ on: subId === s.id, off: !s.enabled }"
+            >
+              <button type="button" class="sub-name" :title="s.source_id" @click="subId = s.id">
+                {{ s.display_name || s.source_id }}
+              </button>
+              <button
+                type="button"
+                class="icon-btn"
+                :class="{ on: s.enabled }"
+                :title="s.enabled ? '停用' : '启用'"
+                @click="toggleSub(s)"
+              >
+                {{ s.enabled ? '开' : '关' }}
+              </button>
+              <button type="button" class="icon-btn danger" title="删除" @click="removeSub(s)">
+                删
+              </button>
+            </div>
+          </div>
+        </section>
 
         <section class="feed">
           <div class="right-head">
@@ -323,7 +317,7 @@ onMounted(() => {
                 v-for="(item, i) in displayedItems"
                 :key="item.id"
                 class="item"
-                :class="{ unread: !item.is_read, on: selectedItem?.id === item.id }"
+                :class="{ unread: !item.is_read }"
                 :style="{ '--i': i }"
                 @click="selectItem(item)"
               >
@@ -339,7 +333,7 @@ onMounted(() => {
                 </div>
                 <h3 class="item-title">{{ item.title || '(无标题)' }}</h3>
                 <p v-if="item.summary" class="item-summary">{{ item.summary }}</p>
-                <span class="item-open">查看详情 ›</span>
+                <span class="item-open">打开 ↗</span>
               </article>
               <PagerBar
                 :page="itemsPage"
@@ -350,34 +344,6 @@ onMounted(() => {
             </template>
           </div>
         </section>
-
-        <aside class="detail">
-          <template v-if="selectedItem">
-            <div class="detail-head">
-              <h2 class="detail-title">{{ selectedItem.title || '(无标题)' }}</h2>
-              <span v-if="itemTypeLabel(selectedItem.item_type)" class="item-type">{{
-                itemTypeLabel(selectedItem.item_type)
-              }}</span>
-            </div>
-            <div class="detail-meta">
-              <span class="detail-author">{{ selectedItem.author_name || '未知作者' }}</span>
-              <span class="detail-time">{{ selectedItem.published_at }}</span>
-            </div>
-            <p v-if="selectedItem.summary" class="detail-summary">{{ selectedItem.summary }}</p>
-            <p v-else class="detail-none muted">该动态没有摘要</p>
-            <div class="detail-actions">
-              <button type="button" class="primary" @click="openItem(selectedItem)">
-                打开原文 ↗
-              </button>
-              <button type="button" class="ghost" @click="selectItem(selectedItem)">
-                {{ selectedItem.is_read ? '已读' : '标为已读' }}
-              </button>
-            </div>
-          </template>
-          <div v-else class="detail-empty">
-            <p class="muted">从左侧动态中点选一条，在此查看详情</p>
-          </div>
-        </aside>
       </div>
     </div>
   </AppShell>
@@ -417,17 +383,17 @@ onMounted(() => {
 
 .workspace {
   display: grid;
-  grid-template-columns: 264px minmax(0, 1fr) 340px;
-  grid-template-areas: 'left feed detail';
+  grid-template-columns: 264px 264px minmax(0, 1fr);
+  grid-template-areas: 'left mid feed';
   gap: 14px;
   flex: 1;
   min-height: 0;
 }
 
-/* ---------- 左栏 ---------- */
+/* ---------- 左栏 · 订阅管理 ---------- */
 .left,
-.feed,
-.detail {
+.mid,
+.feed {
   min-height: 0;
   overflow: auto;
   border: 1px solid var(--line);
@@ -446,14 +412,6 @@ onMounted(() => {
   gap: 8px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--line-soft);
-}
-.side-section + .side-section {
-  padding-top: 16px;
-}
-.side-section.grow {
-  flex: 1;
-  border-bottom: none;
-  padding-bottom: 0;
 }
 .side-title {
   margin: 0;
@@ -644,7 +602,20 @@ onMounted(() => {
   border-color: var(--danger);
 }
 
-/* ---------- 中栏 · 动态列表 ---------- */
+/* ---------- 中栏 · 订阅列表 ---------- */
+.mid {
+  grid-area: mid;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+}
+.mid .sub-list {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---------- 右栏 · 动态列表 ---------- */
 .feed {
   grid-area: feed;
   display: flex;
@@ -744,10 +715,6 @@ onMounted(() => {
   border-color: var(--brand-soft);
   background: linear-gradient(90deg, var(--brand-light), var(--surface) 32%);
 }
-.item.on {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 1px var(--brand) inset;
-}
 .item-head {
   display: flex;
   align-items: center;
@@ -821,83 +788,15 @@ onMounted(() => {
   color: var(--brand);
 }
 
-/* ---------- 右栏 · 详情面板 ---------- */
-.detail {
-  grid-area: detail;
-  display: grid;
-  gap: 10px;
-  align-content: start;
-  padding: 14px 16px;
-}
-.detail-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line-soft);
-}
-.detail-title {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  line-height: 1.45;
-  color: var(--ink);
-  overflow-wrap: break-word;
-}
-.detail-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 0.82rem;
-}
-.detail-author {
-  font-weight: 500;
-  color: var(--ink);
-}
-.detail-time {
-  color: var(--ink-faint);
-}
-.detail-summary {
-  margin: 0;
-  color: var(--ink-muted);
-  font-size: 0.9rem;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-}
-.detail-none {
-  margin: 0;
-  font-size: 0.85rem;
-}
-.detail-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 4px;
-}
-.detail-empty {
-  display: grid;
-  place-items: center;
-  min-height: 240px;
-  text-align: center;
-  padding: 16px;
-}
-.detail-empty p {
-  margin: 0;
-  font-size: 0.85rem;
-}
-
 @media (max-width: 1280px) {
   .workspace {
     grid-template-columns: 264px minmax(0, 1fr);
     grid-template-areas:
-      'left feed'
-      'detail detail';
+      'left mid'
+      'feed feed';
   }
-  .detail {
-    min-height: 280px;
+  .feed {
+    min-height: 320px;
   }
 }
 @media (max-width: 900px) {
@@ -905,13 +804,16 @@ onMounted(() => {
     grid-template-columns: 1fr;
     grid-template-areas:
       'left'
-      'feed'
-      'detail';
+      'mid'
+      'feed';
   }
   .left,
-  .feed,
-  .detail {
+  .mid,
+  .feed {
     overflow: visible;
+  }
+  .mid .sub-list {
+    max-height: 320px;
   }
 }
 </style>
