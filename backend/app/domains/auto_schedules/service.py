@@ -24,7 +24,7 @@ from app.domains.screener.presets import get_builtin_recipe
 from app.domains.screener.repository import ScreenerRunRepository
 from app.models.auto_schedule import AutoSchedule
 from app.schemas.ops import SyncResult
-from app.schemas.screener import RecipeRunRequest
+from app.domains.screener.schemas import RecipeRunRequest
 from app.services.ops.arq_jobs import enqueue_auto_task_sync
 
 logger = logging.getLogger(__name__)

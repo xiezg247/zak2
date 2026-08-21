@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import ValidationFailed
 
-from app.schemas.market import RadarResonanceEntry
+from app.domains.market.schemas import RadarResonanceEntry
 from app.domains.screener.schemas import HardFilterPrefs
 from app.domains.market.quotes import QuoteRow
 from app.domains.radar.cards import list_radar_cards

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import ValidationFailed
 
-from app.schemas.market import EmotionCycleOut
+from app.domains.market.schemas import EmotionCycleOut
 from app.domains.screener.schemas import HardFilterPrefs
 from app.domains.emotion import emotion_cycle as emotion_cycle_svc
 from app.domains.market import overview as market_svc
