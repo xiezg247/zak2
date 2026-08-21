@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import Any, cast
 
 from sqlalchemy.orm import Session
@@ -198,39 +199,35 @@ def _remove_signal_panel(db: Session, user_id: str, args: dict[str, Any]) -> Any
     return {"ok": True, "symbols": symbols}
 
 
+_SummaryFn = Callable[[dict[str, Any]], str]
+
+
+def _sym(args: dict[str, Any], *, vt_first: bool = False) -> str:
+    first, second = ("vt_symbol", "symbol") if vt_first else ("symbol", "vt_symbol")
+    return str(args.get(first) or args.get(second) or "").strip() or "?"
+
+
+def _preview(raw: Any, limit: int = 40) -> str:
+    body = str(raw or "").strip().replace("\n", " ")
+    return body[:limit] + ("…" if len(body) > limit else "")
+
+
+_WRITE_SUMMARIES: dict[str, _SummaryFn] = {
+    "add_watchlist": lambda a: f"加自选：{_sym(a)}"
+    + (f"（{str(a.get('name') or '').strip()}）" if str(a.get("name") or "").strip() else ""),
+    "remove_watchlist": lambda a: f"删自选：{_sym(a)}",
+    "upsert_note_memo": lambda a: f"写备忘：{_sym(a, vt_first=True)} — {_preview(a.get('body'))}",
+    "add_note_entry": lambda a: f"记流水：{_sym(a, vt_first=True)} — {_preview(a.get('body'))}",
+    "upsert_position": lambda a: f"录入/更新持仓：{_sym(a)} 成本{a.get('cost_price')} 数量{a.get('volume')}",
+    "delete_position": lambda a: f"删除持仓：{_sym(a)}",
+    "add_signal_panel": lambda a: f"加入信号名单：{_sym(a)}",
+    "remove_signal_panel": lambda a: f"移出信号名单：{_sym(a)}",
+}
+
+
 def summarize_write_tool(name: str, args: dict[str, Any]) -> str:
-    if name == "add_watchlist":
-        sym = str(args.get("symbol") or args.get("vt_symbol") or "").strip() or "?"
-        nm = str(args.get("name") or "").strip()
-        return f"加自选：{sym}" + (f"（{nm}）" if nm else "")
-    if name == "remove_watchlist":
-        sym = str(args.get("symbol") or args.get("vt_symbol") or "").strip() or "?"
-        return f"删自选：{sym}"
-    if name == "upsert_note_memo":
-        sym = str(args.get("vt_symbol") or args.get("symbol") or "").strip() or "?"
-        body = str(args.get("body") or "").strip().replace("\n", " ")
-        preview = body[:40] + ("…" if len(body) > 40 else "")
-        return f"写备忘：{sym} — {preview}"
-    if name == "add_note_entry":
-        sym = str(args.get("vt_symbol") or args.get("symbol") or "").strip() or "?"
-        body = str(args.get("body") or "").strip().replace("\n", " ")
-        preview = body[:40] + ("…" if len(body) > 40 else "")
-        return f"记流水：{sym} — {preview}"
-    if name == "upsert_position":
-        sym = str(args.get("symbol") or args.get("vt_symbol") or "").strip() or "?"
-        cost = args.get("cost_price")
-        vol = args.get("volume")
-        return f"录入/更新持仓：{sym} 成本{cost} 数量{vol}"
-    if name == "delete_position":
-        sym = str(args.get("symbol") or args.get("vt_symbol") or "").strip() or "?"
-        return f"删除持仓：{sym}"
-    if name == "add_signal_panel":
-        sym = str(args.get("symbol") or args.get("vt_symbol") or "").strip() or "?"
-        return f"加入信号名单：{sym}"
-    if name == "remove_signal_panel":
-        sym = str(args.get("symbol") or args.get("vt_symbol") or "").strip() or "?"
-        return f"移出信号名单：{sym}"
-    return name
+    fn = _WRITE_SUMMARIES.get(name)
+    return fn(args) if fn else name
 
 
 WRITE_HANDLERS: dict[str, ToolHandler] = {
