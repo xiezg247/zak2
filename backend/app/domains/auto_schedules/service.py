@@ -9,9 +9,15 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.errors import AppError
+from app.core.errors import AppError, NotFound, ValidationFailed
 from app.domains.auto_schedules.auto_schedule_time import matches_now, parse_days_of_week, parse_times
 from app.domains.auto_schedules.repository import AutoScheduleRepository
+from app.domains.auto_schedules.schemas import (
+    AutoScheduleCreate,
+    AutoScheduleListOut,
+    AutoScheduleOut,
+    AutoScheduleUpdate,
+)
 from app.domains.channels.notify import delivery as notify_delivery
 from app.domains.screener.engine import run_recipe_screen
 from app.domains.screener.presets import get_builtin_recipe
@@ -127,3 +133,78 @@ def poll_due_tasks(db: Session, now: datetime) -> list[dict[str, str]]:
             continue
         enqueued.append({"task_id": str(task.id), "arq_id": arq_id})
     return enqueued
+
+
+class AutoScheduleService:
+    """自动任务 CRUD 编排：薄路由仅经此访问仓库与校验。"""
+
+    @staticmethod
+    def list(db: Session, user_id: str) -> AutoScheduleListOut:
+        repo = AutoScheduleRepository(db, user_id)
+        return AutoScheduleListOut(items=[repo.to_out(t) for t in repo.list_all()])
+
+    @staticmethod
+    def create(db: Session, user_id: str, body: AutoScheduleCreate) -> AutoScheduleOut:
+        try:
+            validate_task_input(
+                name=body.name,
+                recipe_id=body.recipe_id,
+                days_of_week=body.days_of_week,
+                times=body.times,
+            )
+        except ValueError as exc:
+            raise ValidationFailed(str(exc)) from exc
+        repo = AutoScheduleRepository(db, user_id)
+        task = repo.create_task(
+            name=body.name.strip(),
+            recipe_id=body.recipe_id,
+            days_of_week=body.days_of_week.strip().lower(),
+            times=parse_times(body.times),
+        )
+        return repo.to_out(task)
+
+    @staticmethod
+    def update(db: Session, user_id: str, task_id: int, body: AutoScheduleUpdate) -> AutoScheduleOut:
+        repo = AutoScheduleRepository(db, user_id)
+        task = repo.get(task_id)
+        if task is None:
+            raise NotFound("任务不存在")
+        values = body.model_dump(exclude_none=True)
+        if not values:
+            raise ValidationFailed("没有需要更新的字段")
+        try:
+            validate_task_input(
+                name=values.get("name", task.name),
+                recipe_id=values.get("recipe_id", task.recipe_id),
+                days_of_week=values.get("days_of_week", task.days_of_week),
+                times=values.get("times", list(task.times or [])),
+            )
+        except ValueError as exc:
+            raise ValidationFailed(str(exc)) from exc
+        if "name" in values:
+            values["name"] = str(values["name"]).strip()
+        if "days_of_week" in values:
+            values["days_of_week"] = str(values["days_of_week"]).strip().lower()
+        if "times" in values:
+            values["times"] = parse_times(values["times"])
+        updated = repo.update_task(task_id, values)
+        if updated is None:
+            raise NotFound("任务不存在")
+        return repo.to_out(updated)
+
+    @staticmethod
+    def set_enabled(db: Session, user_id: str, task_id: int, enabled: bool) -> AutoScheduleOut:
+        repo = AutoScheduleRepository(db, user_id)
+        if repo.get(task_id) is None:
+            raise NotFound("任务不存在")
+        updated = repo.update_task(task_id, {"enabled": enabled})
+        if updated is None:
+            raise NotFound("任务不存在")
+        return repo.to_out(updated)
+
+    @staticmethod
+    def delete(db: Session, user_id: str, task_id: int) -> None:
+        repo = AutoScheduleRepository(db, user_id)
+        if repo.get(task_id) is None:
+            raise NotFound("任务不存在")
+        repo.delete(task_id)
