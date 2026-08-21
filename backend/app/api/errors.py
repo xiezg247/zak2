@@ -41,6 +41,27 @@ def _first_validation_message(exc: RequestValidationError) -> str:
     return f"参数校验失败: {loc} {msg}".strip()
 
 
+def handle_unhandled(request: Request, exc: Exception) -> JSONResponse:
+    """记录未捕获异常并返回统一 500 响应。
+
+    供 ServerErrorMiddleware 注册的 handler 与 RequestContextMiddleware
+    共用；请求上下文存活时附带 request_id 与 user_id，便于按请求排查。
+    """
+    from app.core.request_context import get_request_context, get_request_id
+
+    ctx = get_request_context()
+    rid = get_request_id() or "-"
+    user_id = f" user_id={ctx.user_id}" if ctx and ctx.user_id else ""
+    logger.exception(
+        "Unhandled error on %s %s request_id=%s%s",
+        request.method,
+        request.url.path,
+        rid,
+        user_id,
+    )
+    return _json(500, "服务器内部错误", "服务器内部错误")
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
@@ -61,5 +82,4 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        logger.exception("Unhandled error on %s %s", request.method, request.url.path)
-        return _json(500, "服务器内部错误", "服务器内部错误")
+        return handle_unhandled(request, exc)

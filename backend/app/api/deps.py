@@ -30,4 +30,7 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="用户已禁用")
+    from app.core.request_context import set_user_id
+
+    set_user_id(user_id)
     return user
