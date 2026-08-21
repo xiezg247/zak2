@@ -8,6 +8,7 @@
 | 复用 | 自有 PostgreSQL / Redis；业务在本仓；不 import `vnpy_*` |
 | 结构 | `backend/` FastAPI + `frontend/` Vue3；业务域已全量落地 `app/domains/`（含 router/service/repository/schemas），兼容壳已拆除（见 [backend-architecture-refactor-design](./superpowers/specs/2026-08-20-backend-architecture-refactor-design.md)） |
 | Schema | zak2 Alembic（`backend/alembic/`） |
+| 日志 | 请求上下文（Phase 7）：`request_id` 透传/生成/回显，`logging.Filter` 自动注入现有 logger（见 [request-context-logging-design](./superpowers/specs/2026-08-21-request-context-logging-design.md)） |
 
 ## 运行时
 
