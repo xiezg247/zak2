@@ -24,6 +24,10 @@ def test_new_request_id_passthrough_valid() -> None:
     assert _new_request_id("abc-123_XYZ") == "abc-123_XYZ"
 
 
+def test_new_request_id_strips_whitespace() -> None:
+    assert _new_request_id(" abc ") == "abc"  # spec：strip 后校验，透传为 abc
+
+
 def test_new_request_id_rejects_illegal() -> None:
     rid = _new_request_id("bad id with spaces!")  # 空格/感叹号非法
     assert re.fullmatch(r"[0-9a-f]{12}", rid)

@@ -41,6 +41,8 @@ def set_user_id(user_id: str) -> None:
 
 
 def _new_request_id(client_id: str | None) -> str:
+    if client_id:
+        client_id = client_id.strip()
     if client_id and _VALID_RID.fullmatch(client_id):
         return client_id
     return uuid.uuid4().hex[:12]

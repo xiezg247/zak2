@@ -31,7 +31,8 @@ class RequestContextMiddleware:
 
         headers = dict(scope.get("headers") or [])
         client_rid = headers.get(_HEADER.encode())
-        rid = _new_request_id(client_rid.decode() if client_rid else None)
+        # 非 UTF-8 字节不应中断请求，忽略非法字节后进入规则校验
+        rid = _new_request_id(client_rid.decode(errors="ignore") if client_rid else None)
         ctx = RequestContext(
             request_id=rid,
             method=scope.get("method", ""),
@@ -51,11 +52,15 @@ class RequestContextMiddleware:
 
             await self.app(scope, receive, send_wrapper)
         except Exception as exc:
+            # FastAPI 将泛 Exception 挂在最外层 ServerErrorMiddleware，
+            # ExceptionMiddleware 会 re-raise，故本分支是未捕获异常的主路径
+            # （勿当作死代码删除）。此时 response_started 恒为 False，响应经
+            # send_wrapper 发送以回显 X-Request-ID。
             from app.api.errors import handle_unhandled
 
             response = handle_unhandled(Request(scope), exc)
             if not response_started:
-                await response(scope, receive, send)
+                await response(scope, receive, send_wrapper)
             else:
                 raise
         finally:
