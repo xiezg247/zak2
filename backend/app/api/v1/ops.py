@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.db import get_db
+from app.core.errors import AppError, NotFound, ValidationFailed
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.schemas.ops import (
@@ -164,19 +165,19 @@ def patch_scheduler_job(
 ) -> ApiResponse[SchedulerJobOut]:
     _ = user
     if job_id not in JOBS_BY_ID:
-        raise HTTPException(status_code=404, detail="未知任务")
+        raise NotFound("未知任务")
     kind = ops_scheduler.job_kind_for(job_id)
     if kind != "runnable" and body.enabled:
         detail = "独立进程请启动 quote-collector" if kind == "process" else "未实现任务不可启用"
-        raise HTTPException(status_code=400, detail=detail)
+        raise ValidationFailed(detail)
     try:
         ops_scheduler.patch_job_enabled(db, job_id, body.enabled)
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail="未知任务") from exc
+        raise NotFound("未知任务") from exc
     for row in ops_scheduler.list_scheduler_jobs(db):
         if row.job_id == job_id:
             return ApiResponse(data=row)
-    raise HTTPException(status_code=404, detail="未知任务")
+    raise NotFound("未知任务")
 
 
 @router.post("/scheduler/jobs/{job_id}/run", response_model=ApiResponse[JobAccepted])
@@ -184,12 +185,11 @@ async def run_scheduler_job(job_id: str, user: User = Depends(get_current_user))
     kind = ops_scheduler.job_kind_for(job_id)
     if kind != "runnable":
         detail = "独立进程请启动 quote-collector" if kind == "process" else "未实现任务不可执行"
-        raise HTTPException(status_code=400, detail=detail)
+        raise ValidationFailed(detail)
     if job_id not in RUNNERS:
-        raise HTTPException(
-            status_code=501,
-            detail=f"zak2 暂不支持执行该任务，请用 CLI：job run {job_id}",
-        )
+        exc = AppError(f"zak2 暂不支持执行该任务，请用 CLI：job run {job_id}")
+        exc.status_code = 501
+        raise exc
     arq_id = await enqueue_ops_job(job_id, user_id=str(user.id), force=True)
     return ApiResponse(data=JobAccepted(job_id=arq_id, kind=f"ops.{job_id}"))
 

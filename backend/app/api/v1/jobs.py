@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
 from app.api.deps import get_current_user
+from app.core.errors import NotFound
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.schemas.screener import JobOut
@@ -22,5 +23,5 @@ async def get_job(job_id: str, user: User = Depends(get_current_user)) -> ApiRes
     _ = user
     job = await get_job_out(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise NotFound("任务不存在")
     return ApiResponse(data=job)
