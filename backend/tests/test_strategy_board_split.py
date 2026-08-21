@@ -10,8 +10,8 @@ from app.services.strategy.strategy_board_calc import (
     enrich_position_risk,
 )
 from app.services.strategy.strategy_board_config import (
-    DEFAULT_CONFIG_KEY,
     ALL_SIGNAL_MODES,
+    DEFAULT_CONFIG_KEY,
     bars_limit_for,
     resolve_board_config_key,
     resolve_config_key,
@@ -41,6 +41,7 @@ def test_strategy_board_still_exposes_all() -> None:
         "DEFAULT_CONFIG_KEY",
         "SIGNAL_MODE_HEURISTIC",
         "ALL_SIGNAL_MODES",
+        "BAR_LIMIT",
         "bars_limit_for",
         "resolve_config_key",
         "resolve_board_config_key",
@@ -52,6 +53,7 @@ def test_strategy_board_still_exposes_all() -> None:
         "_signal_label",
         "enrich_position_risk",
         "_pack_signal_row",
+        "_mode_note",
         "load_strategy_board",
         "get_quote_store",
         "repo",

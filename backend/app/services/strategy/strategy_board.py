@@ -10,30 +10,26 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.domains.market.quotes import get_quote_store
-from app.domains.watchlist import positions_repo
+from app.domains.watchlist import positions_repo, signal_panel_repo
 from app.domains.watchlist import repository as repo
-from app.domains.watchlist import signal_panel_repo
 from app.domains.watchlist.trading_risk import (
     compute_actual_position_pct,
     load_trading_risk_prefs,
 )
-from app.services.symbols import to_tf_symbol, to_vt_symbol
 from app.services.strategy.strategy_board_calc import (
     _compute_snapshot,
     _load_daily_bars_map,
     _pack_signal_row,
-    _parse_payload,
     _safe_float,
     _signal_label,
     _t1_locked,
     enrich_position_risk,
 )
+from app.services.strategy.strategy_board_calc import (
+    _parse_payload as _parse_payload,
+)
 from app.services.strategy.strategy_board_config import (
     ALL_SIGNAL_MODES,
-    BAR_LIMIT,
-    DEFAULT_CONFIG_KEY,
-    DEFAULT_DOUBLE_MA_FAST,
-    DEFAULT_DOUBLE_MA_SLOW,
     SIGNAL_MODE_ATR_BREAKOUT,
     SIGNAL_MODE_BOLLINGER,
     SIGNAL_MODE_DONCHIAN,
@@ -45,8 +41,23 @@ from app.services.strategy.strategy_board_config import (
     SIGNAL_MODE_TREND_MA,
     bars_limit_for,
     resolve_board_config_key,
-    resolve_config_key,
 )
+from app.services.strategy.strategy_board_config import (
+    BAR_LIMIT as BAR_LIMIT,
+)
+from app.services.strategy.strategy_board_config import (
+    DEFAULT_CONFIG_KEY as DEFAULT_CONFIG_KEY,
+)
+from app.services.strategy.strategy_board_config import (
+    DEFAULT_DOUBLE_MA_FAST as DEFAULT_DOUBLE_MA_FAST,
+)
+from app.services.strategy.strategy_board_config import (
+    DEFAULT_DOUBLE_MA_SLOW as DEFAULT_DOUBLE_MA_SLOW,
+)
+from app.services.strategy.strategy_board_config import (
+    resolve_config_key as resolve_config_key,
+)
+from app.services.symbols import to_tf_symbol, to_vt_symbol
 
 
 def load_strategy_board(

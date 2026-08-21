@@ -11,8 +11,20 @@ from sqlalchemy.orm import Session
 
 from app.core.time import china_today
 from app.models.bars import DbBarData
-from app.services.symbols import normalize_exchange, to_vt_symbol
 from app.services.strategy.position_risk_tags import compute_position_risk_tags, primary_risk_tag
+from app.services.strategy.strategy_board_config import (
+    BAR_LIMIT,
+    DEFAULT_DOUBLE_MA_FAST,
+    DEFAULT_DOUBLE_MA_SLOW,
+    SIGNAL_MODE_ATR_BREAKOUT,
+    SIGNAL_MODE_BOLLINGER,
+    SIGNAL_MODE_DONCHIAN,
+    SIGNAL_MODE_DOUBLE_MA,
+    SIGNAL_MODE_MA_BAND,
+    SIGNAL_MODE_MEDIUM_SWING,
+    SIGNAL_MODE_RSI_REVERSAL,
+    SIGNAL_MODE_TREND_MA,
+)
 from app.services.strategy.strategy_signal_extra import (
     compute_atr_breakout_signal,
     compute_bollinger_signal,
@@ -27,19 +39,7 @@ from app.services.strategy.strategy_signal_ma import (
     compute_trend_ma_signal,
     parse_config_key,
 )
-from app.services.strategy.strategy_board_config import (
-    BAR_LIMIT,
-    DEFAULT_DOUBLE_MA_FAST,
-    DEFAULT_DOUBLE_MA_SLOW,
-    SIGNAL_MODE_ATR_BREAKOUT,
-    SIGNAL_MODE_BOLLINGER,
-    SIGNAL_MODE_DONCHIAN,
-    SIGNAL_MODE_DOUBLE_MA,
-    SIGNAL_MODE_MA_BAND,
-    SIGNAL_MODE_MEDIUM_SWING,
-    SIGNAL_MODE_RSI_REVERSAL,
-    SIGNAL_MODE_TREND_MA,
-)
+from app.services.symbols import normalize_exchange, to_vt_symbol
 
 
 def _safe_float(value: Any) -> float | None:
