@@ -10,7 +10,9 @@
 
 ## 兼容
 
-迁移期间旧路径（`app.api.v1.*`、`app.repositories.*`、`app.services.notify`）仅允许 thin re-export。
+迁移期结束（Phase 6）：旧路径（`app.api.v1.*`、`app.repositories.*`、`app.services.{market,screener,radar,emotion,backtest,content,notify,plan}`）兼容壳已全部拆除，消费方统一走 `app.domains.*`，无双路径实现。
+
+`app/repositories/` 仅保留横切 `base.py` / `pagination.py` 与未迁域 `chat.py`；`app/services/` 保留未迁域实现（`ai` / `ops` / `team` / `quote_collect` / `strategy` / `symbols.py` / `zak_import.py`），可单向依赖 `app.domains.*`。
 
 详见 `docs/superpowers/specs/2026-08-20-backend-architecture-refactor-design.md`。
 
@@ -26,3 +28,4 @@
 - backtest（schemas/repository/services/薄 router，Phase 4 Task 5）
 - auto_schedules（自动选股计划 CRUD/执行/轮询，Phase 5 Task 1–2）
 - ops / jobs 路由与 services/ops 异常统一（HTTPException → AppError，Phase 5 Task 3–4）
+- 拆除全部兼容壳，消费方统一 `app.domains.*`（Phase 6 Task 1–6）
