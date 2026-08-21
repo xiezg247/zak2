@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.errors import AppError
 from app.schemas.ops import SyncResult
 from app.services.market import tushare_client as ts
 from app.services.ops.scheduler import save_job_run_meta
@@ -110,11 +110,9 @@ def sync_universe(db: Session) -> SyncResult:
             message += f"（跳过 {skipped}）"
         save_job_run_meta(db, JOB_ID, last_message=message, last_success=True)
         return SyncResult(success=True, message=message, extra={"count": count, "skipped": skipped})
-    except HTTPException as exc:
+    except AppError as exc:
         db.rollback()
-        detail = exc.detail
-        message = detail if isinstance(detail, str) else str(detail)
-        return _fail(db, message)
+        return _fail(db, str(exc.message))
     except Exception as exc:
         db.rollback()
         return _fail(db, f"同步 A 股列表失败：{exc}")

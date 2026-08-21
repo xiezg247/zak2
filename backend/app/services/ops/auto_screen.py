@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.errors import AppError
 from app.repositories import screener as repo
 from app.schemas.ops import SyncResult
 from app.schemas.screener import RecipeRunRequest
@@ -87,8 +87,8 @@ def _run_auto_screen(
     try:
         # cron / 立即执行均用该 user_id 的权重（embedded 侧为 SCHEDULER_SCREEN_USER_ID）
         result = run_recipe_screen(req, previous_symbols=prev, db=db, user_id=user_id)
-    except HTTPException as exc:
-        message = str(exc.detail)
+    except AppError as exc:
+        message = str(exc.message)
         save_job_run_meta(db, job_id, last_message=message, last_success=False)
         return SyncResult(success=False, message=message)
 
