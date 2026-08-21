@@ -38,7 +38,7 @@ def test_tools_registered() -> None:
         "run_skill",
         *write,
     }
-    assert set(TOOL_HANDLERS) == names - write
+    assert set(TOOL_HANDLERS) == names
 
 
 def test_read_position_tools_registered_not_write() -> None:

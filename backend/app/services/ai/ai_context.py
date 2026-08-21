@@ -5,10 +5,10 @@ from __future__ import annotations
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
+from app.domains.market import overview as market_svc
 from app.models.backtest import BacktestRun
 from app.models.screener import ScreenerRun
 from app.models.watchlist import WatchlistItem
-from app.domains.market import overview as market_svc
 
 
 def build_context_brief(db: Session, user_id: str) -> str:
