@@ -20,4 +20,7 @@
 - `content`（notes / feed / playbook / notify_log，Phase 2）
 - watchlist（自选/分组/持仓/信号面板/trading_risk，Phase 3）
 - screener（选股 schemas/repository/services，Phase 4 Task 1）
+- screener 薄 router（Phase 4 Task 2）
 - market / radar / emotion（行情/雷达/情绪服务与 market schemas，Phase 4 Task 3）
+- market / radar / emotion 薄 router（Phase 4 Task 4）
+- backtest（schemas/repository/services/薄 router，Phase 4 Task 5）
