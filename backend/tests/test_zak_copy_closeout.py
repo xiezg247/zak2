@@ -3,19 +3,19 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi import HTTPException
 
+from app.core.errors import NotFound, Unavailable
+from app.domains.backtest.backtest_engine import load_daily_bars
+from app.domains.market import bars
+from app.domains.screener import engine, pattern_screen
 from app.schemas.screener import PatternRunRequest
-from app.services.backtest.backtest_engine import load_daily_bars
-from app.services.market import bars
-from app.services.screener import engine, pattern_screen
 
 
 def test_require_quotes_empty_points_to_collector() -> None:
     store = MagicMock()
     store.available.return_value = True
     store.meta.return_value = {"quote_count": 0}
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(Unavailable) as ei:
         engine._require_quotes(store)
     assert ei.value.status_code == 503
     assert "quote-collector" in ei.value.detail
@@ -27,7 +27,7 @@ def test_pattern_screen_empty_quotes_points_to_collector() -> None:
     store = MagicMock()
     store.available.return_value = True
     store.meta.return_value = {"quote_count": 0}
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(Unavailable) as ei:
         pattern_screen.run_pattern_screen(
             PatternRunRequest(pattern_id="ma_bull", top_n=5, max_scan=50),
             db=MagicMock(),
@@ -41,7 +41,7 @@ def test_pattern_screen_empty_quotes_points_to_collector() -> None:
 def test_load_daily_bars_insufficient_points_to_ops() -> None:
     db = MagicMock()
     db.scalars.return_value = []  # 0 bars → len < 30
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(NotFound) as ei:
         load_daily_bars(
             db,
             vt_symbol="SHSE.600519",
@@ -57,7 +57,7 @@ def test_load_daily_bars_insufficient_points_to_ops() -> None:
 def test_load_bars_empty_points_to_ops() -> None:
     db = MagicMock()
     db.scalars.return_value = []
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(NotFound) as ei:
         bars.load_bars(db, symbol="600519", exchange="SHSE")
     assert ei.value.status_code == 404
     assert "Ops" in ei.value.detail

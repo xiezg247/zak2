@@ -11,8 +11,8 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.services.market import stock_industry as si
-from app.services.market.quotes import QuoteRow
+from app.domains.market import stock_industry as si
+from app.domains.market.quotes import QuoteRow
 
 
 def _row(symbol: str, industry: str = "") -> QuoteRow:
@@ -98,7 +98,7 @@ def _api_client(user: User | None = None) -> TestClient:
 
 def test_industries_api() -> None:
     client = _api_client()
-    with patch("app.api.v1.screener.list_industry_names", return_value=["白酒", "银行"]):
+    with patch("app.domains.screener.service.list_industry_names", return_value=["白酒", "银行"]):
         resp = client.get("/api/v1/screener/industries")
     assert resp.status_code == 200
     assert resp.json()["data"] == {"items": ["白酒", "银行"]}

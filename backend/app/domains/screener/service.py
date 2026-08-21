@@ -45,8 +45,8 @@ from app.domains.screener.schemas import (
     SchemeUpdate,
 )
 from app.schemas.common import PageOut
-from app.services.market.quotes import get_quote_store
-from app.services.market.stock_industry import list_industry_names
+from app.domains.market.quotes import get_quote_store
+from app.domains.market.stock_industry import list_industry_names
 from app.services.ops.arq_jobs import SCREENER_FUNCS, enqueue_app_job
 
 
