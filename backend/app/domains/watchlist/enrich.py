@@ -7,9 +7,9 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.domains.watchlist.schemas import WatchlistItemOut
-from app.services.market.quotes import QuoteRow, get_quote_store
-from app.services.market.stock_industry import enrich_rows_from_db
-from app.services.market.suspend import load_suspended_vt_symbols
+from app.domains.market.quotes import QuoteRow, get_quote_store
+from app.domains.market.stock_industry import enrich_rows_from_db
+from app.domains.market.suspend import load_suspended_vt_symbols
 from app.services.symbols import to_tf_symbol, to_vt_symbol
 
 

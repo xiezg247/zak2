@@ -10,9 +10,9 @@ from app.core.errors import ValidationFailed
 
 from app.schemas.market import RadarResonanceEntry
 from app.domains.screener.schemas import HardFilterPrefs
-from app.services.market.quotes import QuoteRow
-from app.services.radar.cards import list_radar_cards
-from app.services.radar.radar_resonance import list_radar_resonance
+from app.domains.market.quotes import QuoteRow
+from app.domains.radar.cards import list_radar_cards
+from app.domains.radar.radar_resonance import list_radar_resonance
 from app.services.symbols import parse_flexible_symbol, to_tf_symbol
 
 

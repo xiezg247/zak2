@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 from app.core.errors import AppError, Unavailable, ValidationFailed
 
 from app.domains.screener.schemas import ConditionRunRequest, HardFilterPrefs, RecipeRunRequest
-from app.services.market import stock_industry, tushare_screener
-from app.services.market.quotes import QuoteRow, QuoteStore, get_quote_store
-from app.services.market.suspend import load_suspended_vt_symbols
+from app.domains.market import stock_industry, tushare_screener
+from app.domains.market.quotes import QuoteRow, QuoteStore, get_quote_store
+from app.domains.market.suspend import load_suspended_vt_symbols
 from app.domains.screener import recipe_weights as recipe_weights_svc
 from app.domains.screener.hard_filters import apply_hard_filters, resolve_hard_filter
 from app.domains.screener.presets import get_builtin_recipe, get_preset

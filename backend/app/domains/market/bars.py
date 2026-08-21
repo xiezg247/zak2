@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.bars import DbBarData
-from app.schemas.watchlist import BarOut, BarsResponse
+from app.domains.watchlist.schemas import BarOut, BarsResponse
 from app.services.symbols import normalize_exchange, to_vt_symbol
 
 

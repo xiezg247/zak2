@@ -8,10 +8,10 @@ from app.core.errors import Unavailable
 from app.domains.watchlist.enrich import _opt_field, _opt_price
 from app.domains.watchlist.repository import resolve_symbol_pair
 from app.domains.watchlist.schemas import BarsResponse, FundamentalsOut, QuoteOut
-from app.services.market import fundamentals as fundamentals_svc
-from app.services.market.bars import load_bars
-from app.services.market.quotes import QuoteRow, get_quote_store
-from app.services.market.stock_industry import enrich_rows_from_db
+from app.domains.market import fundamentals as fundamentals_svc
+from app.domains.market.bars import load_bars
+from app.domains.market.quotes import QuoteRow, get_quote_store
+from app.domains.market.stock_industry import enrich_rows_from_db
 from app.services.symbols import normalize_exchange, to_tf_symbol, to_vt_symbol
 
 

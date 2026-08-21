@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.notify import NotifyDeliveryLog
-from app.schemas.watchlist import NotifyLogItem, NotifyLogOut
+from app.domains.watchlist.schemas import NotifyLogItem, NotifyLogOut
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 100

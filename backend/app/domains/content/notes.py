@@ -9,7 +9,7 @@ from app.core.errors import NotFound, ValidationFailed
 from app.domains.content.schemas import NoteEntryOut, NoteMemoOut, NoteSymbolOut
 from app.models.content import StockNoteEntry, StockNoteMemo
 from app.repositories.pagination import Page, paginate
-from app.repositories.watchlist import resolve_symbol_pair
+from app.domains.watchlist.repository import resolve_symbol_pair
 from app.services.symbols import to_vt_symbol
 
 

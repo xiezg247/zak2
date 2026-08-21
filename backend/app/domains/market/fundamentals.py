@@ -6,7 +6,7 @@ from app.core.errors import ValidationFailed
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.schemas.watchlist import DisclosureOut, FinancialSnapshotOut, FinancialSyncOut, FundamentalsOut
+from app.domains.watchlist.schemas import DisclosureOut, FinancialSnapshotOut, FinancialSyncOut, FundamentalsOut
 from app.domains.market.bar_download import to_ts_code
 from app.services.symbols import parse_flexible_symbol, to_vt_symbol
 

@@ -213,7 +213,7 @@ def _synth_volume_surge() -> RadarCardOut | None:
 
 
 def _synth_leader_pick(db: Session) -> RadarCardOut:
-    from app.services.screener import leader_screen
+    from app.domains.screener import leader_screen
 
     rows, subtitle, empty = leader_screen.synth_leader_pick_rows(db, top_n=12, variant="mainline")
     return RadarCardOut(

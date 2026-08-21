@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.repositories.watchlist import resolve_symbol_pair
+from app.domains.watchlist.repository import resolve_symbol_pair
 from app.domains.market.schemas import RadarPredictOut, RadarPredictRow
 
 MODEL_LABEL = "rules_v1"

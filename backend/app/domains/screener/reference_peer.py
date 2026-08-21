@@ -11,11 +11,11 @@ from sqlalchemy.orm import Session
 from app.core.errors import AppError, NotFound, Unavailable, ValidationFailed
 
 from app.domains.screener.schemas import ReferencePeerRequest
-from app.services.market import stock_industry
-from app.services.market import tushare_client as ts
-from app.services.market.quotes import QuoteRow, get_quote_store
-from app.services.market.suspend import load_suspended_vt_symbols
-from app.services.market.tushare_screener import (
+from app.domains.market import stock_industry
+from app.domains.market import tushare_client as ts
+from app.domains.market.quotes import QuoteRow, get_quote_store
+from app.domains.market.suspend import load_suspended_vt_symbols
+from app.domains.market.tushare_screener import (
     _fetch_with_lookback,
     _iter_trade_dates,
     fetch_daily_basic_rows,

@@ -12,9 +12,9 @@ from app.core.errors import Unavailable, ValidationFailed
 
 from app.models.bars import DbBarData
 from app.domains.screener.schemas import PatternRunRequest
-from app.services.market import stock_industry
-from app.services.market.quotes import QuoteRow, QuoteStore, get_quote_store
-from app.services.market.suspend import load_suspended_vt_symbols
+from app.domains.market import stock_industry
+from app.domains.market.quotes import QuoteRow, QuoteStore, get_quote_store
+from app.domains.market.suspend import load_suspended_vt_symbols
 from app.domains.screener.hard_filters import apply_hard_filters, resolve_hard_filter
 from app.domains.screener.pattern_rules import (
     PATTERN_META,

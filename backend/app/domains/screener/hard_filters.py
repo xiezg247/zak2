@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.domains.screener.schemas import HardFilterPrefs, HardFilterTemplate
-from app.services.market.quotes import QuoteRow, _to_vt_symbol
+from app.domains.market.quotes import QuoteRow, _to_vt_symbol
 
 TEMPLATES: list[HardFilterTemplate] = [
     HardFilterTemplate(
