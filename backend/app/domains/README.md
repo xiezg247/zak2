@@ -24,3 +24,5 @@
 - market / radar / emotion（行情/雷达/情绪服务与 market schemas，Phase 4 Task 3）
 - market / radar / emotion 薄 router（Phase 4 Task 4）
 - backtest（schemas/repository/services/薄 router，Phase 4 Task 5）
+- auto_schedules（自动选股计划 CRUD/执行/轮询，Phase 5 Task 1–2）
+- ops / jobs 路由与 services/ops 异常统一（HTTPException → AppError，Phase 5 Task 3–4）
