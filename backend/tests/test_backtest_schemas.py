@@ -1,4 +1,4 @@
-from app.schemas.backtest import BacktestRunRequest, OptimizeBacktestRequest
+from app.domains.backtest.schemas import BacktestRunRequest, OptimizeBacktestRequest
 
 
 def test_run_request_fee_defaults():

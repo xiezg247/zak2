@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from app.schemas.ops import SyncResult
-from app.services.ops.auto_schedule import run_task
+from app.domains.auto_schedules.service import run_task
 from app.worker.tasks_auto_schedule import run_auto_schedule_task
 
 
@@ -26,7 +26,7 @@ def _task(*, enabled: bool = True) -> SimpleNamespace:
 
 def test_run_task_missing() -> None:
     db = MagicMock()
-    with patch("app.repositories.auto_schedule.AutoScheduleRepository.get_any", return_value=None):
+    with patch("app.domains.auto_schedules.repository.AutoScheduleRepository.get_any", return_value=None):
         out = run_task(db, 99)
     assert out.success is False
     assert out.skipped is True
@@ -34,7 +34,7 @@ def test_run_task_missing() -> None:
 
 def test_run_task_disabled() -> None:
     db = MagicMock()
-    with patch("app.repositories.auto_schedule.AutoScheduleRepository.get_any", return_value=_task(enabled=False)):
+    with patch("app.domains.auto_schedules.repository.AutoScheduleRepository.get_any", return_value=_task(enabled=False)):
         out = run_task(db, 7)
     assert out.success is False
     assert out.skipped is True
@@ -52,11 +52,11 @@ def test_run_task_success() -> None:
     fake_run = MagicMock(id="run-a")
     task = _task()
     with (
-        patch("app.repositories.auto_schedule.AutoScheduleRepository.get_any", return_value=task),
+        patch("app.domains.auto_schedules.repository.AutoScheduleRepository.get_any", return_value=task),
         patch("app.domains.screener.repository.ScreenerRunRepository.latest_run_symbols", return_value=None),
-        patch("app.services.ops.auto_schedule.run_recipe_screen", return_value=fake_result),
+        patch("app.domains.auto_schedules.service.run_recipe_screen", return_value=fake_result),
         patch("app.domains.screener.repository.ScreenerRunRepository.save_run", return_value=fake_run) as save,
-        patch("app.services.ops.auto_schedule.notify_delivery.deliver_text") as deliver,
+        patch("app.domains.auto_schedules.service.notify_delivery.deliver_text") as deliver,
     ):
         out = run_task(db, 7)
     assert out.success is True
@@ -75,8 +75,8 @@ def test_run_task_unknown_recipe() -> None:
     task = _task()
     task.recipe_id = "nope"
     with (
-        patch("app.repositories.auto_schedule.AutoScheduleRepository.get_any", return_value=task),
-        patch("app.services.ops.auto_schedule.run_recipe_screen"),
+        patch("app.domains.auto_schedules.repository.AutoScheduleRepository.get_any", return_value=task),
+        patch("app.domains.auto_schedules.service.run_recipe_screen"),
     ):
         out = run_task(db, 7)
     assert out.success is False
@@ -90,12 +90,12 @@ def test_run_task_push_failure_does_not_raise() -> None:
     fake_run = MagicMock(id="run-b")
     task = _task()
     with (
-        patch("app.repositories.auto_schedule.AutoScheduleRepository.get_any", return_value=task),
+        patch("app.domains.auto_schedules.repository.AutoScheduleRepository.get_any", return_value=task),
         patch("app.domains.screener.repository.ScreenerRunRepository.latest_run_symbols", return_value=None),
-        patch("app.services.ops.auto_schedule.run_recipe_screen", return_value=fake_result),
+        patch("app.domains.auto_schedules.service.run_recipe_screen", return_value=fake_result),
         patch("app.domains.screener.repository.ScreenerRunRepository.save_run", return_value=fake_run),
         patch(
-            "app.services.ops.auto_schedule.notify_delivery.deliver_text",
+            "app.domains.auto_schedules.service.notify_delivery.deliver_text",
             side_effect=Exception("db down"),
         ),
     ):

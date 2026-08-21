@@ -9,7 +9,7 @@ pytest.importorskip("vnpy_ctastrategy")
 
 @pytest.mark.vnpy
 def test_run_cta_backtest_synthetic():
-    from app.services.backtest.backtest_vnpy import run_cta_backtest
+    from app.domains.backtest.backtest_vnpy import run_cta_backtest
 
     start = datetime(2024, 1, 2)
     records = []

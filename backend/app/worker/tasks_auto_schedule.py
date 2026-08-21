@@ -6,7 +6,7 @@ import asyncio
 from typing import Any
 
 from app.core.db import SessionLocal
-from app.services.ops import auto_schedule as ops_auto_schedule
+from app.domains.auto_schedules import service as ops_auto_schedule
 
 
 def _run(task_id: int) -> dict[str, Any]:

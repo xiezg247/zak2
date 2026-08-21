@@ -98,7 +98,7 @@ def _run_job(job_id: str) -> None:
 def _run_auto_schedule_poll() -> None:
     """每分钟扫描自动任务，命中当前时刻者入队 ARQ。"""
     from app.core.time import china_now
-    from app.services.ops.auto_schedule import poll_due_tasks
+    from app.domains.auto_schedules.service import poll_due_tasks
 
     db = SessionLocal()
     try:

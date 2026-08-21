@@ -1,7 +1,7 @@
 import pytest
 
-from app.schemas.backtest import BacktestRunRequest
-from app.services.backtest.backtest_settings import build_strategy_setting, min_bars_for_request
+from app.domains.backtest.backtest_settings import build_strategy_setting, min_bars_for_request
+from app.domains.backtest.schemas import BacktestRunRequest
 from app.strategies.cta.registry import get_strategy_class
 
 NEW_STRATEGIES = {

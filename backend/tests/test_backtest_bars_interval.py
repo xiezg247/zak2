@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 import pytest
 
 from app.core.errors import ValidationFailed
-from app.schemas.backtest import BacktestRunRequest
-from app.services.backtest.backtest_bars import Bar, count_trading_days, load_bars
-from app.services.backtest.backtest_settings import min_bars_for_request
+from app.domains.backtest.backtest_bars import Bar, count_trading_days, load_bars
+from app.domains.backtest.backtest_settings import min_bars_for_request
+from app.domains.backtest.schemas import BacktestRunRequest
 
 
 def test_count_trading_days():

@@ -11,7 +11,7 @@ pytest.importorskip("vnpy_ctastrategy")
 def test_vnpy_interval_mapping():
     from vnpy.trader.constant import Interval
 
-    from app.services.backtest.backtest_vnpy import vnpy_interval
+    from app.domains.backtest.backtest_vnpy import vnpy_interval
 
     assert vnpy_interval("d") == Interval.DAILY
     assert vnpy_interval("1m") == Interval.MINUTE
@@ -21,7 +21,7 @@ def test_vnpy_interval_mapping():
 
 @pytest.mark.vnpy
 def test_run_cta_backtest_1m_synthetic():
-    from app.services.backtest.backtest_vnpy import run_cta_backtest
+    from app.domains.backtest.backtest_vnpy import run_cta_backtest
 
     start = datetime(2024, 1, 2, 9, 30)
     records = []

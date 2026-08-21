@@ -9,7 +9,7 @@ from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
-from app.repositories import backtest as backtest_repo
+from app.domains.backtest import repository as backtest_repo
 from app.domains.content import notes
 from app.domains.market import bars
 from app.domains.watchlist import positions_repo

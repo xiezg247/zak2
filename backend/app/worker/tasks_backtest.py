@@ -14,11 +14,11 @@ from sqlalchemy.orm import Session
 
 from app.core.db import SessionLocal
 from app.core.settings import get_settings
-from app.repositories import backtest as repo
-from app.schemas.backtest import BacktestRunRequest, BatchBacktestRequest, OptimizeBacktestRequest
-from app.services.backtest.backtest_bars import bars_to_records
-from app.services.backtest.backtest_optimize import expand_ma_grid
-from app.services.backtest.backtest_settings import build_strategy_setting
+from app.domains.backtest import repository as repo
+from app.domains.backtest.backtest_bars import bars_to_records
+from app.domains.backtest.backtest_optimize import expand_ma_grid
+from app.domains.backtest.backtest_settings import build_strategy_setting
+from app.domains.backtest.schemas import BacktestRunRequest, BatchBacktestRequest, OptimizeBacktestRequest
 
 
 def _fail(exc: BaseException) -> dict[str, Any]:

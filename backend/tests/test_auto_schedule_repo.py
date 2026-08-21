@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from app.models.auto_schedule import AutoSchedule
-from app.repositories.auto_schedule import AutoScheduleRepository
+from app.domains.auto_schedules.repository import AutoScheduleRepository
 
 
 def _row() -> SimpleNamespace:

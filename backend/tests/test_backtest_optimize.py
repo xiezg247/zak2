@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.backtest.backtest_optimize import expand_ma_grid, pick_best
+from app.domains.backtest.backtest_optimize import expand_ma_grid, pick_best
 
 
 def test_expand_filters_fast_ge_slow():

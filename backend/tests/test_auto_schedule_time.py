@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 
 from app.core.time import CHINA_TZ
-from app.services.ops.auto_schedule_time import (
+from app.domains.auto_schedules.auto_schedule_time import (
     matches_now,
     parse_days_of_week,
     parse_times,

@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 import pytest
 
 from app.core.errors import AppError
-from app.schemas.backtest import BacktestRunRequest
-from app.services.backtest.backtest_settings import build_strategy_setting, min_bars_for_request
+from app.domains.backtest.backtest_settings import build_strategy_setting, min_bars_for_request
+from app.domains.backtest.schemas import BacktestRunRequest
 from app.strategies.cta.registry import get_strategy_class
 
 
@@ -31,7 +31,7 @@ def test_build_setting_and_min_bars():
 
 
 def test_execute_unknown_strategy_501():
-    from app.repositories import backtest as repo
+    from app.domains.backtest import repository as repo
 
     class DummyDb:
         pass
@@ -51,7 +51,7 @@ def test_registry_trend_ma():
 @pytest.mark.vnpy
 def test_run_cta_trend_ma_synthetic():
     pytest.importorskip("vnpy_ctastrategy")
-    from app.services.backtest.backtest_vnpy import run_cta_backtest
+    from app.domains.backtest.backtest_vnpy import run_cta_backtest
 
     start = datetime(2020, 1, 2)
     records = []
