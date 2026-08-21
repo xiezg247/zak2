@@ -11,23 +11,27 @@
 ## Global Constraints
 
 - **行为零变化**：REST/JWT/公开 API/算法/返回值一字不变；消费者 import 路径不变（`app.services.ai.ai_tools`、`app.services.strategy.strategy_board` 均保留全部原符号）
-- **patch 兼容（strategy_board）**：`test_strategy_board.py` 用 `patch.object(strategy_board, "_load_daily_bars_map")` 等 19 处 patch **strategy_board 模块属性**，因此 `strategy_board.py` 必须 `from ...strategy_board_calc import _load_daily_bars_map, ...`（等从子模块导入的名字）作为模块级属性，让 `load_strategy_board` 通过模块全局名引用——patch 才生效
+- **patch 兼容（strategy_board）**：`test_strategy_board.py` 用 `patch.object(strategy_board, "_load_daily_bars_map")` 等 19 处 patch **strategy_board 模块属性**，因此 `strategy_board.py` 必须 `from ...strategy_board_calc import _load_daily_bars_map, ...`（从子模块导入的名字）作为模块级属性，让 `load_strategy_board` 通过模块全局名引用——patch 才生效
 - **patch 路径更新（ai_tools）**：`test_ai_write_positions.py` 中 4 处 `patch("app.services.ai.ai_tools.watchlist_repo.resolve_symbol_pair")` 必须改为 `patch("app.services.ai.tools.write.watchlist_repo.resolve_symbol_pair")`（写 handler 已迁入 `write.py`，其引用 `write.py` 模块级 `watchlist_repo`）
 - **依赖方向**：`strategy_board_config.py` 不依赖 `_calc`；`_calc` 依赖 `_config` 常量与 `bars_limit_for`/`parse_config_key`；`strategy_board.py` 依赖两者。禁止反向依赖（无循环导入）
-- 拆分子模块只做**原样搬移 + import 调整**，不重写函数内部逻辑（唯一例外：`summarize_write_tool` 表驱动重构，行为逐分支等价）
+- 拆分子模块只做**原样搬移 + import 调整**，不重写函数内部逻辑（唯一例外：Task 2 的 `summarize_write_tool` 表驱动重构，行为逐分支等价）
 - 保留各 handler 函数内延迟 import（如 `read.py` 中 `from app.services.ai import ai_read_tools`），不改动
+- **每个 commit 前相关测试全绿**（不得携带红测提交）
 - commit 简体中文 `<type>(<scope>): <简述>`
-- 每个 commit 前跑相关测试绿；终验跑全量 `uv run pytest -q --tb=short`
+- 终验跑全量 `uv run pytest -q --tb=short`
 
 ---
 
-### Task 1: ai_tools 子包骨架（`_common.py` + `read.py`）
+### Task 1: ai_tools 子包全量迁移 + 收敛编排（保持全绿）
 
 **Files:**
 - Create: `backend/app/services/ai/tools/__init__.py`
 - Create: `backend/app/services/ai/tools/_common.py`
 - Create: `backend/app/services/ai/tools/read.py`
-- Modify: `backend/app/services/ai/ai_tools.py`（删除已迁出的 11 个只读 handler 与对应定义，聚合 `READ_HANDLERS`/`READ_DEFINITIONS`，从 `_common` 导入 `_truncate`/`_parse_args`）
+- Create: `backend/app/services/ai/tools/skills.py`
+- Create: `backend/app/services/ai/tools/write.py`
+- Modify: `backend/app/services/ai/ai_tools.py`（删除全部已迁出函数，收敛为纯编排 + 聚合注册表）
+- Modify: `backend/tests/test_ai_write_positions.py`（4 处 patch 路径）
 - Test: `backend/tests/test_ai_tools_split.py`（新增）
 
 **Interfaces:**
@@ -35,19 +39,28 @@
 - Produces:
   - `app.services.ai.tools._common`: `MAX_RESULT_CHARS: int = 6000`、`ToolHandler = Callable[[Session, str, dict[str, Any]], Any]`、`_truncate(payload: Any) -> str`、`_parse_args(arguments: dict[str, Any] | str | None) -> dict[str, Any]`
   - `app.services.ai.tools.read`: `READ_HANDLERS: dict[str, ToolHandler]`（11 键）、`READ_DEFINITIONS: list[dict[str, Any]]`（11 条，key 同 READ_HANDLERS）
-  - `app.services.ai.ai_tools` 保留：`TOOL_HANDLERS`（本任务先 `{**READ_HANDLERS}`，Task 2 补全）、`TOOL_DEFINITIONS`（本任务先 `[*READ_DEFINITIONS]`，Task 2 补全）、`WRITE_TOOL_NAMES`、`execute_tool`、`execute_write_tool`、`get_tool_definitions`、`summarize_write_tool`（后两者 Task 2 起从 write 聚合）
+  - `app.services.ai.tools.skills`: `SKILL_HANDLERS: dict[str, ToolHandler]`（3 键）、`SKILL_DEFINITIONS: list[dict[str, Any]]`（3 条）
+  - `app.services.ai.tools.write`: `WRITE_TOOL_NAMES: frozenset[str]`（8 键）、`WRITE_HANDLERS: dict[str, ToolHandler]`（8 键）、`WRITE_DEFINITIONS: list[dict[str, Any]]`（8 条）、`summarize_write_tool(name: str, args: dict[str, Any]) -> str`（原样搬移，Task 2 再表驱动化）
+  - `app.services.ai.ai_tools` 最终形态：`TOOL_HANDLERS = {**READ_HANDLERS, **SKILL_HANDLERS, **WRITE_HANDLERS}`、`TOOL_DEFINITIONS = [*READ_DEFINITIONS, *SKILL_DEFINITIONS, *WRITE_DEFINITIONS]`，仅保留 `logger`、`get_tool_definitions`、`execute_write_tool`、`_mcp_tool_definitions`、`_execute_mcp_tool`、`execute_tool`，re-export `WRITE_TOOL_NAMES`、`summarize_write_tool`、`_parse_args`、`MAX_RESULT_CHARS`、`ToolHandler`
 
 - [ ] **Step 1: 写失败测试**
 
 `backend/tests/test_ai_tools_split.py`：
 
 ```python
-"""ai_tools 拆分子包结构回归：_common/read 符号归属。"""
+"""ai_tools 拆分子包结构回归：子模块符号归属 + ai_tools 聚合全量。"""
 
 from __future__ import annotations
 
-from app.services.ai.tools._common import MAX_RESULT_CHARS, ToolHandler, _parse_args, _truncate
+from app.services.ai.tools._common import MAX_RESULT_CHARS, _parse_args, _truncate
 from app.services.ai.tools.read import READ_DEFINITIONS, READ_HANDLERS
+from app.services.ai.tools.skills import SKILL_DEFINITIONS, SKILL_HANDLERS
+from app.services.ai.tools.write import (
+    WRITE_DEFINITIONS,
+    WRITE_HANDLERS,
+    WRITE_TOOL_NAMES,
+    summarize_write_tool,
+)
 
 
 def test_common_module_exports() -> None:
@@ -55,10 +68,9 @@ def test_common_module_exports() -> None:
     assert _parse_args(None) == {}
     assert _parse_args('{"a": 1}') == {"a": 1}
     assert callable(_truncate)
-    assert callable(ToolHandler) is False or isinstance(ToolHandler, object)
 
 
-def test_read_module_registers_only_read_tools() -> None:
+def test_read_module_registers_11() -> None:
     names = set(READ_HANDLERS)
     assert names == {
         "get_watchlist",
@@ -74,6 +86,33 @@ def test_read_module_registers_only_read_tools() -> None:
         "get_recent_backtest",
     }
     assert {d["function"]["name"] for d in READ_DEFINITIONS} == names
+
+
+def test_skills_module_registers_3() -> None:
+    assert set(SKILL_HANDLERS) == {"list_skills", "read_skill", "run_skill"}
+    assert {d["function"]["name"] for d in SKILL_DEFINITIONS} == set(SKILL_HANDLERS)
+
+
+def test_write_module_registers_8() -> None:
+    assert set(WRITE_HANDLERS) == set(WRITE_TOOL_NAMES) == {
+        "add_watchlist",
+        "remove_watchlist",
+        "upsert_note_memo",
+        "add_note_entry",
+        "upsert_position",
+        "delete_position",
+        "add_signal_panel",
+        "remove_signal_panel",
+    }
+    assert {d["function"]["name"] for d in WRITE_DEFINITIONS} == set(WRITE_TOOL_NAMES)
+
+
+def test_ai_tools_aggregates_all() -> None:
+    from app.services.ai import ai_tools
+
+    all_names = set(READ_HANDLERS) | set(SKILL_HANDLERS) | set(WRITE_HANDLERS)
+    assert set(ai_tools.TOOL_HANDLERS) == all_names == {*WRITE_TOOL_NAMES, *ai_tools.TOOL_HANDLERS}
+    assert {d["function"]["name"] for d in ai_tools.TOOL_DEFINITIONS} == all_names
 ```
 
 - [ ] **Step 2: 运行测试确认失败**
@@ -142,7 +181,7 @@ from app.services.symbols import to_vt_symbol
 from app.services.ai.tools._common import ToolHandler
 ```
 
-文件尾追加注册表（只读 11 键）：
+文件尾追加注册表：
 
 ```python
 READ_HANDLERS: dict[str, ToolHandler] = {
@@ -166,150 +205,9 @@ READ_DEFINITIONS: list[dict[str, Any]] = [
 
 > `READ_DEFINITIONS` 的 11 条 JSON 定义从原 `ai_tools.py` 的 `TOOL_DEFINITIONS` 列表**按 key 归属原样搬移**（`get_watchlist` … `get_recent_backtest`），不做任何编辑。
 
-- [ ] **Step 5: 创建 `__init__.py`（子包聚合壳）**
+- [ ] **Step 5: 创建 `skills.py`**
 
-`backend/app/services/ai/tools/__init__.py`：
-
-```python
-"""ai_tools 拆分子包：只读 / 技能 / 写工具 + 公共工具。"""
-
-from app.services.ai.tools._common import MAX_RESULT_CHARS, ToolHandler, _parse_args, _truncate
-from app.services.ai.tools.read import READ_DEFINITIONS, READ_HANDLERS
-
-__all__ = [
-    "MAX_RESULT_CHARS",
-    "READ_DEFINITIONS",
-    "READ_HANDLERS",
-    "ToolHandler",
-    "_parse_args",
-    "_truncate",
-]
-```
-
-- [ ] **Step 6: 收敛 `ai_tools.py`（删除已迁出代码 + 聚合）**
-
-编辑 `backend/app/services/ai/ai_tools.py`：
-
-1. 删除 11 个只读 handler 函数体（`_get_watchlist` … `_get_recent_backtest`），删除顶部 `from app.domains.backtest import repository as backtest_repo`、`from app.domains.market import bars`、`from app.services.symbols import to_vt_symbol`（仅 read 使用；写 handler 还在本文件，Task 2 迁出后再清）
-2. 顶部 import 改为：
-
-```python
-from __future__ import annotations
-
-import json
-import logging
-from typing import Any, cast
-
-from sqlalchemy.orm import Session
-
-from app.domains.content import notes
-from app.domains.watchlist import positions_repo
-from app.domains.watchlist import repository as watchlist_repo
-from app.domains.watchlist import signal_panel_repo
-from app.services.ai.tools._common import MAX_RESULT_CHARS, ToolHandler, _parse_args, _truncate
-from app.services.ai.tools.read import READ_DEFINITIONS, READ_HANDLERS
-```
-
-3. `WRITE_TOOL_NAMES` 保留在本文件（Task 2 迁出），`TOOL_HANDLERS`/`TOOL_DEFINITIONS` 改为：
-
-```python
-TOOL_HANDLERS: dict[str, ToolHandler] = {**READ_HANDLERS}
-TOOL_DEFINITIONS: list[dict[str, Any]] = [*READ_DEFINITIONS]
-```
-
-> 本任务阶段 `TOOL_HANDLERS`/`TOOL_DEFINITIONS` 只含只读（Skill/写工具还在本文件，Task 2 收敛后补全）；`get_tool_definitions()`、`execute_tool`、`execute_write_tool`、`summarize_write_tool` 原样保留。
-
-- [ ] **Step 7: 运行测试确认通过**
-
-Run: `cd backend && uv run pytest tests/test_ai_tools_split.py tests/test_ai_tools.py tests/test_ai_read_tools.py -q --tb=short`
-Expected: PASS（全部绿，含既有 `test_ai_tools.py` 的 `test_tools_registered`——注意此时它断言的完整工具集可能因 Task 2 未完成而少 skills/write；若 FAIL 属预期，Task 2 完成后恢复）
-
-- [ ] **Step 8: Commit**
-
-```bash
-git add backend/app/services/ai/tools/ backend/app/services/ai/ai_tools.py backend/tests/test_ai_tools_split.py
-git commit -m "refactor(ai): ai_tools 只读工具迁入 tools 子包 read 模块"
-```
-
----
-
-### Task 2: skills + write 子模块 + summarize 表驱动重构 + ai_tools 收敛编排
-
-**Files:**
-- Create: `backend/app/services/ai/tools/skills.py`
-- Create: `backend/app/services/ai/tools/write.py`
-- Modify: `backend/app/services/ai/tools/__init__.py`（聚合全量）
-- Modify: `backend/app/services/ai/ai_tools.py`（删除 skills/write 函数，收敛为纯编排 + 聚合注册表）
-- Modify: `backend/tests/test_ai_write_positions.py`（4 处 patch 路径）
-- Modify: `backend/tests/test_ai_tools_split.py`（补 skills/write 断言）
-- Test: `backend/tests/test_ai_tools_split.py`
-
-**Interfaces:**
-- Consumes: Task 1 的 `_common`/`read`
-- Produces:
-  - `app.services.ai.tools.skills`: `SKILL_HANDLERS: dict[str, ToolHandler]`（3 键）、`SKILL_DEFINITIONS: list[dict[str, Any]]`（3 条）
-  - `app.services.ai.tools.write`: `WRITE_TOOL_NAMES: frozenset[str]`（8 键）、`WRITE_HANDLERS: dict[str, ToolHandler]`（8 键）、`WRITE_DEFINITIONS: list[dict[str, Any]]`（8 条）、`summarize_write_tool(name: str, args: dict[str, Any]) -> str`（表驱动）
-  - `ai_tools.py` 最终形态：仅保留 `logger`、`get_tool_definitions`、`execute_write_tool`、`_mcp_tool_definitions`、`_execute_mcp_tool`、`execute_tool`，聚合 `TOOL_HANDLERS = {**READ_HANDLERS, **SKILL_HANDLERS, **WRITE_HANDLERS}`、`TOOL_DEFINITIONS = [*READ_DEFINITIONS, *SKILL_DEFINITIONS, *WRITE_DEFINITIONS]`，并 re-export `WRITE_TOOL_NAMES`、`summarize_write_tool`、`_parse_args`、`MAX_RESULT_CHARS`
-
-- [ ] **Step 1: 扩展失败测试**
-
-`backend/tests/test_ai_tools_split.py` 追加：
-
-```python
-from app.services.ai.tools.skills import SKILL_DEFINITIONS, SKILL_HANDLERS
-from app.services.ai.tools.write import (
-    WRITE_DEFINITIONS,
-    WRITE_HANDLERS,
-    WRITE_TOOL_NAMES,
-    summarize_write_tool,
-)
-
-
-def test_skills_module_registers_three() -> None:
-    assert set(SKILL_HANDLERS) == {"list_skills", "read_skill", "run_skill"}
-    assert {d["function"]["name"] for d in SKILL_DEFINITIONS} == set(SKILL_HANDLERS)
-
-
-def test_write_module_registers_eight() -> None:
-    assert set(WRITE_HANDLERS) == set(WRITE_TOOL_NAMES) == {
-        "add_watchlist",
-        "remove_watchlist",
-        "upsert_note_memo",
-        "add_note_entry",
-        "upsert_position",
-        "delete_position",
-        "add_signal_panel",
-        "remove_signal_panel",
-    }
-    assert {d["function"]["name"] for d in WRITE_DEFINITIONS} == set(WRITE_TOOL_NAMES)
-
-
-def test_ai_tools_aggregates_all() -> None:
-    from app.services.ai import ai_tools
-
-    read = set(READ_HANDLERS) | set(SKILL_HANDLERS) | set(WRITE_HANDLERS)
-    assert set(ai_tools.TOOL_HANDLERS) == read
-    assert {d["function"]["name"] for d in ai_tools.TOOL_DEFINITIONS} == read
-
-
-def test_summarize_table_driven_equivalence() -> None:
-    assert summarize_write_tool("no_such", {}) == "no_such"
-    assert "加自选" in summarize_write_tool("add_watchlist", {"symbol": "600519.SSE", "name": "茅台"})
-    assert "写备忘" in summarize_write_tool("upsert_note_memo", {"vt_symbol": "600519.SSE", "body": "观察"})
-    assert "成本100 数量100" in summarize_write_tool(
-        "upsert_position",
-        {"symbol": "600519.SSE", "cost_price": 100, "volume": 100},
-    )
-```
-
-- [ ] **Step 2: 运行测试确认失败**
-
-Run: `cd backend && uv run pytest tests/test_ai_tools_split.py -q --tb=short`
-Expected: FAIL —— `ModuleNotFoundError: No module named 'app.services.ai.tools.skills'`
-
-- [ ] **Step 3: 创建 `skills.py`**
-
-`backend/app/services/ai/tools/skills.py`：把原 `ai_tools.py` 中 `_list_skills`、`_read_skill`、`_run_skill` 原样搬入（函数体一字不改，保留函数内延迟 import `from app.services.ai import skills_catalog` 与 `from app.services.ai.skill_runtime import ...`）。文件头与注册表：
+`backend/app/services/ai/tools/skills.py`：把原 `ai_tools.py` 中 `_list_skills`、`_read_skill`、`_run_skill` 原样搬入（函数体一字不改，保留延迟 import `from app.services.ai import skills_catalog` 与 `from app.services.ai.skill_runtime import ...`）。文件头与注册表：
 
 ```python
 """内置投研技能工具（ai_tools 拆分）。"""
@@ -324,18 +222,31 @@ from app.services.ai.tools._common import ToolHandler
 
 
 def _list_skills(db: Session, user_id: str, args: dict[str, Any]) -> Any:
-    # 原样搬移
-    ...
+    _ = db, user_id, args
+    from app.services.ai import skills_catalog
+
+    return {"skills": skills_catalog.list_skills()}
 
 
 def _read_skill(db: Session, user_id: str, args: dict[str, Any]) -> Any:
-    # 原样搬移
-    ...
+    _ = db, user_id
+    from app.services.ai import skills_catalog
+
+    sid = str(args.get("skill_id") or "").strip()
+    try:
+        return skills_catalog.read_skill(sid)
+    except ValueError as exc:
+        return {"error": str(exc)}
 
 
 def _run_skill(db: Session, user_id: str, args: dict[str, Any]) -> Any:
-    # 原样搬移
-    ...
+    from app.services.ai.skill_runtime import SkillContext, run_skill_module
+
+    sid = str(args.get("skill_id") or "").strip()
+    if not sid:
+        return {"error": "缺少 skill_id"}
+    payload = {k: v for k, v in args.items() if k != "skill_id"}
+    return run_skill_module(sid, SkillContext(db=db, user_id=user_id), payload)
 
 
 SKILL_HANDLERS: dict[str, ToolHandler] = {
@@ -349,9 +260,9 @@ SKILL_DEFINITIONS: list[dict[str, Any]] = [
 ]
 ```
 
-- [ ] **Step 4: 创建 `write.py`（8 个写 handler + 表驱动 summarize）**
+- [ ] **Step 6: 创建 `write.py`（8 个写 handler 原样搬移 + summarize 原样搬移）**
 
-`backend/app/services/ai/tools/write.py`：把原 `ai_tools.py` 中 8 个写 handler（`_add_watchlist`、`_remove_watchlist`、`_upsert_note_memo`、`_add_note_entry`、`_upsert_position`、`_delete_position`、`_add_signal_panel`、`_remove_signal_panel`）原样搬入。文件头：
+`backend/app/services/ai/tools/write.py`：把原 `ai_tools.py` 中 8 个写 handler（`_add_watchlist`、`_remove_watchlist`、`_upsert_note_memo`、`_add_note_entry`、`_upsert_position`、`_delete_position`、`_add_signal_panel`、`_remove_signal_panel`）与 `summarize_write_tool`（**if 链原样搬移**，Task 2 再表驱动化）原样搬入。文件头：
 
 ```python
 """投研写工具实现（需确认后落库，ai_tools 拆分）。"""
@@ -359,7 +270,6 @@ SKILL_DEFINITIONS: list[dict[str, Any]] = [
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from typing import Any, cast
 
 from sqlalchemy.orm import Session
@@ -406,7 +316,154 @@ WRITE_DEFINITIONS: list[dict[str, Any]] = [
 ]
 ```
 
-`summarize_write_tool` 用**表驱动重构**（行为逐分支等价于原 if 链；原逻辑：`add_watchlist` 取 `symbol or vt_symbol`，`upsert_note_memo`/`add_note_entry` 取 `vt_symbol or symbol`，其余取 `symbol or vt_symbol`；body 预览 40 字加 `…`；`upsert_position` 打印 `成本{cost} 数量{vol}`；未知名返回 `name`）：
+> `summarize_write_tool` 的 if 链整体原样搬入本文件（保持行为）。注意：`_upsert_position` 内 `from collections.abc import Callable` 不需要；`cast` 在 `_upsert_position` 用到（已 import）。
+
+- [ ] **Step 7: 创建 `__init__.py`（子包聚合壳）**
+
+`backend/app/services/ai/tools/__init__.py`：
+
+```python
+"""ai_tools 拆分子包：只读 / 技能 / 写工具 + 公共工具。"""
+
+from app.services.ai.tools._common import MAX_RESULT_CHARS, ToolHandler, _parse_args, _truncate
+from app.services.ai.tools.read import READ_DEFINITIONS, READ_HANDLERS
+from app.services.ai.tools.skills import SKILL_DEFINITIONS, SKILL_HANDLERS
+from app.services.ai.tools.write import (
+    WRITE_DEFINITIONS,
+    WRITE_HANDLERS,
+    WRITE_TOOL_NAMES,
+    summarize_write_tool,
+)
+
+__all__ = [
+    "MAX_RESULT_CHARS",
+    "READ_DEFINITIONS",
+    "READ_HANDLERS",
+    "SKILL_DEFINITIONS",
+    "SKILL_HANDLERS",
+    "ToolHandler",
+    "WRITE_DEFINITIONS",
+    "WRITE_HANDLERS",
+    "WRITE_TOOL_NAMES",
+    "_parse_args",
+    "_truncate",
+    "summarize_write_tool",
+]
+```
+
+- [ ] **Step 8: 收敛 `ai_tools.py` 为纯编排入口**
+
+编辑 `backend/app/services/ai/ai_tools.py`：
+
+1. 删除全部已迁出内容：11 个只读 handler、3 个 skill handler、8 个写 handler、`summarize_write_tool`、`WRITE_TOOL_NAMES`、原 `TOOL_HANDLERS`/`WRITE_HANDLERS`/`TOOL_DEFINITIONS` 字面量
+2. 顶部 import 与聚合改为：
+
+```python
+"""投研工具编排入口：只读 + 需确认的写操作，供 Agent tool-calling。
+
+实现拆分为 app/services/ai/tools/ 子包，本模块聚合注册表并提供执行编排。
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+from sqlalchemy.orm import Session
+
+from app.services.ai.tools._common import MAX_RESULT_CHARS, ToolHandler, _parse_args, _truncate
+from app.services.ai.tools.read import READ_DEFINITIONS, READ_HANDLERS
+from app.services.ai.tools.skills import SKILL_DEFINITIONS, SKILL_HANDLERS
+from app.services.ai.tools.write import (
+    WRITE_DEFINITIONS,
+    WRITE_HANDLERS,
+    WRITE_TOOL_NAMES,
+    summarize_write_tool,
+)
+
+logger = logging.getLogger(__name__)
+
+TOOL_HANDLERS: dict[str, ToolHandler] = {**READ_HANDLERS, **SKILL_HANDLERS, **WRITE_HANDLERS}
+TOOL_DEFINITIONS: list[dict[str, Any]] = [*READ_DEFINITIONS, *SKILL_DEFINITIONS, *WRITE_DEFINITIONS]
+```
+
+3. 保留原样不动：`get_tool_definitions`、`execute_write_tool`、`_mcp_tool_definitions`、`_execute_mcp_tool`、`execute_tool`（它们引用的 `WRITE_TOOL_NAMES`/`_parse_args`/`_truncate`/`WRITE_HANDLERS` 均已 import）
+
+> 删除后若 `json`、`cast`、`notes`、`positions_repo`、`signal_panel_repo`、`watchlist_repo`、`backtest_repo`、`bars`、`to_vt_symbol` 不再被引用，一并删除其 import。
+
+- [ ] **Step 9: 更新 patch 路径（4 处）**
+
+`backend/tests/test_ai_write_positions.py` 中全部 4 处：
+
+```python
+patch("app.services.ai.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
+```
+
+改为：
+
+```python
+patch("app.services.ai.tools.write.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
+```
+
+（可全局替换 `"app.services.ai.ai_tools.watchlist_repo"` → `"app.services.ai.tools.write.watchlist_repo"`）
+
+- [ ] **Step 10: 运行测试确认全绿**
+
+Run: `cd backend && uv run pytest tests/test_ai_tools_split.py tests/test_ai_tools.py tests/test_ai_read_tools.py tests/test_ai_proposals.py tests/test_ai_write_positions.py -q --tb=short`
+Expected: PASS（全部绿；`test_tools_registered` 断言完整 22 工具集通过，证明聚合无损）
+
+- [ ] **Step 11: Commit**
+
+```bash
+git add backend/app/services/ai/tools/ backend/app/services/ai/ai_tools.py backend/tests/test_ai_tools_split.py backend/tests/test_ai_write_positions.py
+git commit -m "refactor(ai): ai_tools 拆分 tools 子包并收敛编排入口"
+```
+
+---
+
+### Task 2: summarize_write_tool 表驱动重构
+
+**Files:**
+- Modify: `backend/app/services/ai/tools/write.py`（if 链 → 表驱动）
+- Test: `backend/tests/test_ai_tools_split.py`（追加等价性断言）
+
+**Interfaces:**
+- Consumes: Task 1 的 `app.services.ai.tools.write.summarize_write_tool`（if 链版本）
+- Produces: 同签名 `summarize_write_tool(name: str, args: dict[str, Any]) -> str`（表驱动版本，行为逐分支等价）
+
+- [ ] **Step 1: 写失败测试**
+
+`backend/tests/test_ai_tools_split.py` 追加：
+
+```python
+def test_summarize_table_driven_equivalence() -> None:
+    assert summarize_write_tool("no_such", {}) == "no_such"
+    assert "加自选" in summarize_write_tool("add_watchlist", {"symbol": "600519.SSE", "name": "茅台"})
+    assert "删自选" in summarize_write_tool("remove_watchlist", {"symbol": "600519.SSE"})
+    assert "写备忘" in summarize_write_tool("upsert_note_memo", {"vt_symbol": "600519.SSE", "body": "观察"})
+    assert "记流水" in summarize_write_tool("add_note_entry", {"vt_symbol": "600519.SSE", "body": "买入观察"})
+    assert "成本100 数量100" in summarize_write_tool(
+        "upsert_position",
+        {"symbol": "600519.SSE", "cost_price": 100, "volume": 100},
+    )
+    assert "删除持仓" in summarize_write_tool("delete_position", {"symbol": "600519.SSE"})
+    assert "加入信号名单" in summarize_write_tool("add_signal_panel", {"symbol": "600519.SSE"})
+    assert "移出信号名单" in summarize_write_tool("remove_signal_panel", {"symbol": "600519.SSE"})
+    # body 预览：40 字截断 + 省略号
+    long_body = "x" * 50
+    assert "…" in summarize_write_tool("upsert_note_memo", {"vt_symbol": "600519.SSE", "body": long_body})
+    # 换行归一
+    assert "a b" in summarize_write_tool("add_note_entry", {"vt_symbol": "600519.SSE", "body": "a\nb"})
+```
+
+- [ ] **Step 2: 运行测试确认通过（表驱动未实现，等价断言大多已满足）**
+
+Run: `cd backend && uv run pytest tests/test_ai_tools_split.py::test_summarize_table_driven_equivalence -q --tb=short`
+Expected: 本步新断言直接 PASS（if 链行为等价）——**这不是 TDD 失败**；本任务用「重构保护测试」方式：先加断言确认 if 链行为，再重构验证不回归。若因笔误 FAIL，修正测试。
+
+- [ ] **Step 3: 重构为表驱动**
+
+`backend/app/services/ai/tools/write.py`：把 `summarize_write_tool` 的 if 链替换为表驱动，**行为逐分支等价**（原逻辑：`add_watchlist` 取 `symbol or vt_symbol`，`upsert_note_memo`/`add_note_entry` 取 `vt_symbol or symbol`，其余取 `symbol or vt_symbol`；body 预览 40 字加 `…`；`upsert_position` 打印 `成本{cost} 数量{vol}`；未知名返回 `name`）。文件头补 `from collections.abc import Callable`：
 
 ```python
 _SummaryFn = Callable[[dict[str, Any]], str]
@@ -441,107 +498,19 @@ def summarize_write_tool(name: str, args: dict[str, Any]) -> str:
 
 > 与原有测试断言完全兼容：`test_ai_proposals.py::test_summarize_write_tool`、`test_ai_write_positions.py::test_summarize_new_write_tools` 只断言中文前缀与 `600519`/`100` 子串，且 `upsert_position` 的 `cost_price=100, volume=100` 输出含 `成本100 数量100`。
 
-- [ ] **Step 5: 更新 `__init__.py` 聚合全量**
+- [ ] **Step 4: 运行相关测试确认无回归**
 
-`backend/app/services/ai/tools/__init__.py`：
+Run: `cd backend && uv run pytest tests/test_ai_tools_split.py tests/test_ai_proposals.py tests/test_ai_write_positions.py -q --tb=short`
+Expected: PASS（全部绿）
 
-```python
-"""ai_tools 拆分子包：只读 / 技能 / 写工具 + 公共工具。"""
-
-from app.services.ai.tools._common import MAX_RESULT_CHARS, ToolHandler, _parse_args, _truncate
-from app.services.ai.tools.read import READ_DEFINITIONS, READ_HANDLERS
-from app.services.ai.tools.skills import SKILL_DEFINITIONS, SKILL_HANDLERS
-from app.services.ai.tools.write import (
-    WRITE_DEFINITIONS,
-    WRITE_HANDLERS,
-    WRITE_TOOL_NAMES,
-    summarize_write_tool,
-)
-
-__all__ = [
-    "MAX_RESULT_CHARS",
-    "READ_DEFINITIONS",
-    "READ_HANDLERS",
-    "SKILL_DEFINITIONS",
-    "SKILL_HANDLERS",
-    "ToolHandler",
-    "WRITE_DEFINITIONS",
-    "WRITE_HANDLERS",
-    "WRITE_TOOL_NAMES",
-    "_parse_args",
-    "_truncate",
-    "summarize_write_tool",
-]
-```
-
-- [ ] **Step 6: 收敛 `ai_tools.py` 为纯编排入口**
-
-编辑 `backend/app/services/ai/ai_tools.py`：
-
-1. 删除 `_list_skills`/`_read_skill`/`_run_skill` 与 8 个写 handler、`WRITE_TOOL_NAMES`、`summarize_write_tool`、原 `TOOL_HANDLERS`/`WRITE_HANDLERS`/`TOOL_DEFINITIONS` 字面量
-2. 删除顶部不再使用的 import（`notes`、`positions_repo`、`signal_panel_repo`、`cast`、`json` 仅 `_parse_args` 用但已迁 `_common`）
-3. 顶部 import 与聚合改为：
-
-```python
-"""投研工具编排入口：只读 + 需确认的写操作，供 Agent tool-calling。
-
-实现拆分为 app/services/ai/tools/ 子包，本模块聚合注册表并提供执行编排。
-"""
-
-from __future__ import annotations
-
-import logging
-from typing import Any
-
-from sqlalchemy.orm import Session
-
-from app.services.ai.tools._common import MAX_RESULT_CHARS, ToolHandler, _parse_args, _truncate
-from app.services.ai.tools.read import READ_DEFINITIONS, READ_HANDLERS
-from app.services.ai.tools.skills import SKILL_DEFINITIONS, SKILL_HANDLERS
-from app.services.ai.tools.write import (
-    WRITE_DEFINITIONS,
-    WRITE_HANDLERS,
-    WRITE_TOOL_NAMES,
-    summarize_write_tool,
-)
-
-logger = logging.getLogger(__name__)
-
-TOOL_HANDLERS: dict[str, ToolHandler] = {**READ_HANDLERS, **SKILL_HANDLERS, **WRITE_HANDLERS}
-TOOL_DEFINITIONS: list[dict[str, Any]] = [*READ_DEFINITIONS, *SKILL_DEFINITIONS, *WRITE_DEFINITIONS]
-```
-
-4. 保留原样不动：`get_tool_definitions`、`execute_write_tool`、`_mcp_tool_definitions`、`_execute_mcp_tool`、`execute_tool`
-
-> `execute_tool` 引用 `WRITE_TOOL_NAMES`（已 import）、`_parse_args`（已 import）、`_truncate`（已 import）、`_execute_mcp_tool`（同文件）——均可用。`execute_write_tool` 引用 `WRITE_HANDLERS`/`_parse_args`——可用。
-
-- [ ] **Step 7: 更新 patch 路径（4 处）**
-
-`backend/tests/test_ai_write_positions.py` 中全部 4 处：
-
-```python
-patch("app.services.ai.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
-```
-
-改为：
-
-```python
-patch("app.services.ai.tools.write.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
-```
-
-（可全局替换 `"app.services.ai.ai_tools.watchlist_repo"` → `"app.services.ai.tools.write.watchlist_repo"`）
-
-- [ ] **Step 8: 运行测试确认通过**
-
-Run: `cd backend && uv run pytest tests/test_ai_tools_split.py tests/test_ai_tools.py tests/test_ai_read_tools.py tests/test_ai_proposals.py tests/test_ai_write_positions.py -q --tb=short`
-Expected: PASS（全部绿，`test_tools_registered` 恢复断言完整 22 工具集）
-
-- [ ] **Step 9: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add backend/app/services/ai/tools/ backend/app/services/ai/ai_tools.py backend/tests/test_ai_tools_split.py backend/tests/test_ai_write_positions.py
-git commit -m "refactor(ai): ai_tools 拆分完成并表驱动化 summarize_write_tool"
+git add backend/app/services/ai/tools/write.py backend/tests/test_ai_tools_split.py
+git commit -m "refactor(ai): summarize_write_tool 表驱动化
 ```
+
+> 注意：commit message 用完整 heredoc（含闭合引号），参考 Global Constraints 的中文格式。
 
 ---
 
@@ -677,7 +646,7 @@ DEFAULT_DOUBLE_MA_SLOW = 20
 BAR_LIMIT = 120
 ```
 
-> 函数体全部**原样搬移**（含 `trend_ma_config_key` 等函数内的延迟 import）。注意 `bars_limit_for` 与 `resolve_config_key`/`_pref_fast_slow` 原样搬入即可（它们引用本文件常量与 `parse_config_key`，已 import）。`SIGNAL_MODE_*` 常量不再从 `_config` 之外的模块 import（原文件就是本文件内定义）。
+> 函数体全部**原样搬移**（含 `trend_ma_config_key` 等函数内的延迟 import）。`bars_limit_for` 引用本文件常量与 `parse_config_key`（已 import）；`resolve_config_key`/`_pref_fast_slow` 引用 `text`/`Session`/`DEFAULT_CONFIG_KEY`/`DEFAULT_DOUBLE_MA_*`（已 import）。
 
 - [ ] **Step 4: 创建 `strategy_board_calc.py`**
 
@@ -821,7 +790,7 @@ git commit -m "refactor(strategy): strategy_board 按 config/calc 平铺拆分"
 - [ ] **Step 2: 全量回归**
 
 Run: `cd backend && uv run pytest -q --tb=short`
-Expected: PASS（~732+ collected，全绿）
+Expected: PASS（732+ collected，全绿）
 
 - [ ] **Step 3: import 冒烟**
 
@@ -860,17 +829,20 @@ git commit -m "docs(backend): 补充 ai_tools 子包与 strategy_board 拆分说
 ## Self-Review
 
 **Spec coverage 核对：**
-- 「ai_tools 子包 read/skills/write/_common/__init__」→ Task 1/2 ✓
-- 「ai_tools.py 保留编排入口（execute_tool/execute_write_tool/get_tool_definitions）」→ Task 2 Step 6 ✓
+- 「ai_tools 子包 read/skills/write/_common/__init__」→ Task 1 ✓
+- 「ai_tools.py 保留编排入口（execute_tool/execute_write_tool/get_tool_definitions）」→ Task 1 Step 8 ✓
 - 「strategy_board 平铺 config/calc，原文件保留 load_strategy_board」→ Task 3 ✓
-- 「summarize_write_tool 表驱动重构」→ Task 2 Step 4 ✓（含 `vt_first` 区分 memo/entry 的 `vt_symbol or symbol` 原语义）
+- 「summarize_write_tool 表驱动重构」→ Task 2 ✓（含 `vt_first` 区分 memo/entry 的 `vt_symbol or symbol` 原语义）
 - 「行为零变化 + 消费者 import 不变」→ 模块级聚合 + patch 路径更新说明 ✓
-- 「测试兜底」→ Task 1/2/3 结构回归测试 + 全量回归 ✓
+- 「测试兜底」→ Task 1/3 结构回归测试 + Task 2 等价性测试 + 全量回归 ✓
 - 「文档更新」→ Task 4 ✓
+- **每个 commit 相关测试全绿**：Task 1 一步迁移全部子模块，`test_tools_registered` 保持绿（聚合无损）；Task 2 重构有等价性保护测试先加后重构 ✓
 
 **Placeholder scan：** 无 TBD/「类似 Task N」；各搬移函数明确「原样搬移」，表驱动重构给了完整新代码。
 
-**Type consistency：** `READ_HANDLERS`/`SKILL_HANDLERS`/`WRITE_HANDLERS`/`READ_DEFINITIONS` 等名称在 Task 1-2 定义与 Task 2 聚合处一致；`strategy_board_config`/`strategy_board_calc` 符号在 Task 3 定义与 `strategy_board.py` import 及 split 测试一致；`summarize_write_tool` 签名 `(name, args) -> str` 一致。
+**Type consistency：** `READ_HANDLERS`/`SKILL_HANDLERS`/`WRITE_HANDLERS`/`READ_DEFINITIONS` 等名称在 Task 1 定义与聚合处一致；`strategy_board_config`/`strategy_board_calc` 符号在 Task 3 定义与 `strategy_board.py` import 及 split 测试一致；`summarize_write_tool` 签名 `(name, args) -> str` 一致。
 
 **已知注意点：**
-- Task 1 Step 7 期间 `test_tools_registered` 可能暂时 FAIL（skills/write 尚未聚合），属预期；Task 2 Step 8 恢复全绿。若希望每个 commit 全绿，可将 Task 1/2 合并执行后再 commit，但按计划拆分 commit 更利于 review。
+- Task 1 Step 8 收敛 `ai_tools.py` 后，需仔细核对 `execute_tool`/`execute_write_tool`/`get_tool_definitions` 引用的名字均已在 import 中（`WRITE_TOOL_NAMES`、`_parse_args`、`_truncate`、`WRITE_HANDLERS`、`TOOL_HANDLERS`、`TOOL_DEFINITIONS`）
+- `test_ai_tools_split.py::test_ai_tools_aggregates_all` 的断言包含 `all_names == {*WRITE_TOOL_NAMES, *ai_tools.TOOL_HANDLERS}`（重言式），实现时可简化为 `set(ai_tools.TOOL_HANDLERS) == all_names`
+- Task 2 的「失败测试」实为保护测试（先断言 if 链行为，再重构），非传统 TDD RED——计划已说明
