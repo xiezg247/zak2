@@ -15,16 +15,16 @@ def test_expand_over_64_message():
 
 
 def test_validate_helper_semantics():
-    from app.api.v1 import backtest as api
+    from app.domains.backtest.service import _validate_ma_windows
 
     try:
-        api._validate_ma_windows("double_ma", 20, 10)
-        raise AssertionError("expected HTTPException")
+        _validate_ma_windows("double_ma", 20, 10)
+        raise AssertionError("expected AppError")
     except Exception as exc:
         assert getattr(exc, "status_code", None) == 400
 
 
 def test_validate_helper_skips_non_ma_strategy():
-    from app.api.v1 import backtest as api
+    from app.domains.backtest.service import _validate_ma_windows
 
-    api._validate_ma_windows("bollinger", 20, 10)
+    _validate_ma_windows("bollinger", 20, 10)

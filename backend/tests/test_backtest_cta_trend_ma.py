@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 
 import pytest
-from fastapi import HTTPException
 
+from app.core.errors import AppError
 from app.schemas.backtest import BacktestRunRequest
 from app.services.backtest.backtest_settings import build_strategy_setting, min_bars_for_request
 from app.strategies.cta.registry import get_strategy_class
@@ -37,7 +37,7 @@ def test_execute_unknown_strategy_501():
         pass
 
     req = BacktestRunRequest(vt_symbol="600519.SSE", strategy="ghost")
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(AppError) as ei:
         repo.BacktestRepository(DummyDb(), "u1").execute_single(req)  # type: ignore[arg-type]
     assert ei.value.status_code == 501
 

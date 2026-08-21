@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 
 import pytest
-from fastapi import HTTPException
 
+from app.core.errors import ValidationFailed
 from app.schemas.backtest import BacktestRunRequest
 from app.services.backtest.backtest_bars import Bar, count_trading_days, load_bars
 from app.services.backtest.backtest_settings import min_bars_for_request
@@ -38,7 +38,7 @@ def test_load_bars_rejects_bad_interval():
     class DummyDb:
         pass
 
-    with pytest.raises(HTTPException) as ei:
+    with pytest.raises(ValidationFailed) as ei:
         load_bars(
             DummyDb(),  # type: ignore[arg-type]
             vt_symbol="600519.SSE",
