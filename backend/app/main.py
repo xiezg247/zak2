@@ -38,6 +38,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    from app.core.request_context_middleware import RequestContextMiddleware
+
+    app.add_middleware(RequestContextMiddleware)
     app.include_router(api_router)
     register_exception_handlers(app)
 
