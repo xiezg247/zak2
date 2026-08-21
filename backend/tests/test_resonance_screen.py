@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from app.core.errors import ValidationFailed
 
-from app.schemas.market import RadarResonanceEntry, RadarResonanceOut
+from app.domains.market.schemas import RadarResonanceEntry, RadarResonanceOut
 from app.domains.screener.schemas import HardFilterPrefs, RecipeRunRequest
 from app.domains.screener.engine import run_recipe_screen
 from app.domains.screener.presets import get_builtin_recipe

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.domains.screener.schemas import HardFilterPrefs, RecipeRunRequest
-from app.services.market.quotes import QuoteRow
+from app.domains.market.quotes import QuoteRow
 from app.domains.screener.engine import run_recipe_screen
 from app.domains.screener.leader_screen import (
     _write_seal_time_fields,
@@ -145,7 +145,7 @@ def test_radar_leader_enriches_empty_industry_before_filter() -> None:
 
     with (
         patch(
-            "app.services.market.stock_industry.load_industry_map",
+            "app.domains.market.stock_industry.load_industry_map",
             return_value={"SHSE.600519": "白酒"},
         ),
         patch(

@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from app.schemas.market import RadarCardOut, RadarResonanceEntry, RadarResonanceOut
+from app.domains.market.schemas import RadarCardOut, RadarResonanceEntry, RadarResonanceOut
 from app.services.ops import scan_horizon_outlook as m
 
 

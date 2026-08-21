@@ -9,10 +9,10 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.schemas.market import RadarCardOut
+from app.domains.market.schemas import RadarCardOut
 from app.schemas.ops import SyncResult
 from app.services.ops.scheduler import save_job_run_meta
-from app.services.radar.cards import build_synthesized_cards
+from app.domains.radar.cards import build_synthesized_cards
 
 JOB_ID = "warm_radar_card_snapshots"
 

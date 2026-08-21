@@ -10,7 +10,7 @@ from app.api.errors import register_exception_handlers
 from app.api.v1 import api_router
 from app.core.logging import configure_logging
 from app.core.settings import get_settings
-from app.services.market.quote_notify_hub import get_quote_notify_hub
+from app.domains.market.quote_notify_hub import get_quote_notify_hub
 
 
 @asynccontextmanager

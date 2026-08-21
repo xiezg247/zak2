@@ -1,5 +1,5 @@
-from app.schemas.market import RadarCardOut
-from app.services.radar.radar_resonance import resonance_scan_stats
+from app.domains.market.schemas import RadarCardOut
+from app.domains.radar.radar_resonance import resonance_scan_stats
 
 
 def test_resonance_scan_stats_excluded():

@@ -10,16 +10,16 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.schemas.ops import SyncResult
-from app.services.market.limit_list_store import load_first_time_map
+from app.domains.market.limit_list_store import load_first_time_map
 from app.services.ops.scheduler import save_job_run_meta
-from app.services.radar.cards import list_radar_cards
-from app.services.radar.radar_predict import (
+from app.domains.radar.cards import list_radar_cards
+from app.domains.radar.radar_predict import (
     MODEL_LABEL,
     score_predict_rows,
     upsert_predict,
     vt_with_min_daily_bars,
 )
-from app.services.radar.radar_resonance import compute_resonance, resonance_scan_stats
+from app.domains.radar.radar_resonance import compute_resonance, resonance_scan_stats
 
 JOB_ID = "scan_horizon_outlook"
 STRATEGY_KEY = "resonance_heuristic"

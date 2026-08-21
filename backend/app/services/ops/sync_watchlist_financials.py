@@ -11,8 +11,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.schemas.ops import SyncResult
-from app.services.market import tushare_client as ts
-from app.services.market.bar_download import to_ts_code
+from app.domains.market import tushare_client as ts
+from app.domains.market.bar_download import to_ts_code
 from app.services.ops.bars_fill import list_watchlist_symbols
 from app.services.ops.scheduler import save_job_run_meta
 

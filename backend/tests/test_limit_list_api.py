@@ -13,9 +13,9 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.schemas.market import EmotionSnapshot, LimitListOut
-from app.services.market.limit_list_store import list_limit_list
-from app.services.radar.cards import _synth_limit_ladder
+from app.domains.market.schemas import EmotionSnapshot, LimitListOut
+from app.domains.market.limit_list_store import list_limit_list
+from app.domains.radar.cards import _synth_limit_ladder
 
 
 def _make_user() -> User:
@@ -45,12 +45,12 @@ def test_list_limit_list_empty_no_raise() -> None:
         return result
 
     db.execute.side_effect = _execute
-    from app.services.market import tushare_client as ts
+    from app.domains.market import tushare_client as ts
 
     with (
-        patch("app.services.market.limit_list_store.latest_open_yyyymmdd", return_value="20240805"),
+        patch("app.domains.market.limit_list_store.latest_open_yyyymmdd", return_value="20240805"),
         patch(
-            "app.services.market.limit_list_store.ts.require_token",
+            "app.domains.market.limit_list_store.ts.require_token",
             side_effect=ts.TushareNotConfiguredError("missing"),
         ),
     ):
@@ -132,9 +132,9 @@ def test_synth_limit_ladder_attaches_seal_fields() -> None:
         updated_at="2024-08-05T10:00:00",
     )
     with (
-        patch("app.services.radar.cards.market_svc.load_emotion", return_value=emotion),
+        patch("app.domains.radar.cards.market_svc.load_emotion", return_value=emotion),
         patch(
-            "app.services.market.limit_list_store.load_first_time_map",
+            "app.domains.market.limit_list_store.load_first_time_map",
             return_value={"SHSE.600519": "0930", "SZSE.000001": "1100"},
         ),
     ):

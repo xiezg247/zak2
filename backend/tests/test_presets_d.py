@@ -3,8 +3,8 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from app.domains.screener.schemas import ConditionRunRequest, HardFilterPrefs
-from app.services.market import tushare_screener
-from app.services.market.quotes import QuoteRow
+from app.domains.market import tushare_screener
+from app.domains.market.quotes import QuoteRow
 from app.domains.screener.engine import run_condition_screen
 from app.domains.screener.presets import list_presets
 

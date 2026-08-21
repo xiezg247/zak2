@@ -9,10 +9,10 @@ from sqlalchemy.orm import Session
 
 from app.core.settings import get_settings
 from app.schemas.ops import SyncResult
-from app.services.market import tushare_client as ts
-from app.services.market.quote_factor_patch import apply_factor_patches
-from app.services.market.quotes import get_quote_store
-from app.services.market.tushare_screener import (
+from app.domains.market import tushare_client as ts
+from app.domains.market.quote_factor_patch import apply_factor_patches
+from app.domains.market.quotes import get_quote_store
+from app.domains.market.tushare_screener import (
     fetch_daily_basic_rows,
     fetch_moneyflow_rows,
     latest_open_yyyymmdd,

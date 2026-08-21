@@ -14,7 +14,7 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.services.radar.radar_horizon import load_horizon
+from app.domains.radar.radar_horizon import load_horizon
 
 
 def _make_user() -> User:

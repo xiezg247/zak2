@@ -1,4 +1,4 @@
-from app.services.market.sector import list_sector_flow, list_trade_dates
+from app.domains.market.sector import list_sector_flow, list_trade_dates
 
 
 def test_sector_kind_validation_via_import() -> None:

@@ -13,8 +13,8 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.schemas.market import RadarCardOut
-from app.services.radar import radar_resonance as rr
+from app.domains.market.schemas import RadarCardOut
+from app.domains.radar import radar_resonance as rr
 
 
 def _make_user() -> User:

@@ -183,7 +183,7 @@ def test_normalize_last_key_compensation_sums_exactly_one() -> None:
 
 
 def test_score_intraday_custom_weights_changes_ranking() -> None:
-    from app.services.market.quotes import QuoteRow
+    from app.domains.market.quotes import QuoteRow
     from app.domains.screener.engine import _score_intraday_multi
 
     high_mom = QuoteRow(
@@ -209,7 +209,7 @@ def test_score_intraday_custom_weights_changes_ranking() -> None:
 
 
 def test_score_ultra_short_custom_weights_changes_ranking() -> None:
-    from app.services.market.quotes import QuoteRow
+    from app.domains.market.quotes import QuoteRow
     from app.domains.screener.engine import _score_ultra_short
 
     high_board = QuoteRow(
@@ -234,7 +234,7 @@ def test_score_ultra_short_custom_weights_changes_ranking() -> None:
 
 def test_run_recipe_screen_loads_user_weights() -> None:
     from app.domains.screener.schemas import HardFilterPrefs, RecipeRunRequest
-    from app.services.market.quotes import QuoteRow
+    from app.domains.market.quotes import QuoteRow
     from app.domains.screener.engine import run_recipe_screen
 
     class _Store:
@@ -277,7 +277,7 @@ def test_run_recipe_screen_loads_user_weights() -> None:
 
 def test_run_recipe_screen_loads_ultra_short_user_weights() -> None:
     from app.domains.screener.schemas import HardFilterPrefs, RecipeRunRequest
-    from app.services.market.quotes import QuoteRow
+    from app.domains.market.quotes import QuoteRow
     from app.domains.screener.engine import run_recipe_screen
 
     class _Store:

@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
-from app.schemas.market import EmotionCycleOut
-from app.services.emotion import emotion_thresholds as et
-from app.services.emotion.emotion_cycle import DEFAULT_THRESHOLDS, Thresholds
+from app.domains.market.schemas import EmotionCycleOut
+from app.domains.emotion import emotion_thresholds as et
+from app.domains.emotion.emotion_cycle import DEFAULT_THRESHOLDS, Thresholds
 
 
 def test_thresholds_fields_match_dataclass() -> None:
@@ -121,7 +121,7 @@ def test_reset_thresholds_deletes_meta() -> None:
 
 
 def test_save_invalidates_cache(monkeypatch) -> None:
-    from app.services.emotion import emotion_cycle_cache as c
+    from app.domains.emotion import emotion_cycle_cache as c
 
     store = MagicMock()
     store.available.return_value = False
@@ -135,7 +135,7 @@ def test_save_invalidates_cache(monkeypatch) -> None:
 
 
 def test_reset_invalidates_cache(monkeypatch) -> None:
-    from app.services.emotion import emotion_cycle_cache as c
+    from app.domains.emotion import emotion_cycle_cache as c
 
     store = MagicMock()
     store.available.return_value = False

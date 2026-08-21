@@ -9,8 +9,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.schemas.ops import SyncResult
-from app.services.market import tushare_client as ts
-from app.services.market.tushare_screener import fetch_moneyflow_rows, latest_open_yyyymmdd
+from app.domains.market import tushare_client as ts
+from app.domains.market.tushare_screener import fetch_moneyflow_rows, latest_open_yyyymmdd
 from app.services.ops.scheduler import save_job_run_meta
 
 JOB_ID = "prefetch_moneyflow"

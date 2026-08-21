@@ -3,8 +3,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from app.domains.screener.schemas import HardFilterPrefs
-from app.services.market import suspend as sus
-from app.services.market.quotes import QuoteRow
+from app.domains.market import suspend as sus
+from app.domains.market.quotes import QuoteRow
 from app.domains.screener.hard_filters import apply_hard_filters
 
 
@@ -17,7 +17,7 @@ def test_load_empty() -> None:
     res = MagicMock()
     res.mappings.return_value.all.return_value = []
     db.execute.return_value = res
-    with patch("app.services.market.suspend.latest_open_yyyymmdd", return_value="20260813"):
+    with patch("app.domains.market.suspend.latest_open_yyyymmdd", return_value="20260813"):
         assert sus.load_suspended_vt_symbols(db) == set()
 
 

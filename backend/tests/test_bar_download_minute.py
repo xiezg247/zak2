@@ -1,7 +1,7 @@
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
-from app.services.market import bar_download as bars
+from app.domains.market import bar_download as bars
 
 
 def test_fetch_minute_rows_calls_stk_mins() -> None:

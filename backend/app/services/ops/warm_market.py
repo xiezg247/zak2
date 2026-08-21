@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.schemas.ops import SyncResult
-from app.services.emotion.emotion_cycle import build_emotion_cycle
+from app.domains.emotion.emotion_cycle import build_emotion_cycle
 from app.services.ops.scheduler import save_job_run_meta
 
 JOB_ID = "warm_market_summary"

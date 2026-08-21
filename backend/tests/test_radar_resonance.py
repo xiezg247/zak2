@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from app.schemas.market import RadarCardOut
-from app.services.radar.radar_resonance import CARD_WEIGHTS, compute_resonance
+from app.domains.market.schemas import RadarCardOut
+from app.domains.radar.radar_resonance import CARD_WEIGHTS, compute_resonance
 
 
 def test_compute_resonance_min_cards() -> None:

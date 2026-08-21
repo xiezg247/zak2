@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 from app.core.redis_keys import META_SEQ_KEY, NOTIFY_CHANNEL, QUOTE_KEY_FMT, RANK_KEY_FMT
-from app.services.market.quote_factor_patch import apply_factor_patches
+from app.domains.market.quote_factor_patch import apply_factor_patches
 
 
 def test_apply_skips_missing_keys_no_publish() -> None:

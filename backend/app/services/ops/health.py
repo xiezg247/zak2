@@ -18,7 +18,7 @@ from app.schemas.ops import (
     HealthSchedulerLockOut,
 )
 from app.services.ai import mcp_client
-from app.services.market.quotes import get_quote_store
+from app.domains.market.quotes import get_quote_store
 from app.services.ops import scheduler_lock
 from app.services.quote_collect.control import collector_health
 

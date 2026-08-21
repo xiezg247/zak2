@@ -14,7 +14,7 @@ from app.repositories import positions as positions_repo
 from app.repositories import signal_panel as signal_panel_repo
 from app.repositories import watchlist as watchlist_repo
 from app.services.content import notes
-from app.services.market import bars
+from app.domains.market import bars
 from app.services.symbols import to_vt_symbol
 
 logger = logging.getLogger(__name__)

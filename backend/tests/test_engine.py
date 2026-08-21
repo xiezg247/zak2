@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.domains.screener.schemas import ConditionRunRequest, HardFilterPrefs
-from app.services.market.quotes import QuoteRow
+from app.domains.market.quotes import QuoteRow
 from app.domains.screener.engine import run_condition_screen
 from app.domains.screener.hard_filters import apply_hard_filters
 
@@ -120,7 +120,7 @@ def test_recipe_enriches_empty_industry_before_filter() -> None:
             return [QuoteRow(symbol="SHSE.600519", name="茅台", change_pct=5.0, industry="")]
 
     with patch(
-        "app.services.market.stock_industry.load_industry_map",
+        "app.domains.market.stock_industry.load_industry_map",
         return_value={"SHSE.600519": "白酒"},
     ):
         result = run_recipe_screen(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.services.radar import cards as radar
+from app.domains.radar import cards as radar
 from app.domains.screener import leader_screen
 
 

@@ -10,8 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.core.time import china_today
 from app.schemas.ops import SyncResult
-from app.services.market import tushare_client as ts
-from app.services.market.tushare_screener import latest_open_yyyymmdd, ts_code_to_tf
+from app.domains.market import tushare_client as ts
+from app.domains.market.tushare_screener import latest_open_yyyymmdd, ts_code_to_tf
 from app.services.ops.scheduler import save_job_run_meta
 
 JOB_ID = "sync_limit_list"

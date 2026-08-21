@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.market.db_ranks import _load_daily_bars, db_rank_fallback
+from app.domains.market.db_ranks import _load_daily_bars, db_rank_fallback
 
 
 def test_db_rank_fallback_change_pct_ordering() -> None:
@@ -32,14 +32,14 @@ def test_db_rank_fallback_change_pct_ordering() -> None:
         },
     }
     with (
-        patch("app.services.market.db_ranks._latest_trade_dates", return_value=("2024-01-02", "2023-12-29")),
-        patch("app.services.market.db_ranks._load_daily_bars", return_value=bars),
+        patch("app.domains.market.db_ranks._latest_trade_dates", return_value=("2024-01-02", "2023-12-29")),
+        patch("app.domains.market.db_ranks._load_daily_bars", return_value=bars),
         patch(
-            "app.services.market.db_ranks._load_prev_closes",
+            "app.domains.market.db_ranks._load_prev_closes",
             return_value={"SHSE.600519": 100.0, "SHSE.000001": 9.0},
         ),
         patch(
-            "app.services.market.db_ranks._load_daily_basic_factors",
+            "app.domains.market.db_ranks._load_daily_basic_factors",
             return_value={
                 "SHSE.600519": {
                     "turnover_rate": 1.5,
@@ -49,13 +49,13 @@ def test_db_rank_fallback_change_pct_ordering() -> None:
                 }
             },
         ),
-        patch("app.services.market.db_ranks._load_limit_times", return_value={}),
+        patch("app.domains.market.db_ranks._load_limit_times", return_value={}),
         patch(
-            "app.services.market.db_ranks._load_names",
+            "app.domains.market.db_ranks._load_names",
             return_value={"SHSE.600519": "茅台", "SHSE.000001": "平安"},
         ),
         patch(
-            "app.services.market.db_ranks._load_industries",
+            "app.domains.market.db_ranks._load_industries",
             return_value={"SHSE.600519": "白酒", "SHSE.000001": "银行"},
         ),
     ):

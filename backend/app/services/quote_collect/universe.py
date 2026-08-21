@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.services.market.bar_download import list_universe_symbols
+from app.domains.market.bar_download import list_universe_symbols
 from app.services.symbols import to_tf_symbol
 
 

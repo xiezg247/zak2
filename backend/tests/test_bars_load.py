@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from app.core.errors import NotFound
 
-from app.services.market import bars
+from app.domains.market import bars
 
 
 def test_load_bars_empty_daily_ops_copy() -> None:

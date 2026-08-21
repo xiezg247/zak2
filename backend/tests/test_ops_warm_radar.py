@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.schemas.market import RadarCardOut
+from app.domains.market.schemas import RadarCardOut
 from app.services.ops import warm_radar as warm
 
 

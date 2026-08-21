@@ -19,10 +19,10 @@ from app.repositories import (
     watchlist as watchlist_repo,
 )
 from app.services.content import notes
-from app.services.market import overview as market
-from app.services.market.quotes import get_quote_store
+from app.domains.market import overview as market
+from app.domains.market.quotes import get_quote_store
 from app.services.plan import trading_risk
-from app.services.radar import cards as radar
+from app.domains.radar import cards as radar
 from app.services.strategy import strategy_board
 from app.services.symbols import to_vt_symbol
 

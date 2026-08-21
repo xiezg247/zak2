@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
-from app.schemas.market import LimitListOut, LimitListRow
-from app.services.radar import cards as radar_svc
+from app.domains.market.schemas import LimitListOut, LimitListRow
+from app.domains.radar import cards as radar_svc
 
 
 def test_synth_limit_break_filters_open_times():
@@ -13,7 +13,7 @@ def test_synth_limit_break_filters_open_times():
         patch.object(radar_svc, "_synth_change_top", return_value=MagicMock(card_id="discovery_change_top")),
         patch.object(radar_svc, "_synth_volume_surge", return_value=None),
         patch(
-            "app.services.market.limit_list_store.list_limit_list",
+            "app.domains.market.limit_list_store.list_limit_list",
             return_value=LimitListOut(
                 trade_date="20260814",
                 rows=[

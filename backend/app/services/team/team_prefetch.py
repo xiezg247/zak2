@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 from app.core.time import china_now
 from app.repositories import watchlist as watchlist_repo
 from app.schemas.team import TeamBars, TeamEmotion, TeamFinancial, TeamPrefetch, TeamRisk, TeamStrategy
-from app.services.emotion import emotion_cycle as emotion_cycle_svc
-from app.services.market.bars import load_bars
-from app.services.market.quotes import get_quote_store
+from app.domains.emotion import emotion_cycle as emotion_cycle_svc
+from app.domains.market.bars import load_bars
+from app.domains.market.quotes import get_quote_store
 from app.services.strategy import strategy_board
 from app.services.symbols import to_tf_symbol, to_vt_symbol
 
@@ -58,7 +58,7 @@ def _ma_alignment(closes: list[float]) -> str:
 def _try_valuation(symbol: str, exchange: str) -> TeamFinancial:
     """尽力从 Tushare daily_basic 取单票估值；失败则空对象（字段留空或携带 error）。"""
     try:
-        from app.services.market import tushare_client as ts
+        from app.domains.market import tushare_client as ts
 
         token = ""
         try:

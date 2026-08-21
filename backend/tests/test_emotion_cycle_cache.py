@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.schemas.market import EmotionCycleOut
+from app.domains.market.schemas import EmotionCycleOut
 
 
 def _cycle(**kw) -> EmotionCycleOut:
@@ -21,11 +21,11 @@ def _cycle(**kw) -> EmotionCycleOut:
 def _patch_no_redis():
     store = MagicMock()
     store.available.return_value = False
-    return patch("app.services.emotion.emotion_cycle_cache.get_quote_store", return_value=store)
+    return patch("app.domains.emotion.emotion_cycle_cache.get_quote_store", return_value=store)
 
 
 def test_cache_ttl_sec_defaults_and_clamps(monkeypatch) -> None:
-    from app.services.emotion import emotion_cycle_cache as c
+    from app.domains.emotion import emotion_cycle_cache as c
 
     monkeypatch.delenv("EMOTION_CYCLE_CACHE_TTL_SEC", raising=False)
     assert c.cache_ttl_sec() == 60
@@ -43,7 +43,7 @@ def test_cache_ttl_sec_defaults_and_clamps(monkeypatch) -> None:
 def test_mem_cache_roundtrip(monkeypatch) -> None:
     monkeypatch.setenv("EMOTION_CYCLE_CACHE_TTL_SEC", "60")
     with _patch_no_redis():
-        from app.services.emotion import emotion_cycle_cache as c
+        from app.domains.emotion import emotion_cycle_cache as c
 
         c.cache_invalidate()
         assert c.cache_get() is None
@@ -57,8 +57,8 @@ def test_mem_cache_roundtrip(monkeypatch) -> None:
 
 def test_build_uses_cache(monkeypatch) -> None:
     with _patch_no_redis():
-        from app.services.emotion import emotion_cycle as ec
-        from app.services.emotion import emotion_cycle_cache as c
+        from app.domains.emotion import emotion_cycle as ec
+        from app.domains.emotion import emotion_cycle_cache as c
 
         c.cache_invalidate()
         c.cache_set(_cycle(stage="startup", stage_label="启动"))
@@ -71,8 +71,8 @@ def test_build_uses_cache(monkeypatch) -> None:
 
 def test_build_force_bypasses_cache(monkeypatch) -> None:
     with _patch_no_redis():
-        from app.services.emotion import emotion_cycle as ec
-        from app.services.emotion import emotion_cycle_cache as c
+        from app.domains.emotion import emotion_cycle as ec
+        from app.domains.emotion import emotion_cycle_cache as c
 
         c.cache_set(_cycle(stage="ice", source="cache_stub"))
         db = MagicMock()
@@ -80,7 +80,7 @@ def test_build_force_bypasses_cache(monkeypatch) -> None:
             patch.object(ec, "_breadth_from_redis", return_value=None),
             patch.object(ec, "_ladder_rows", return_value=[]),
             patch.object(ec, "_index_above_ma5", return_value=None),
-            patch("app.services.emotion.emotion_thresholds.load_thresholds", return_value=(ec.DEFAULT_THRESHOLDS, True)),
+            patch("app.domains.emotion.emotion_thresholds.load_thresholds", return_value=(ec.DEFAULT_THRESHOLDS, True)),
         ):
             out = ec.build_emotion_cycle(db, force=True)
         assert out.source != "cache_stub"
@@ -89,8 +89,8 @@ def test_build_force_bypasses_cache(monkeypatch) -> None:
 
 def test_build_sets_cache_after_compute(monkeypatch) -> None:
     with _patch_no_redis():
-        from app.services.emotion import emotion_cycle as ec
-        from app.services.emotion import emotion_cycle_cache as c
+        from app.domains.emotion import emotion_cycle as ec
+        from app.domains.emotion import emotion_cycle_cache as c
 
         c.cache_invalidate()
         db = MagicMock()
@@ -98,7 +98,7 @@ def test_build_sets_cache_after_compute(monkeypatch) -> None:
             patch.object(ec, "_breadth_from_redis", return_value=None),
             patch.object(ec, "_ladder_rows", return_value=[]),
             patch.object(ec, "_index_above_ma5", return_value=None),
-            patch("app.services.emotion.emotion_thresholds.load_thresholds", return_value=(ec.DEFAULT_THRESHOLDS, True)),
+            patch("app.domains.emotion.emotion_thresholds.load_thresholds", return_value=(ec.DEFAULT_THRESHOLDS, True)),
         ):
             out = ec.build_emotion_cycle(db, force=True)
         cached = c.cache_get()

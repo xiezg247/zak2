@@ -1,4 +1,4 @@
-from app.services.market.tushare_screener import ts_code_to_tf
+from app.domains.market.tushare_screener import ts_code_to_tf
 from app.domains.screener.presets import list_presets
 
 

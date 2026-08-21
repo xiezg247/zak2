@@ -14,7 +14,7 @@ from app.domains.watchlist import enrich as wl
 from app.domains.watchlist import market_views as mv
 from app.main import create_app
 from app.models.user import User
-from app.services.market.quotes import QuoteRow
+from app.domains.market.quotes import QuoteRow
 
 
 def _item(symbol: str = "600519", exchange: str = "SSE", name: str = "茅台", sort: int = 0):

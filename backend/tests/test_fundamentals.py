@@ -13,7 +13,7 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.services.market import fundamentals as fund
+from app.domains.market import fundamentals as fund
 
 
 def _client() -> TestClient:

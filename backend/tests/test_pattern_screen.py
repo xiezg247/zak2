@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from app.domains.screener.schemas import PatternRunRequest
-from app.services.market.quotes import QuoteRow
+from app.domains.market.quotes import QuoteRow
 from app.domains.screener import pattern_screen
 from app.domains.screener.pattern_rules import BarSeries
 
