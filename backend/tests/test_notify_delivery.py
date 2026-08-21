@@ -5,8 +5,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from app.services.notify.delivery import deliver_text, send_to_channel
-from app.services.notify.feishu import FeishuSendError
+from app.domains.channels.notify.delivery import deliver_text, send_to_channel
+from app.domains.channels.notify.feishu import FeishuSendError
 
 
 def _channel(id_: str, name: str, webhook: str) -> SimpleNamespace:

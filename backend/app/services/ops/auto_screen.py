@@ -10,7 +10,7 @@ from app.core.errors import AppError
 from app.repositories import screener as repo
 from app.schemas.ops import SyncResult
 from app.schemas.screener import RecipeRunRequest
-from app.services.notify import delivery as notify_delivery
+from app.domains.channels.notify import delivery as notify_delivery
 from app.services.ops.scheduler import load_scheduler_config, save_job_run_meta
 from app.services.screener.engine import run_recipe_screen
 

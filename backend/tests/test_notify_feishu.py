@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from app.services.notify.feishu import FeishuSendError, send_feishu_webhook
+from app.domains.channels.notify.feishu import FeishuSendError, send_feishu_webhook
 
 
 def test_send_ok() -> None:

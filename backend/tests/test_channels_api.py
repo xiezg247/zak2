@@ -85,7 +85,7 @@ def test_create_channel_valid() -> None:
     db = MagicMock()
     row = _channel_row(id_="new-id", name="新群", webhook="https://open.feishu.cn/y")
     db.add.side_effect = None
-    with patch("app.repositories.channel.ChannelRepository.create_channel", return_value=row) as create:
+    with patch("app.domains.channels.repository.ChannelRepository.create_channel", return_value=row) as create:
         client = _api_client(db=db)
         resp = client.post(
             "/api/v1/channels",
@@ -114,7 +114,7 @@ def test_create_channel_missing_webhook() -> None:
 def test_update_channel() -> None:
     db = MagicMock()
     row = _channel_row(id_="c1", name="改名后")
-    with patch("app.repositories.channel.ChannelRepository.update_channel", return_value=row) as update:
+    with patch("app.domains.channels.repository.ChannelRepository.update_channel", return_value=row) as update:
         client = _api_client(db=db)
         resp = client.patch("/api/v1/channels/c1", json={"name": "改名后", "enabled": False})
     assert resp.status_code == 200
@@ -126,7 +126,7 @@ def test_update_channel() -> None:
 
 def test_update_channel_not_found() -> None:
     db = MagicMock()
-    with patch("app.repositories.channel.ChannelRepository.get", return_value=None):
+    with patch("app.domains.channels.repository.ChannelRepository.get", return_value=None):
         client = _api_client(db=db)
         resp = client.patch("/api/v1/channels/nope", json={"name": "x"})
     assert resp.status_code == 404
@@ -134,7 +134,7 @@ def test_update_channel_not_found() -> None:
 
 def test_delete_channel() -> None:
     db = MagicMock()
-    with patch("app.repositories.channel.ChannelRepository.get", return_value=_channel_row()):
+    with patch("app.domains.channels.repository.ChannelRepository.get", return_value=_channel_row()):
         client = _api_client(db=db)
         resp = client.delete("/api/v1/channels/c1")
     assert resp.status_code == 200
@@ -143,7 +143,7 @@ def test_delete_channel() -> None:
 
 def test_delete_channel_not_found() -> None:
     db = MagicMock()
-    with patch("app.repositories.channel.ChannelRepository.get", return_value=None):
+    with patch("app.domains.channels.repository.ChannelRepository.get", return_value=None):
         client = _api_client(db=db)
         resp = client.delete("/api/v1/channels/nope")
     assert resp.status_code == 404
@@ -152,7 +152,7 @@ def test_delete_channel_not_found() -> None:
 def test_repo_create_generates_id() -> None:
     """UUID 主键必须有应用层生成的 id，回归 base 的 autoincrement 误判。"""
     from app.models.channel import NotifyChannel
-    from app.repositories.channel import ChannelRepository
+    from app.domains.channels.repository import ChannelRepository
 
     db = MagicMock()
     repo = ChannelRepository(db, "u1")
@@ -168,7 +168,7 @@ def test_repo_create_generates_id() -> None:
 
 def test_repo_update_partial() -> None:
     from app.models.channel import NotifyChannel
-    from app.repositories.channel import ChannelRepository
+    from app.domains.channels.repository import ChannelRepository
 
     db = MagicMock()
     row = _channel_row()
@@ -185,7 +185,7 @@ def test_repo_update_partial() -> None:
 def test_test_channel_ok() -> None:
     db = MagicMock()
     with (
-        patch("app.repositories.channel.ChannelRepository.get", return_value=_channel_row()),
+        patch("app.domains.channels.repository.ChannelRepository.get", return_value=_channel_row()),
         patch("app.domains.channels.service.notify_delivery.send_to_channel", return_value=(True, "")) as send,
     ):
         client = _api_client(db=db)
@@ -201,7 +201,7 @@ def test_test_channel_ok() -> None:
 def test_test_channel_failed() -> None:
     db = MagicMock()
     with (
-        patch("app.repositories.channel.ChannelRepository.get", return_value=_channel_row()),
+        patch("app.domains.channels.repository.ChannelRepository.get", return_value=_channel_row()),
         patch("app.domains.channels.service.notify_delivery.send_to_channel", return_value=(False, "HTTP 500")) as send,
     ):
         client = _api_client(db=db)
@@ -215,7 +215,7 @@ def test_test_channel_failed() -> None:
 
 def test_test_channel_not_found() -> None:
     db = MagicMock()
-    with patch("app.repositories.channel.ChannelRepository.get", return_value=None):
+    with patch("app.domains.channels.repository.ChannelRepository.get", return_value=None):
         client = _api_client(db=db)
         resp = client.post("/api/v1/channels/nope/test")
     assert resp.status_code == 404
