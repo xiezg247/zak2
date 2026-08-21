@@ -9,11 +9,10 @@ from typing import Any, cast
 from sqlalchemy.orm import Session
 
 from app.domains.content import notes
-from app.domains.watchlist import positions_repo
+from app.domains.watchlist import positions_repo, signal_panel_repo
 from app.domains.watchlist import repository as watchlist_repo
-from app.domains.watchlist import signal_panel_repo
-from app.services.symbols import to_vt_symbol
 from app.services.ai.tools._common import ToolHandler
+from app.services.symbols import to_vt_symbol
 
 logger = logging.getLogger(__name__)
 
@@ -212,9 +211,14 @@ def _preview(raw: Any, limit: int = 40) -> str:
     return body[:limit] + ("…" if len(body) > limit else "")
 
 
+def _sum_add_watchlist(args: dict[str, Any]) -> str:
+    name = str(args.get("name") or "").strip()
+    suffix = f"（{name}）" if name else ""
+    return f"加自选：{_sym(args)}{suffix}"
+
+
 _WRITE_SUMMARIES: dict[str, _SummaryFn] = {
-    "add_watchlist": lambda a: f"加自选：{_sym(a)}"
-    + (f"（{str(a.get('name') or '').strip()}）" if str(a.get("name") or "").strip() else ""),
+    "add_watchlist": _sum_add_watchlist,
     "remove_watchlist": lambda a: f"删自选：{_sym(a)}",
     "upsert_note_memo": lambda a: f"写备忘：{_sym(a, vt_first=True)} — {_preview(a.get('body'))}",
     "add_note_entry": lambda a: f"记流水：{_sym(a, vt_first=True)} — {_preview(a.get('body'))}",

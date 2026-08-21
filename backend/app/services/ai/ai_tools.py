@@ -5,23 +5,30 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.services.ai.tools._common import MAX_RESULT_CHARS, ToolHandler, _parse_args, _truncate
+from app.services.ai.tools._common import (
+    MAX_RESULT_CHARS as MAX_RESULT_CHARS,
+)
+from app.services.ai.tools._common import (
+    ToolHandler,
+    _parse_args,
+    _truncate,
+)
 from app.services.ai.tools.read import READ_DEFINITIONS, READ_HANDLERS
 from app.services.ai.tools.skills import SKILL_DEFINITIONS, SKILL_HANDLERS
 from app.services.ai.tools.write import (
     WRITE_DEFINITIONS,
     WRITE_HANDLERS,
     WRITE_TOOL_NAMES,
-    summarize_write_tool,
+)
+from app.services.ai.tools.write import (
+    summarize_write_tool as summarize_write_tool,
 )
 
-logger = logging.getLogger(__name__)
-
+# 写工具只能经 execute_write_tool 在用户确认后执行；execute_tool 依赖 WRITE_TOOL_NAMES 先行拦截，写工具不会命中本表。
 TOOL_HANDLERS: dict[str, ToolHandler] = {**READ_HANDLERS, **SKILL_HANDLERS, **WRITE_HANDLERS}
 TOOL_DEFINITIONS: list[dict[str, Any]] = [*READ_DEFINITIONS, *SKILL_DEFINITIONS, *WRITE_DEFINITIONS]
 

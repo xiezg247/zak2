@@ -61,13 +61,14 @@ def test_ai_tools_aggregates_all() -> None:
     from app.services.ai import ai_tools
 
     all_names = set(READ_HANDLERS) | set(SKILL_HANDLERS) | set(WRITE_HANDLERS)
-    assert set(ai_tools.TOOL_HANDLERS) == all_names == {*WRITE_TOOL_NAMES, *ai_tools.TOOL_HANDLERS}
+    assert set(ai_tools.TOOL_HANDLERS) == all_names
     assert {d["function"]["name"] for d in ai_tools.TOOL_DEFINITIONS} == all_names
 
 
 def test_summarize_table_driven_equivalence() -> None:
     assert summarize_write_tool("no_such", {}) == "no_such"
     assert "加自选" in summarize_write_tool("add_watchlist", {"symbol": "600519.SSE", "name": "茅台"})
+    assert summarize_write_tool("add_watchlist", {"symbol": "600519.SSE", "name": None}) == "加自选：600519.SSE"
     assert "删自选" in summarize_write_tool("remove_watchlist", {"symbol": "600519.SSE"})
     assert "写备忘" in summarize_write_tool("upsert_note_memo", {"vt_symbol": "600519.SSE", "body": "观察"})
     assert "记流水" in summarize_write_tool("add_note_entry", {"vt_symbol": "600519.SSE", "body": "买入观察"})

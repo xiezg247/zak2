@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 from app.domains.backtest import repository as backtest_repo
 from app.domains.market import bars
 from app.domains.watchlist import repository as watchlist_repo
-from app.services.symbols import to_vt_symbol
 from app.services.ai.tools._common import ToolHandler
+from app.services.symbols import to_vt_symbol
 
 
 def _get_watchlist(db: Session, user_id: str, args: dict[str, Any]) -> Any:
