@@ -8,16 +8,16 @@ from typing import Any
 from fastapi import HTTPException
 
 from app.core.db import SessionLocal
-from app.repositories import screener as repo
-from app.schemas.screener import (
+from app.domains.screener import repository as repo
+from app.domains.screener.engine import run_condition_screen, run_recipe_screen
+from app.domains.screener.pattern_screen import run_pattern_screen
+from app.domains.screener.reference_peer import run_reference_peer
+from app.domains.screener.schemas import (
     ConditionRunRequest,
     PatternRunRequest,
     RecipeRunRequest,
     ReferencePeerRequest,
 )
-from app.services.screener.engine import run_condition_screen, run_recipe_screen
-from app.services.screener.pattern_screen import run_pattern_screen
-from app.services.screener.reference_peer import run_reference_peer
 
 
 def _fail(exc: BaseException) -> dict[str, Any]:

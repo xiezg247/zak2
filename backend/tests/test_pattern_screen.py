@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.schemas.screener import PatternRunRequest
+from app.domains.screener.schemas import PatternRunRequest
 from app.services.market.quotes import QuoteRow
-from app.services.screener import pattern_screen
-from app.services.screener.pattern_rules import BarSeries
+from app.domains.screener import pattern_screen
+from app.domains.screener.pattern_rules import BarSeries
 
 
 def test_parse_tf_symbol() -> None:

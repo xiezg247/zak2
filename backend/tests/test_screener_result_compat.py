@@ -6,7 +6,7 @@ import json
 from types import SimpleNamespace
 
 from app.domains.screener.service import _run_detail
-from app.repositories import screener as repo
+from app.domains.screener import repository as repo
 
 
 def _run(result_json: str) -> SimpleNamespace:

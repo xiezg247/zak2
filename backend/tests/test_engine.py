@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from app.schemas.screener import ConditionRunRequest, HardFilterPrefs
+from app.domains.screener.schemas import ConditionRunRequest, HardFilterPrefs
 from app.services.market.quotes import QuoteRow
-from app.services.screener.engine import run_condition_screen
-from app.services.screener.hard_filters import apply_hard_filters
+from app.domains.screener.engine import run_condition_screen
+from app.domains.screener.hard_filters import apply_hard_filters
 
 
 def _row(symbol: str, **kwargs) -> QuoteRow:  # type: ignore[no-untyped-def]
@@ -106,8 +106,8 @@ def test_condition_limit_up() -> None:
 def test_recipe_enriches_empty_industry_before_filter() -> None:
     from unittest.mock import MagicMock, patch
 
-    from app.schemas.screener import RecipeRunRequest
-    from app.services.screener.engine import run_recipe_screen
+    from app.domains.screener.schemas import RecipeRunRequest
+    from app.domains.screener.engine import run_recipe_screen
 
     class _Store:
         def available(self):
@@ -142,8 +142,8 @@ def test_recipe_enriches_empty_industry_before_filter() -> None:
 
 
 def test_recipe_post_close_multi() -> None:
-    from app.schemas.screener import RecipeRunRequest
-    from app.services.screener.engine import run_recipe_screen
+    from app.domains.screener.schemas import RecipeRunRequest
+    from app.domains.screener.engine import run_recipe_screen
 
     class _MfStore(_FakeStore):
         def load_ranked_quotes(self, field: str, *, pool: int = 500) -> list[QuoteRow]:

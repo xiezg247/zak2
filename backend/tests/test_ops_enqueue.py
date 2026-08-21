@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from arq.jobs import JobStatus
 
-from app.schemas.screener import JobOut
+from app.domains.screener.schemas import JobOut
 from app.services.ops import arq_jobs as m
 
 

@@ -1,5 +1,5 @@
 from app.services.market.tushare_screener import ts_code_to_tf
-from app.services.screener.presets import list_presets
+from app.domains.screener.presets import list_presets
 
 
 def test_limit_up_and_low_pe_implemented() -> None:

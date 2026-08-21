@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.api.v1 import jobs as jobs_api
-from app.schemas.screener import JobOut
+from app.domains.screener.schemas import JobOut
 
 
 @pytest.mark.asyncio

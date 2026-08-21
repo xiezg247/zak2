@@ -19,7 +19,7 @@ from app.core.redis_keys import (
     ARQ_JOBS_RECENT_ZSET,
 )
 from app.core.settings import get_settings
-from app.schemas.screener import JobOut
+from app.domains.screener.schemas import JobOut
 
 logger = logging.getLogger(__name__)
 

@@ -6,9 +6,9 @@ import pytest
 from app.core.errors import ValidationFailed
 
 from app.schemas.market import RadarResonanceEntry, RadarResonanceOut
-from app.schemas.screener import HardFilterPrefs, RecipeRunRequest
-from app.services.screener.engine import run_recipe_screen
-from app.services.screener.presets import get_builtin_recipe
+from app.domains.screener.schemas import HardFilterPrefs, RecipeRunRequest
+from app.domains.screener.engine import run_recipe_screen
+from app.domains.screener.presets import get_builtin_recipe
 
 
 def test_radar_resonance_recipe_registered() -> None:
@@ -25,7 +25,7 @@ def test_run_resonance_no_cards_raises_400() -> None:
         "app.domains.screener.resonance_screen.list_radar_cards",
         return_value=[],
     ):
-        from app.services.screener.resonance_screen import run_resonance_screen
+        from app.domains.screener.resonance_screen import run_resonance_screen
 
         with pytest.raises(ValidationFailed) as ei:
             run_resonance_screen(
@@ -57,7 +57,7 @@ def test_run_resonance_with_entries() -> None:
         patch("app.domains.screener.resonance_screen.list_radar_cards", return_value=[MagicMock()]),
         patch("app.domains.screener.resonance_screen.list_radar_resonance", return_value=out) as lr,
     ):
-        from app.services.screener.resonance_screen import run_resonance_screen
+        from app.domains.screener.resonance_screen import run_resonance_screen
 
         result = run_resonance_screen(
             db=db,
@@ -89,7 +89,7 @@ def test_run_resonance_empty_entries_ok() -> None:
         patch("app.domains.screener.resonance_screen.list_radar_cards", return_value=[MagicMock()]),
         patch("app.domains.screener.resonance_screen.list_radar_resonance", return_value=out),
     ):
-        from app.services.screener.resonance_screen import run_resonance_screen
+        from app.domains.screener.resonance_screen import run_resonance_screen
 
         result = run_resonance_screen(
             db=db,

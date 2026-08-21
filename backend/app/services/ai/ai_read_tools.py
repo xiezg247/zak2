@@ -11,9 +11,7 @@ from sqlalchemy.orm import Session
 from app.repositories import (
     positions as positions_repo,
 )
-from app.repositories import (
-    screener as screener_repo,
-)
+from app.domains.screener import repository as screener_repo
 from app.repositories import (
     signal_panel as signal_panel_repo,
 )

@@ -10,17 +10,17 @@ from app.api.v1 import (
     jobs,
     market,
     ops,
-    screener,
     watchlist,
     ws,
 )
 from app.domains.auth.router import router as auth_router
 from app.domains.channels.router import router as channels_router
+from app.domains.screener.router import router as screener_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_router)
 api_router.include_router(jobs.router)
-api_router.include_router(screener.router)
+api_router.include_router(screener_router)
 api_router.include_router(watchlist.router)
 api_router.include_router(market.router)
 api_router.include_router(content.router)

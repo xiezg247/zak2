@@ -53,9 +53,9 @@ def test_run_task_success() -> None:
     task = _task()
     with (
         patch("app.repositories.auto_schedule.AutoScheduleRepository.get_any", return_value=task),
-        patch("app.repositories.screener.ScreenerRunRepository.latest_run_symbols", return_value=None),
+        patch("app.domains.screener.repository.ScreenerRunRepository.latest_run_symbols", return_value=None),
         patch("app.services.ops.auto_schedule.run_recipe_screen", return_value=fake_result),
-        patch("app.repositories.screener.ScreenerRunRepository.save_run", return_value=fake_run) as save,
+        patch("app.domains.screener.repository.ScreenerRunRepository.save_run", return_value=fake_run) as save,
         patch("app.services.ops.auto_schedule.notify_delivery.deliver_text") as deliver,
     ):
         out = run_task(db, 7)
@@ -91,9 +91,9 @@ def test_run_task_push_failure_does_not_raise() -> None:
     task = _task()
     with (
         patch("app.repositories.auto_schedule.AutoScheduleRepository.get_any", return_value=task),
-        patch("app.repositories.screener.ScreenerRunRepository.latest_run_symbols", return_value=None),
+        patch("app.domains.screener.repository.ScreenerRunRepository.latest_run_symbols", return_value=None),
         patch("app.services.ops.auto_schedule.run_recipe_screen", return_value=fake_result),
-        patch("app.repositories.screener.ScreenerRunRepository.save_run", return_value=fake_run),
+        patch("app.domains.screener.repository.ScreenerRunRepository.save_run", return_value=fake_run),
         patch(
             "app.services.ops.auto_schedule.notify_delivery.deliver_text",
             side_effect=Exception("db down"),

@@ -8,7 +8,7 @@ from app.core.errors import NotFound, Unavailable
 from app.domains.backtest.backtest_engine import load_daily_bars
 from app.domains.market import bars
 from app.domains.screener import engine, pattern_screen
-from app.schemas.screener import PatternRunRequest
+from app.domains.screener.schemas import PatternRunRequest
 
 
 def test_require_quotes_empty_points_to_collector() -> None:
