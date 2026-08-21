@@ -47,7 +47,7 @@ def _api_client() -> TestClient:
 def test_get_emotion_thresholds_default() -> None:
     client = _api_client()
     with patch(
-        "app.api.v1.market.emotion_thresholds_svc.load_thresholds",
+        "app.domains.market.router.emotion_thresholds_svc.load_thresholds",
         return_value=(DEFAULT_THRESHOLDS, True),
     ):
         resp = client.get("/api/v1/market/emotion-cycle/thresholds")
@@ -61,7 +61,7 @@ def test_put_emotion_thresholds() -> None:
     client = _api_client()
     updated = DEFAULT_THRESHOLDS
     with patch(
-        "app.api.v1.market.emotion_thresholds_svc.save_thresholds",
+        "app.domains.market.router.emotion_thresholds_svc.save_thresholds",
         return_value=updated,
     ) as save:
         resp = client.put(
@@ -77,7 +77,7 @@ def test_put_emotion_thresholds() -> None:
 def test_reset_emotion_thresholds() -> None:
     client = _api_client()
     with patch(
-        "app.api.v1.market.emotion_thresholds_svc.reset_thresholds",
+        "app.domains.market.router.emotion_thresholds_svc.reset_thresholds",
         return_value=DEFAULT_THRESHOLDS,
     ) as reset:
         resp = client.post("/api/v1/market/emotion-cycle/thresholds/reset")

@@ -167,7 +167,7 @@ def test_get_resonance_weights_api() -> None:
     user = _make_user()
     client = _api_client(user)
     merged = rr.merge_weights({"leader_pick": 2.5})
-    with patch("app.api.v1.market.resonance_svc.load_user_weights", return_value=merged):
+    with patch("app.domains.market.router.resonance_svc.load_user_weights", return_value=merged):
         resp = client.get("/api/v1/radar/resonance/weights")
     assert resp.status_code == 200
     body = resp.json()
@@ -181,7 +181,7 @@ def test_put_resonance_weights_api_ok() -> None:
     client = _api_client(user)
     merged = rr.merge_weights({"leader_pick": 3})
     with patch(
-        "app.api.v1.market.resonance_svc.save_user_weights",
+        "app.domains.market.router.resonance_svc.save_user_weights",
         return_value=merged,
     ) as save:
         resp = client.put(
@@ -199,7 +199,7 @@ def test_put_resonance_weights_api_reset() -> None:
     client = _api_client(user)
     merged = rr.merge_weights(None)
     with patch(
-        "app.api.v1.market.resonance_svc.save_user_weights",
+        "app.domains.market.router.resonance_svc.save_user_weights",
         return_value=merged,
     ) as save:
         resp = client.put("/api/v1/radar/resonance/weights", json={"weights": {}})
@@ -211,7 +211,7 @@ def test_put_resonance_weights_api_reset() -> None:
 def test_put_resonance_weights_api_bad_request() -> None:
     client = _api_client()
     with patch(
-        "app.api.v1.market.resonance_svc.save_user_weights",
+        "app.domains.market.router.resonance_svc.save_user_weights",
         side_effect=ValueError("权重超出范围 [0, 5]"),
     ):
         resp = client.put(

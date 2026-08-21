@@ -110,7 +110,7 @@ def test_get_limit_list_api_empty() -> None:
     client = TestClient(app)
 
     with patch(
-        "app.api.v1.market.list_limit_list",
+        "app.domains.market.router.list_limit_list",
         return_value=LimitListOut(trade_date="20240805"),
     ):
         resp = client.get("/api/v1/market/limit-list?trade_date=20240805")
