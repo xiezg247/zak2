@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.schemas.content import TeamReportListItem
+from app.domains.content.schemas import TeamReportListItem
 from app.schemas.team import AgentScore, TeamEmotion, TeamPrefetch, TeamScores
 from app.services.team.team_orchestrator import _fallback_report, stream_team_analysis_with_persist
 from app.services.team.team_reports import should_persist_report

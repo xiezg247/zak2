@@ -8,7 +8,7 @@ import math
 from sqlalchemy.orm import Session
 
 from app.core.time import china_now
-from app.repositories import watchlist as watchlist_repo
+from app.domains.watchlist import repository as watchlist_repo
 from app.schemas.team import TeamBars, TeamEmotion, TeamFinancial, TeamPrefetch, TeamRisk, TeamStrategy
 from app.domains.emotion import emotion_cycle as emotion_cycle_svc
 from app.domains.market.bars import load_bars

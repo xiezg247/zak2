@@ -9,7 +9,5 @@ OOP 风格：
 
 子模块按需导入，避免包级连锁 import 导致循环依赖，例如：
 
-    from app.repositories import watchlist
-    from app.repositories.watchlist import resolve_symbol_pair
-    from app.repositories.watchlist import WatchlistItemRepository
+    from app.repositories.chat import ChatRepository
 """

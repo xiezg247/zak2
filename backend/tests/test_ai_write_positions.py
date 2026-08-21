@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from app.core.errors import NotFound, ValidationFailed
-from app.schemas.watchlist import PositionOut
+from app.domains.watchlist.schemas import PositionOut
 from app.services.ai.ai_tools import execute_write_tool, summarize_write_tool
 
 
@@ -24,9 +24,9 @@ def test_upsert_not_in_watchlist() -> None:
     db = MagicMock()
     with (
         patch("app.services.ai.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
-        patch("app.repositories.positions.PositionRepository.get_position", return_value=None),
+        patch("app.domains.watchlist.positions_repo.PositionRepository.get_position", return_value=None),
         patch(
-            "app.repositories.positions.PositionRepository.add_position",
+            "app.domains.watchlist.positions_repo.PositionRepository.add_position",
             side_effect=ValidationFailed("须先加入自选再录入持仓"),
         ),
     ):
@@ -58,9 +58,9 @@ def test_upsert_creates_when_missing() -> None:
     )
     with (
         patch("app.services.ai.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
-        patch("app.repositories.positions.PositionRepository.get_position", return_value=None),
-        patch("app.repositories.positions.PositionRepository.add_position", return_value=row) as add,
-        patch("app.repositories.positions.PositionRepository.update_position") as upd,
+        patch("app.domains.watchlist.positions_repo.PositionRepository.get_position", return_value=None),
+        patch("app.domains.watchlist.positions_repo.PositionRepository.add_position", return_value=row) as add,
+        patch("app.domains.watchlist.positions_repo.PositionRepository.update_position") as upd,
     ):
         out = execute_write_tool(
             db,
@@ -92,9 +92,9 @@ def test_upsert_updates_when_exists() -> None:
     )
     with (
         patch("app.services.ai.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
-        patch("app.repositories.positions.PositionRepository.get_position", return_value=existing),
-        patch("app.repositories.positions.PositionRepository.update_position", return_value=row) as upd,
-        patch("app.repositories.positions.PositionRepository.add_position") as add,
+        patch("app.domains.watchlist.positions_repo.PositionRepository.get_position", return_value=existing),
+        patch("app.domains.watchlist.positions_repo.PositionRepository.update_position", return_value=row) as upd,
+        patch("app.domains.watchlist.positions_repo.PositionRepository.add_position") as add,
     ):
         out = execute_write_tool(
             db,
@@ -116,7 +116,7 @@ def test_delete_position_missing() -> None:
     db = MagicMock()
     with (
         patch("app.services.ai.ai_tools.watchlist_repo.resolve_symbol_pair", return_value=("600519", "SSE")),
-        patch("app.repositories.positions.PositionRepository.delete_position", return_value=False),
+        patch("app.domains.watchlist.positions_repo.PositionRepository.delete_position", return_value=False),
     ):
         out = execute_write_tool(db, "u1", "delete_position", {"symbol": "600519.SSE"})
     assert "error" in out
@@ -125,7 +125,7 @@ def test_delete_position_missing() -> None:
 def test_add_remove_signal_panel() -> None:
     db = MagicMock()
     with patch(
-        "app.repositories.signal_panel.SignalPanelRepository.add_symbol",
+        "app.domains.watchlist.signal_panel_repo.SignalPanelRepository.add_symbol",
         return_value=["600519.SSE"],
     ):
         out = execute_write_tool(db, "u1", "add_signal_panel", {"symbol": "600519.SSE"})
@@ -133,7 +133,7 @@ def test_add_remove_signal_panel() -> None:
     assert "600519.SSE" in (out.get("symbols") or [])
 
     with patch(
-        "app.repositories.signal_panel.SignalPanelRepository.remove_symbol",
+        "app.domains.watchlist.signal_panel_repo.SignalPanelRepository.remove_symbol",
         side_effect=NotFound("不在信号名单中"),
     ):
         out2 = execute_write_tool(db, "u1", "remove_signal_panel", {"symbol": "600519.SSE"})

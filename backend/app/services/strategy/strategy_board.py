@@ -11,11 +11,11 @@ from sqlalchemy.orm import Session
 
 from app.core.time import china_today
 from app.models.bars import DbBarData
-from app.repositories import positions as positions_repo
-from app.repositories import signal_panel as signal_panel_repo
-from app.repositories import watchlist as repo
 from app.domains.market.quotes import get_quote_store
-from app.services.plan.trading_risk import (
+from app.domains.watchlist import positions_repo
+from app.domains.watchlist import repository as repo
+from app.domains.watchlist import signal_panel_repo
+from app.domains.watchlist.trading_risk import (
     compute_actual_position_pct,
     load_trading_risk_prefs,
 )

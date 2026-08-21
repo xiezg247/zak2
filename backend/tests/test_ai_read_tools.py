@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from app.schemas.watchlist import TradingRiskPrefsOut
+from app.domains.watchlist.schemas import TradingRiskPrefsOut
 from app.services.ai import ai_read_tools as art
 from app.services.ai.ai_tools import WRITE_TOOL_NAMES, execute_tool
 
@@ -132,7 +132,7 @@ def test_get_positions_limit_and_shape() -> None:
         },
     ]
     with (
-        patch("app.repositories.positions.PositionRepository.list_positions", return_value=rows) as lp,
+        patch("app.domains.watchlist.positions_repo.PositionRepository.list_positions", return_value=rows) as lp,
         patch.object(art, "get_quote_store") as gq,
     ):
         store = MagicMock()
@@ -146,7 +146,7 @@ def test_get_positions_limit_and_shape() -> None:
 
 def test_get_positions_empty_and_skip_quotes() -> None:
     with (
-        patch("app.repositories.positions.PositionRepository.list_positions", return_value=[]),
+        patch("app.domains.watchlist.positions_repo.PositionRepository.list_positions", return_value=[]),
         patch.object(art, "get_quote_store") as gq,
     ):
         out = art.get_positions(MagicMock(), "u", {"with_quotes": True})
@@ -171,7 +171,7 @@ def test_get_positions_with_quotes_false_skips_store() -> None:
         }
     ]
     with (
-        patch("app.repositories.positions.PositionRepository.list_positions", return_value=rows),
+        patch("app.domains.watchlist.positions_repo.PositionRepository.list_positions", return_value=rows),
         patch.object(art, "get_quote_store") as gq,
     ):
         out = art.get_positions(MagicMock(), "u", {"with_quotes": False})
@@ -197,7 +197,7 @@ def test_get_positions_quote_store_failure_still_returns() -> None:
         }
     ]
     with (
-        patch("app.repositories.positions.PositionRepository.list_positions", return_value=rows),
+        patch("app.domains.watchlist.positions_repo.PositionRepository.list_positions", return_value=rows),
         patch.object(art, "get_quote_store", side_effect=RuntimeError("redis down")),
     ):
         out = art.get_positions(MagicMock(), "u", {"with_quotes": True})
@@ -207,7 +207,7 @@ def test_get_positions_quote_store_failure_still_returns() -> None:
 
 def test_get_signal_panel_delegates() -> None:
     payload = {"symbols": ["600519.SSE"], "count": 1, "max_symbols": 10}
-    with patch("app.repositories.signal_panel.SignalPanelRepository.panel_payload", return_value=payload) as pp:
+    with patch("app.domains.watchlist.signal_panel_repo.SignalPanelRepository.panel_payload", return_value=payload) as pp:
         out = art.get_signal_panel(MagicMock(), "u", {})
     assert out == payload
     pp.assert_called_once()

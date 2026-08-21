@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models.report import WebTeamReport
 from app.repositories.pagination import Page, paginate
-from app.schemas.content import TeamReportListItem, TeamReportOut
+from app.domains.content.schemas import TeamReportListItem, TeamReportOut
 from app.services.symbols import parse_flexible_symbol, to_vt_symbol
 
 _logger = logging.getLogger(__name__)

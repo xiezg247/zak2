@@ -14,7 +14,7 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
-from app.services.content.notify_log import clamp_limit, list_notify_log, parse_payload
+from app.domains.content.notify_log import clamp_limit, list_notify_log, parse_payload
 
 
 def _make_user() -> User:

@@ -14,7 +14,7 @@ from app.core.security import hash_password
 from app.main import create_app
 from app.models.user import User
 from app.core.errors import ValidationFailed
-from app.services.plan import trading_risk as tr
+from app.domains.watchlist import trading_risk as tr
 
 
 def _make_user() -> User:

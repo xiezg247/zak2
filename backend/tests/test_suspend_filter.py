@@ -74,7 +74,7 @@ def test_filter_respects_exclude_false() -> None:
 
 
 def test_watchlist_item_default_suspended() -> None:
-    from app.schemas.watchlist import WatchlistItemOut
+    from app.domains.watchlist.schemas import WatchlistItemOut
 
     item = WatchlistItemOut(
         symbol="000001",

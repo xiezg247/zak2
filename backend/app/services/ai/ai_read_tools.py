@@ -8,21 +8,15 @@ from typing import Any
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.repositories import (
-    positions as positions_repo,
-)
-from app.domains.screener import repository as screener_repo
-from app.repositories import (
-    signal_panel as signal_panel_repo,
-)
-from app.repositories import (
-    watchlist as watchlist_repo,
-)
-from app.services.content import notes
+from app.domains.content import notes
 from app.domains.market import overview as market
 from app.domains.market.quotes import get_quote_store
-from app.services.plan import trading_risk
 from app.domains.radar import cards as radar
+from app.domains.screener import repository as screener_repo
+from app.domains.watchlist import positions_repo
+from app.domains.watchlist import repository as watchlist_repo
+from app.domains.watchlist import signal_panel_repo
+from app.domains.watchlist import trading_risk
 from app.services.strategy import strategy_board
 from app.services.symbols import to_vt_symbol
 
